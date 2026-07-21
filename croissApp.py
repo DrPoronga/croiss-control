@@ -967,5 +967,25 @@ def registrar_gasto():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+# ==========================================
+# SEGURIDAD Y ACCESO (CLAVE DE ENTRADA)
+# ==========================================
+ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
+ADMIN_PASS = os.environ.get("ADMIN_PASSWORD", "croisscamigera") 
+
+@app.before_request
+def proteger_app():
+    # Permite cargar el logo, CSS y JS sin bloquear la pantalla
+    if request.endpoint == 'static':
+        return
+
+    auth = request.authorization
+    if not auth or auth.username != ADMIN_USER or auth.password != ADMIN_PASS:
+        return (
+            'Acceso Restringido - CROISS Control', 
+            401, 
+            {'WWW-Authenticate': 'Basic realm="CROISS Control"'}
+        )
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
