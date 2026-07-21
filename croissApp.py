@@ -16,7 +16,7 @@ app = Flask(__name__)
 
 # Configuración de Brevo API por HTTP
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
-EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "croiss.uy@gmail.com")
+EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "pedidos@croissuy.com")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -812,7 +812,8 @@ def obtener_clientes():
         for c in lista_historico: c["total_gastado"] = round(c["total_gastado"], 2)
 
         lista_mes = list(clientes_mes.values())
-        lista_mes.sort(key=lambda x: x["total_gastado"], reverse=True)
+        # Ordena de mayor a menor por cantidad de croissants (y en caso de empate, por dinero gastado)
+        lista_mes.sort(key=lambda x: (x["total_croissants"], x["total_gastado"]), reverse=True)
         for c in lista_mes: c["total_gastado"] = round(c["total_gastado"], 2)
 
         top_cliente_mes = lista_mes[0] if lista_mes else None

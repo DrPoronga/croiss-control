@@ -718,7 +718,7 @@ button.btn-submit:active {
 }
 
 /* ==========================================
-   LOADER TRANSPARENTE - BOCADOS ORGÁNICOS CON DIENTES
+   LOADER TRANSPARENTE - CANVAS BITES
    ========================================== */
 .croiss-swal-popup-transparent {
     background: transparent !important;
@@ -734,8 +734,6 @@ button.btn-submit:active {
     padding: 0 !important;
     overflow: hidden !important;
     background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
 }
 
 .croiss-swal-popup-transparent .swal2-actions,
@@ -745,78 +743,26 @@ button.btn-submit:active {
     display: none !important;
 }
 
-.croiss-bite-container {
-    position: relative;
+.croiss-canvas-container {
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 20px;
+    position: relative;
 }
 
-.croiss-bite-img {
-    width: 160px;
-    height: auto;
+#croissBiteCanvas {
     display: block;
-    mask: url(#croissantBiteMask);
-    -webkit-mask: url(#croissantBiteMask);
     filter: drop-shadow(0 14px 24px rgba(45, 30, 24, 0.35));
-    opacity: 1 !important;
-    animation: croissChompSequence 1.8s infinite cubic-bezier(0.25, 1, 0.5, 1);
+    transition: transform 0.08s ease-out;
 }
 
-/* Movimiento "CHOMP!" de impacto en cada bocado */
-@keyframes croissChompSequence {
-    0%   { transform: scale(1) rotate(0deg); opacity: 1; }
-    
-    /* Impacto 1: Punta derecha */
-    18%  { transform: scale(0.92) rotate(-6deg); }
-    22%  { transform: scale(1) rotate(0deg); }
-    
-    /* Impacto 2: Lomo superior */
-    43%  { transform: scale(0.89) rotate(7deg); }
-    47%  { transform: scale(1) rotate(0deg); }
-    
-    /* Impacto 3: Centro panza */
-    68%  { transform: scale(0.85) rotate(-9deg); }
-    72%  { transform: scale(1) rotate(0deg); }
-    
-    /* Devorado completo */
-    90%  { transform: scale(0.75) rotate(12deg); }
-    94%  { transform: scale(0); opacity: 0; }
-    97%  { transform: scale(0); opacity: 0; }
-    100% { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-
-/* Secuencia de la dentadura recortando */
-.bite-mark {
-    transform-origin: center;
-    transform-box: fill-box;
-}
-
-.bite-1 { animation: bite1Anim 1.8s infinite step-end; }
-.bite-2 { animation: bite2Anim 1.8s infinite step-end; }
-.bite-3 { animation: bite3Anim 1.8s infinite step-end; }
-.bite-4 { animation: bite4Anim 1.8s infinite step-end; }
-
-@keyframes bite1Anim {
-    0%, 17% { transform: scale(0); }
-    18%, 100% { transform: scale(1); }
-}
-
-@keyframes bite2Anim {
-    0%, 42% { transform: scale(0); }
-    43%, 100% { transform: scale(1); }
-}
-
-@keyframes bite3Anim {
-    0%, 67% { transform: scale(0); }
-    68%, 100% { transform: scale(1); }
-}
-
-@keyframes bite4Anim {
-    0%, 89% { transform: scale(0); }
-    90%, 100% { transform: scale(1); }
-}
+/* Sacudidas en cada bocado */
+.chomp-shake-1 { transform: scale(0.93) rotate(-6deg); }
+.chomp-shake-2 { transform: scale(0.91) rotate(7deg); }
+.chomp-shake-3 { transform: scale(0.88) rotate(-8deg); }
+.chomp-shake-4 { transform: scale(0.85) rotate(9deg); }
+.chomp-shake-5 { transform: scale(0) rotate(-12deg); opacity: 0; }
 
 .ios-search-box {
     margin-bottom: 12px;

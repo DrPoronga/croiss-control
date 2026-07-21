@@ -17,9 +17,10 @@ let datosClientesGlobal = { todos: [], ranking: [], subOrigen: 'lista' };
 let directorioClientesCache = [];
 let isFetchingStock = false;
 let clienteUltimoAutocompletado = '';
+let croissAnimFrameId = null;
 
-// Garantiza ver la secuencia completa de bocados (1.8s)
-async function esperarAnimacionMinima(tiempoInicio, minMs = 1800) {
+// Garantiza ver la secuencia completa de los 5 bocados (2.2s)
+async function esperarAnimacionMinima(tiempoInicio, minMs = 2200) {
     const transcurrido = Date.now() - tiempoInicio;
     if (transcurrido < minMs) {
         await new Promise(resolve => setTimeout(resolve, minMs - transcurrido));
@@ -32,52 +33,12 @@ function getInputValueSafe(id, defaultVal = '') {
     return el ? el.value.trim() : defaultVal;
 }
 
-// 🥐 LOADER TRANSPARENTE CON MASCARA DE DIENTES REALES
+// 🥐 LOADER CANVAS: 5 BOCADOS REALES CON DENTADURA SERRADA
 function mostrarCroissLoader() {
     Swal.fire({
         html: `
-            <div class="croiss-bite-container">
-                <svg width="0" height="0" style="position:absolute;">
-                  <defs>
-                    <mask id="croissantBiteMask" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox">
-                      <!-- Fondo blanco principal -->
-                      <rect x="0" y="0" width="1" height="1" fill="white" />
-                      
-                      <!-- 1. DENTADURA PUNTA DERECHA -->
-                      <g class="bite-mark bite-1">
-                        <polygon points="0.75,-0.1 1.2,-0.1 1.2,0.5 0.75,0.5" fill="black" />
-                        <circle cx="0.73" cy="0.08" r="0.06" fill="black" />
-                        <circle cx="0.71" cy="0.18" r="0.06" fill="black" />
-                        <circle cx="0.72" cy="0.28" r="0.06" fill="black" />
-                        <circle cx="0.75" cy="0.38" r="0.06" fill="black" />
-                      </g>
-
-                      <!-- 2. DENTADURA LOMO SUPERIOR -->
-                      <g class="bite-mark bite-2">
-                        <polygon points="0.45,-0.1 0.85,-0.1 0.85,0.55 0.45,0.55" fill="black" />
-                        <circle cx="0.43" cy="0.12" r="0.07" fill="black" />
-                        <circle cx="0.41" cy="0.25" r="0.07" fill="black" />
-                        <circle cx="0.42" cy="0.38" r="0.07" fill="black" />
-                        <circle cx="0.46" cy="0.48" r="0.07" fill="black" />
-                      </g>
-
-                      <!-- 3. DENTADURA CENTRO PANZA -->
-                      <g class="bite-mark bite-3">
-                        <polygon points="0.2,-0.1 0.6,-0.1 0.6,0.85 0.2,0.85" fill="black" />
-                        <circle cx="0.18" cy="0.20" r="0.08" fill="black" />
-                        <circle cx="0.16" cy="0.38" r="0.08" fill="black" />
-                        <circle cx="0.17" cy="0.56" r="0.08" fill="black" />
-                        <circle cx="0.21" cy="0.72" r="0.08" fill="black" />
-                      </g>
-
-                      <!-- 4. DEVORADO COMPLETO -->
-                      <g class="bite-mark bite-4">
-                        <rect x="-0.1" y="-0.1" width="1.2" height="1.2" fill="black" />
-                      </g>
-                    </mask>
-                  </defs>
-                </svg>
-                <img src="/static/croissant.png" class="croiss-bite-img" alt="Cargando...">
+            <div class="croiss-canvas-container">
+                <canvas id="croissBiteCanvas" width="180" height="140"></canvas>
             </div>
         `,
         showConfirmButton: false,
@@ -85,8 +46,84 @@ function mostrarCroissLoader() {
         background: 'transparent',
         customClass: {
             popup: 'croiss-swal-popup-transparent'
+        },
+        didOpen: () => {
+            iniciarAnimacionCanvasCroissant();
+        },
+        willClose: () => {
+            if (croissAnimFrameId) cancelAnimationFrame(croissAnimFrameId);
         }
     });
+}
+
+function iniciarAnimacionCanvasCroissant() {
+    const canvas = document.getElementById('croissBiteCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    const startTime = Date.now();
+    const duration = 2200; // 2.2 segundos ciclo completo
+
+    // Definición exacta de las 5 mordidas de dentadura
+    const bites = [
+        { t: 0.15, x: 145, y: 38, r: 22, shake: 'chomp-shake-1' }, // Bite 1: Punta Derecha
+        { t: 0.35, x: 122, y: 50, r: 26, shake: 'chomp-shake-2' }, // Bite 2: Lomo Derecho
+        { t: 0.55, x: 92,  y: 68, r: 30, shake: 'chomp-shake-3' }, // Bite 3: Centro Panza
+        { t: 0.75, x: 60,  y: 84, r: 28, shake: 'chomp-shake-4' }, // Bite 4: Lomo Izquierdo
+        { t: 0.90, x: 28,  y: 98, r: 38, shake: 'chomp-shake-5' }  // Bite 5: Punta Izquierda (Devorado)
+    ];
+
+    function recortarMordidaDentadura(cx, cy, radius) {
+        ctx.globalCompositeOperation = 'destination-out';
+        
+        // Círculo principal cóncavo del bocado
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // 5 Muescas pequeñas de dientes incisivos bordeando la mordida
+        const numTeeth = 5;
+        for (let i = 0; i < numTeeth; i++) {
+            const angle = (Math.PI / 3) + (i * (Math.PI / 4.2));
+            const tx = cx + Math.cos(angle) * (radius - 2);
+            const ty = cy + Math.sin(angle) * (radius - 2);
+            ctx.beginPath();
+            ctx.arc(tx, ty, radius * 0.28, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+
+    function render() {
+        const elapsed = (Date.now() - startTime) % duration;
+        const progress = elapsed / duration;
+
+        // Limpiar canvas
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        if (croissImagePreload.complete && croissImagePreload.naturalWidth !== 0) {
+            // Dibujar imagen original escalada limpia
+            ctx.drawImage(croissImagePreload, 10, 10, 160, 120);
+
+            // Aplicar mordiscos acumulativos
+            let currentShake = '';
+            for (let b of bites) {
+                if (progress >= b.t) {
+                    recortarMordidaDentadura(b.x, b.y, b.r);
+                    if (progress >= b.t && progress < b.t + 0.10) {
+                        currentShake = b.shake;
+                    }
+                }
+            }
+
+            // Aplicar temblor de impacto "CHOMP"
+            canvas.className = currentShake;
+        }
+
+        croissAnimFrameId = requestAnimationFrame(render);
+    }
+
+    render();
 }
 
 // CONFIRMACIÓN DE ÉXITO ESTILO IOS
@@ -414,7 +451,7 @@ function editarStockProducto(prodNombre, stockActual, precioActual) {
                     })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1800);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('¡Stock Actualizado!', 'El catálogo de productos ya tiene la nueva información.');
@@ -430,15 +467,19 @@ function editarStockProducto(prodNombre, stockActual, precioActual) {
     });
 }
 
-// Cargar Agenda
 async function cargarAgenda() {
     const contenedor = document.getElementById('listaAgenda');
     if(!contenedor) return;
-    contenedor.innerHTML = '<p style="text-align:center; color:#64748b;">Cargando compromisos...</p>';
+
+    const tInicio = Date.now();
+    mostrarCroissLoader();
 
     try {
         const res = await fetch('/api/agenda');
         const data = await res.json();
+
+        await esperarAnimacionMinima(tInicio, 1800);
+        Swal.close();
 
         if(data.status === 'exito') {
             contenedor.innerHTML = '';
@@ -491,19 +532,25 @@ async function cargarAgenda() {
             });
         }
     } catch (err) {
+        Swal.close();
         contenedor.innerHTML = '<p style="color:red; text-align:center;">Error al cargar la agenda.</p>';
     }
 }
 
-// Cargar Cuentas
 async function cargarCuentas() {
     const contPago = document.getElementById('listaPendientesPago');
     const contEntrega = document.getElementById('listaPendientesEntrega');
     const bannerTotal = document.getElementById('cMontoPendienteTotal');
 
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
     try {
         const res = await fetch('/api/cuentas');
         const data = await res.json();
+
+        await esperarAnimacionMinima(tInicio, 1800);
+        Swal.close();
 
         if (data.status === 'exito') {
             if(bannerTotal) bannerTotal.innerText = `$${data.total_por_cobrar}`;
@@ -569,6 +616,7 @@ async function cargarCuentas() {
             }
         }
     } catch (err) {
+        Swal.close();
         console.error("Error al cargar entregas:", err);
     }
 }
@@ -598,7 +646,7 @@ async function eliminarPedido(numFila, clienteNombre) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1800);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Cancelado', 'Se removió la orden de la agenda.');
@@ -640,7 +688,7 @@ async function notificarEntrega(numFila, nombreCliente) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1800);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('¡Pedido Entregado!', `Notificación enviada a ${nombreCliente}.`);
@@ -682,7 +730,7 @@ async function marcarComoPagado(numFila, nombreCliente) {
                     body: JSON.stringify({ fila: numFila, estado: 'Pagado' })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1800);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('¡Cobro Registrado!', `El pedido de ${nombreCliente} ya figura al día.`);
@@ -700,6 +748,9 @@ async function marcarComoPagado(numFila, nombreCliente) {
 
 // Cargar Balance
 async function cargarBalance() {
+    const tInicio = Date.now();
+    mostrarCroissLoader(); // 🥐 Muestra la animación de las mordidas mientras busca los datos
+
     try {
         const mesVal = document.getElementById('bMesFilter').value;
         let url = '/api/balance';
@@ -707,6 +758,10 @@ async function cargarBalance() {
 
         const res = await fetch(url);
         const data = await res.json();
+
+        // Garantiza que se vea la animación fluida y cierra el loader
+        await esperarAnimacionMinima(tInicio, 1800);
+        Swal.close();
 
         if(data.status === 'exito') {
             document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
@@ -753,6 +808,7 @@ async function cargarBalance() {
             }
         }
     } catch(err) {
+        Swal.close();
         console.error("Error al cargar balance:", err);
     }
 }
@@ -767,13 +823,16 @@ function cambiarSegmentoBalance(segmento) {
     if (segmento === 'balance' || segmento === 'evolucion') cargarBalance();
 }
 
-// Cargar Inventario Unificado
 async function cargarInsumosYGastos() {
-    cargarStock();
+    const tInicio = Date.now();
+    mostrarCroissLoader();
 
     try {
         const res = await fetch('/api/gastos_e_insumos');
         const data = await res.json();
+
+        await esperarAnimacionMinima(tInicio, 1800);
+        Swal.close();
 
         if (data.status === 'exito') {
             const contInsumos = document.getElementById('listaInsumosStock');
@@ -829,16 +888,22 @@ async function cargarInsumosYGastos() {
             }
         }
     } catch (err) {
+        Swal.close();
         console.error("Error cargando inventario:", err);
     }
 }
 
-// Cargar Clientes
 async function cargarClientes() {
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
     try {
         const mesVal = document.getElementById('cMesFilter').value || hoy.substring(0, 7);
         const res = await fetch(`/api/clientes?mes=${mesVal}`);
         const data = await res.json();
+
+        await esperarAnimacionMinima(tInicio, 1800);
+        Swal.close();
 
         if (data.status === 'exito') {
             datosClientesGlobal.todos = data.clientes_todos;
@@ -850,7 +915,7 @@ async function cargarClientes() {
             const bannerDetalle = document.getElementById('topDetalle');
             if (data.top_cliente_mes) {
                 bannerNombre.innerText = data.top_cliente_mes.nombre;
-                bannerDetalle.innerText = `Lidera con $${data.top_cliente_mes.total_gastado} gastados (${data.top_cliente_mes.total_croissants} croissants)`;
+                bannerDetalle.innerText = `Lidera con ${data.top_cliente_mes.total_croissants} croissants comprados 🥐`;
             } else {
                 bannerNombre.innerText = 'Sin Compradores';
                 bannerDetalle.innerText = 'Aún no se registraron ventas en este mes.';
@@ -867,14 +932,15 @@ async function cargarClientes() {
                     div.onclick = () => verDetalleCliente(c);
                     div.innerHTML = `
                         <div style="display:flex; align-items:center; gap:8px;">
-                            <span class="cliente-rank-pos">#${idx + 1}</span>
+                            <span class="cliente-rank-pos" style="font-weight: 800; color: var(--accent);">#${idx + 1}</span>
                             <div>
-                                <strong>👤 ${c.nombre}</strong><br>
-                                <small style="color:var(--text-muted);">${c.total_croissants} croissants comprados</small>
+                                <strong>👤 ${c.nombre}</strong>
                             </div>
                         </div>
                         <div style="display:flex; align-items:center; gap:6px;">
-                            <strong style="color:var(--accent); font-size:0.9rem;">$${c.total_gastado}</strong>
+                            <strong style="color:var(--accent); font-size:0.95rem; background: var(--accent-light); padding: 4px 10px; border-radius: 12px;">
+                                🥐 ${c.total_croissants} un.
+                            </strong>
                             <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">›</span>
                         </div>
                     `;
@@ -883,6 +949,7 @@ async function cargarClientes() {
             }
         }
     } catch (err) {
+        Swal.close();
         console.error("Error al cargar clientes:", err);
     }
 }
@@ -1029,7 +1096,7 @@ function abrirModalEditarCliente(clienteObj) {
                     body: JSON.stringify(result.value)
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1800);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('¡Cliente Actualizado!', 'Datos guardados en la planilla.');
@@ -1213,7 +1280,7 @@ if (formFinalizarPedido) {
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-            await esperarAnimacionMinima(tInicio, 1800);
+            await esperarAnimacionMinima(tInicio, 2200);
 
             if (data.status === 'exito') {
                 carrito = [];
@@ -1264,7 +1331,7 @@ if (formGasto) {
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
-            await esperarAnimacionMinima(tInicio, 1800);
+            await esperarAnimacionMinima(tInicio, 2200);
 
             if (data.status === 'exito') {
                 mostrarCroissExito('¡Compra / Gasto Registrado!', 'Se actualizó el historial y el stock de insumos.');
