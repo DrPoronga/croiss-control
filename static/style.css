@@ -421,7 +421,7 @@ button.btn-submit:active {
     font-size: 1.6rem;
 }
 
-/* Tarjeta de Pantalla Principal (Foto limpia) */
+/* Tarjeta de Pantalla Principal */
 .home-card {
     position: relative;
     min-height: 560px;
@@ -432,7 +432,7 @@ button.btn-submit:active {
     background: url('chef.jpg') center 15% / cover no-repeat;
 }
 
-/* Adaptación Responsiva para Celulares */
+/* Responsivo cel */
 @media (max-width: 768px) {
     .app-layout {
         flex-direction: column;
@@ -470,7 +470,7 @@ button.btn-submit:active {
     }
 }
 
-/* Estilos para Cuentas */
+/* Cuentas */
 .cuentas-total-banner {
     background: #FEF2F2;
     border: 1px solid #FCA5A5;
@@ -532,7 +532,7 @@ button.btn-submit:active {
     transform: scale(0.95);
 }
 
-/* Tarjeta Cliente Top del Mes */
+/* Top Cliente */
 .top-cliente-card {
     background: linear-gradient(135deg, #C86D28, #9A4D15);
     color: white;
@@ -560,7 +560,7 @@ button.btn-submit:active {
     font-weight: 800;
 }
 
-/* Segmented Control Estilo iOS */
+/* Segmented Control iOS */
 .ios-segmented-control {
     display: flex;
     background: #EFEAE6;
@@ -648,9 +648,7 @@ button.btn-submit:active {
     border: 1px solid var(--border-color);
 }
 
-/* ==========================================
-   MODALES Y DIÁLOGOS DE CONFIRMACIÓN
-   ========================================== */
+/* Modales iOS */
 .croiss-swal-popup {
     border-radius: 28px !important;
     padding: 24px 20px !important;
@@ -707,8 +705,20 @@ button.btn-submit:active {
     cursor: pointer !important;
 }
 
+.croiss-btn-danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+    color: #FFFFFF !important;
+    border-radius: 14px !important;
+    padding: 12px 20px !important;
+    font-weight: 700 !important;
+    font-size: 0.88rem !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
+    border: none !important;
+    cursor: pointer !important;
+}
+
 /* ==========================================
-   LOADER 100% TRANSPARENTE CON ANIMACIÓN DE MORDISCOS
+   LOADER TRANSPARENTE - BOCADOS ORGÁNICOS CON DIENTES
    ========================================== */
 .croiss-swal-popup-transparent {
     background: transparent !important;
@@ -719,7 +729,6 @@ button.btn-submit:active {
     overflow: hidden !important;
 }
 
-/* Limpia cualquier elemento o barra de SweetAlert */
 .croiss-swal-popup-transparent .swal2-html-container {
     margin: 0 !important;
     padding: 0 !important;
@@ -745,57 +754,68 @@ button.btn-submit:active {
 }
 
 .croiss-bite-img {
-    width: 150px;
+    width: 160px;
     height: auto;
     display: block;
     mask: url(#croissantBiteMask);
     -webkit-mask: url(#croissantBiteMask);
-    filter: drop-shadow(0 12px 22px rgba(45, 30, 24, 0.28));
-    animation: croissChompWobble 2.4s infinite cubic-bezier(0.25, 1, 0.5, 1);
+    filter: drop-shadow(0 14px 24px rgba(45, 30, 24, 0.35));
+    opacity: 1 !important;
+    animation: croissChompSequence 1.8s infinite cubic-bezier(0.25, 1, 0.5, 1);
 }
 
-/* Movimiento de impacto en cada mordisco */
-@keyframes croissChompWobble {
-    0%   { transform: scale(1) rotate(0deg); }
-    22%  { transform: scale(0.91) rotate(-6deg); } /* Mordisco 1 */
-    25%  { transform: scale(1.05) rotate(3deg); }
-    47%  { transform: scale(0.89) rotate(8deg); }  /* Mordisco 2 */
-    50%  { transform: scale(1.05) rotate(-3deg); }
-    72%  { transform: scale(0.86) rotate(-10deg); } /* Mordisco 3 */
-    75%  { transform: scale(1.08) rotate(4deg); }
-    95%  { transform: scale(0) opacity(0); }
+/* Movimiento "CHOMP!" de impacto en cada bocado */
+@keyframes croissChompSequence {
+    0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+    
+    /* Impacto 1: Punta derecha */
+    18%  { transform: scale(0.92) rotate(-6deg); }
+    22%  { transform: scale(1) rotate(0deg); }
+    
+    /* Impacto 2: Lomo superior */
+    43%  { transform: scale(0.89) rotate(7deg); }
+    47%  { transform: scale(1) rotate(0deg); }
+    
+    /* Impacto 3: Centro panza */
+    68%  { transform: scale(0.85) rotate(-9deg); }
+    72%  { transform: scale(1) rotate(0deg); }
+    
+    /* Devorado completo */
+    90%  { transform: scale(0.75) rotate(12deg); }
+    94%  { transform: scale(0); opacity: 0; }
+    97%  { transform: scale(0); opacity: 0; }
     100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
 
-/* Animación progresiva de los recortes circulares */
+/* Secuencia de la dentadura recortando */
 .bite-mark {
     transform-origin: center;
     transform-box: fill-box;
 }
 
-.bite-1 {
-    animation: bite1Anim 2.4s infinite step-end;
-}
-.bite-2 {
-    animation: bite2Anim 2.4s infinite step-end;
-}
-.bite-3 {
-    animation: bite3Anim 2.4s infinite step-end;
-}
+.bite-1 { animation: bite1Anim 1.8s infinite step-end; }
+.bite-2 { animation: bite2Anim 1.8s infinite step-end; }
+.bite-3 { animation: bite3Anim 1.8s infinite step-end; }
+.bite-4 { animation: bite4Anim 1.8s infinite step-end; }
 
 @keyframes bite1Anim {
-    0%, 20% { transform: scale(0); }
-    22%, 100% { transform: scale(1); }
+    0%, 17% { transform: scale(0); }
+    18%, 100% { transform: scale(1); }
 }
 
 @keyframes bite2Anim {
-    0%, 45% { transform: scale(0); }
-    47%, 100% { transform: scale(1); }
+    0%, 42% { transform: scale(0); }
+    43%, 100% { transform: scale(1); }
 }
 
 @keyframes bite3Anim {
-    0%, 70% { transform: scale(0); }
-    72%, 100% { transform: scale(1); }
+    0%, 67% { transform: scale(0); }
+    68%, 100% { transform: scale(1); }
+}
+
+@keyframes bite4Anim {
+    0%, 89% { transform: scale(0); }
+    90%, 100% { transform: scale(1); }
 }
 
 .ios-search-box {
@@ -842,124 +862,3 @@ button.btn-submit:active {
     background: #FAF9F8;
     border: 1px solid var(--border-color);
 }
-
-/* ==========================================
-   LOADER TRANSPARENTE - BOCADOS DE PUNTA A PUNTA
-   ========================================== */
-.croiss-swal-popup-transparent {
-    background: transparent !important;
-    box-shadow: none !important;
-    border: none !important;
-    outline: none !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-}
-
-.croiss-swal-popup-transparent .swal2-html-container {
-    margin: 0 !important;
-    padding: 0 !important;
-    overflow: hidden !important;
-    background: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-}
-
-.croiss-swal-popup-transparent .swal2-actions,
-.croiss-swal-popup-transparent .swal2-loader,
-.croiss-swal-popup-transparent .swal2-title,
-.croiss-swal-popup-transparent .swal2-icon {
-    display: none !important;
-}
-
-.croiss-bite-container {
-    position: relative;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-}
-
-.croiss-bite-img {
-    width: 155px;
-    height: auto;
-    display: block;
-    mask: url(#croissantBiteMask);
-    -webkit-mask: url(#croissantBiteMask);
-    filter: drop-shadow(0 14px 24px rgba(45, 30, 24, 0.3));
-    animation: croissChompSequence 2.8s infinite cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-/* Movimiento de impacto (CHOMP) en cada bocado */
-@keyframes croissChompSequence {
-    0%   { transform: scale(1) rotate(0deg); opacity: 1; }
-    
-    /* Bocado 1: Punta derecha */
-    17%  { transform: scale(0.93) rotate(-5deg); }
-    20%  { transform: scale(1.02) rotate(2deg); }
-    
-    /* Bocado 2: Cuerpo */
-    37%  { transform: scale(0.90) rotate(6deg); }
-    40%  { transform: scale(1.03) rotate(-3deg); }
-    
-    /* Bocado 3: Centro grande */
-    57%  { transform: scale(0.86) rotate(-8deg); }
-    60%  { transform: scale(1.04) rotate(4deg); }
-    
-    /* Bocado 4: Devorado completo */
-    77%  { transform: scale(0.80) rotate(10deg); }
-    82%  { transform: scale(0); opacity: 0; }
-    
-    /* Reinicio suave */
-    92%  { transform: scale(0); opacity: 0; }
-    100% { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-
-/* Tiempos de disparo de cada recorte circular */
-.bite-mark {
-    transform-origin: center;
-    transform-box: fill-box;
-}
-
-.bite-1 { animation: bite1Anim 2.8s infinite step-end; }
-.bite-2 { animation: bite2Anim 2.8s infinite step-end; }
-.bite-3 { animation: bite3Anim 2.8s infinite step-end; }
-.bite-4 { animation: bite4Anim 2.8s infinite step-end; }
-
-@keyframes bite1Anim {
-    0%, 16% { transform: scale(0); }
-    18%, 100% { transform: scale(1); }
-}
-
-@keyframes bite2Anim {
-    0%, 36% { transform: scale(0); }
-    38%, 100% { transform: scale(1); }
-}
-
-@keyframes bite3Anim {
-    0%, 56% { transform: scale(0); }
-    58%, 100% { transform: scale(1); }
-}
-
-@keyframes bite4Anim {
-    0%, 76% { transform: scale(0); }
-    78%, 100% { transform: scale(1); }
-}
-
-/* Botón Rojo Estilo CROISS para Cancelar / Eliminar */
-.croiss-btn-danger {
-    background: linear-gradient(135deg, #EF4444, #DC2626) !important;
-    color: #FFFFFF !important;
-    border-radius: 14px !important;
-    padding: 12px 20px !important;
-    font-weight: 700 !important;
-    font-size: 0.88rem !important;
-    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
-    border: none !important;
-    cursor: pointer !important;
-    transition: all 0.2s ease !important;
-}
-
-.croiss-btn-danger:active {
-    transform: scale(0.96) !important;
-}
-

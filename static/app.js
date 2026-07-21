@@ -1,3 +1,7 @@
+// PRECARGA DE LA IMAGEN EN MEMORIA RAM
+const croissImagePreload = new Image();
+croissImagePreload.src = '/static/croissant.png';
+
 // Configuración de fechas iniciales
 const hoy = new Date().toISOString().split('T')[0];
 if(document.getElementById('vFecha')) document.getElementById('vFecha').value = hoy;
@@ -14,13 +18,21 @@ let directorioClientesCache = [];
 let isFetchingStock = false;
 let clienteUltimoAutocompletado = '';
 
+// Garantiza ver la secuencia completa de bocados (1.8s)
+async function esperarAnimacionMinima(tiempoInicio, minMs = 1800) {
+    const transcurrido = Date.now() - tiempoInicio;
+    if (transcurrido < minMs) {
+        await new Promise(resolve => setTimeout(resolve, minMs - transcurrido));
+    }
+}
+
 // Helper seguro para leer valores de inputs
 function getInputValueSafe(id, defaultVal = '') {
     const el = document.getElementById(id);
     return el ? el.value.trim() : defaultVal;
 }
 
-// 🥐 LOADER: BITES PROGRESIVOS DE PUNTA A PUNTA
+// 🥐 LOADER TRANSPARENTE CON MASCARA DE DIENTES REALES
 function mostrarCroissLoader() {
     Swal.fire({
         html: `
@@ -28,20 +40,40 @@ function mostrarCroissLoader() {
                 <svg width="0" height="0" style="position:absolute;">
                   <defs>
                     <mask id="croissantBiteMask" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox">
-                      <!-- Fondo blanco (Mantiene visible el croissant) -->
+                      <!-- Fondo blanco principal -->
                       <rect x="0" y="0" width="1" height="1" fill="white" />
                       
-                      <!-- 1. Mordisco CHICO en la punta derecha -->
-                      <circle class="bite-mark bite-1" cx="0.88" cy="0.28" r="0.20" fill="black" />
-                      
-                      <!-- 2. Mordisco MEDIANO en el cuerpo superior -->
-                      <circle class="bite-mark bite-2" cx="0.66" cy="0.40" r="0.27" fill="black" />
-                      
-                      <!-- 3. Mordisco GRANDE en la panza/centro -->
-                      <circle class="bite-mark bite-3" cx="0.42" cy="0.58" r="0.33" fill="black" />
-                      
-                      <!-- 4. Mordisco FINAL que devora la punta izquierda -->
-                      <circle class="bite-mark bite-4" cx="0.18" cy="0.75" r="0.40" fill="black" />
+                      <!-- 1. DENTADURA PUNTA DERECHA -->
+                      <g class="bite-mark bite-1">
+                        <polygon points="0.75,-0.1 1.2,-0.1 1.2,0.5 0.75,0.5" fill="black" />
+                        <circle cx="0.73" cy="0.08" r="0.06" fill="black" />
+                        <circle cx="0.71" cy="0.18" r="0.06" fill="black" />
+                        <circle cx="0.72" cy="0.28" r="0.06" fill="black" />
+                        <circle cx="0.75" cy="0.38" r="0.06" fill="black" />
+                      </g>
+
+                      <!-- 2. DENTADURA LOMO SUPERIOR -->
+                      <g class="bite-mark bite-2">
+                        <polygon points="0.45,-0.1 0.85,-0.1 0.85,0.55 0.45,0.55" fill="black" />
+                        <circle cx="0.43" cy="0.12" r="0.07" fill="black" />
+                        <circle cx="0.41" cy="0.25" r="0.07" fill="black" />
+                        <circle cx="0.42" cy="0.38" r="0.07" fill="black" />
+                        <circle cx="0.46" cy="0.48" r="0.07" fill="black" />
+                      </g>
+
+                      <!-- 3. DENTADURA CENTRO PANZA -->
+                      <g class="bite-mark bite-3">
+                        <polygon points="0.2,-0.1 0.6,-0.1 0.6,0.85 0.2,0.85" fill="black" />
+                        <circle cx="0.18" cy="0.20" r="0.08" fill="black" />
+                        <circle cx="0.16" cy="0.38" r="0.08" fill="black" />
+                        <circle cx="0.17" cy="0.56" r="0.08" fill="black" />
+                        <circle cx="0.21" cy="0.72" r="0.08" fill="black" />
+                      </g>
+
+                      <!-- 4. DEVORADO COMPLETO -->
+                      <g class="bite-mark bite-4">
+                        <rect x="-0.1" y="-0.1" width="1.2" height="1.2" fill="black" />
+                      </g>
                     </mask>
                   </defs>
                 </svg>
@@ -368,6 +400,7 @@ function editarStockProducto(prodNombre, stockActual, precioActual) {
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
+            const tInicio = Date.now();
             mostrarCroissLoader();
 
             try {
@@ -381,6 +414,7 @@ function editarStockProducto(prodNombre, stockActual, precioActual) {
                     })
                 });
                 const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('¡Stock Actualizado!', 'El catálogo de productos ya tiene la nueva información.');
@@ -555,6 +589,7 @@ async function eliminarPedido(numFila, clienteNombre) {
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
+            const tInicio = Date.now();
             mostrarCroissLoader();
             try {
                 const res = await fetch('/api/eliminar_venta', {
@@ -563,6 +598,7 @@ async function eliminarPedido(numFila, clienteNombre) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Cancelado', 'Se removió la orden de la agenda.');
@@ -595,6 +631,7 @@ async function notificarEntrega(numFila, nombreCliente) {
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
+            const tInicio = Date.now();
             mostrarCroissLoader();
             try {
                 const res = await fetch('/api/marcar_entregado', {
@@ -603,6 +640,7 @@ async function notificarEntrega(numFila, nombreCliente) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('¡Pedido Entregado!', `Notificación enviada a ${nombreCliente}.`);
@@ -634,6 +672,7 @@ async function marcarComoPagado(numFila, nombreCliente) {
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
+            const tInicio = Date.now();
             mostrarCroissLoader();
             
             try {
@@ -643,6 +682,7 @@ async function marcarComoPagado(numFila, nombreCliente) {
                     body: JSON.stringify({ fila: numFila, estado: 'Pagado' })
                 });
                 const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('¡Cobro Registrado!', `El pedido de ${nombreCliente} ya figura al día.`);
@@ -979,6 +1019,7 @@ function abrirModalEditarCliente(clienteObj) {
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
+            const tInicio = Date.now();
             mostrarCroissLoader();
 
             try {
@@ -988,6 +1029,7 @@ function abrirModalEditarCliente(clienteObj) {
                     body: JSON.stringify(result.value)
                 });
                 const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('¡Cliente Actualizado!', 'Datos guardados en la planilla.');
@@ -1137,6 +1179,7 @@ if (formFinalizarPedido) {
             return;
         }
 
+        const tInicio = Date.now();
         mostrarCroissLoader();
 
         const clienteNombre = getInputValueSafe('vCliente', 'Consumidor Final');
@@ -1170,6 +1213,7 @@ if (formFinalizarPedido) {
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
+            await esperarAnimacionMinima(tInicio, 1800);
 
             if (data.status === 'exito') {
                 carrito = [];
@@ -1200,6 +1244,7 @@ if (formGasto) {
     formGasto.addEventListener('submit', async (e) => {
         e.preventDefault();
 
+        const tInicio = Date.now();
         mostrarCroissLoader();
 
         const payload = {
@@ -1219,6 +1264,7 @@ if (formGasto) {
                 body: JSON.stringify(payload)
             });
             const data = await res.json();
+            await esperarAnimacionMinima(tInicio, 1800);
 
             if (data.status === 'exito') {
                 mostrarCroissExito('¡Compra / Gasto Registrado!', 'Se actualizó el historial y el stock de insumos.');
