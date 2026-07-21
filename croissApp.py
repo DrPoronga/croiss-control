@@ -167,7 +167,7 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
 # --- PLANTILLAS VISUALES DE EMAIL ---
 
 def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
-    badge_pago = "🟢 Pagado" if estado_pago.lower() == "pagado" else "🔴 Pendiente de Pago"
+    badge_pago = "Pagado" if estado_pago.lower() == "pagado" else "Pendiente de Pago"
     return f"""
     <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #FAF9F8; padding: 30px 10px; color: #2D1E18;">
       <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 24px; padding: 28px; border: 1px solid #EFEAE6; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
