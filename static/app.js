@@ -20,6 +20,61 @@ function getInputValueSafe(id, defaultVal = '') {
     return el ? el.value.trim() : defaultVal;
 }
 
+// 🥐 LOADER: BITES PROGRESIVOS DE PUNTA A PUNTA
+function mostrarCroissLoader() {
+    Swal.fire({
+        html: `
+            <div class="croiss-bite-container">
+                <svg width="0" height="0" style="position:absolute;">
+                  <defs>
+                    <mask id="croissantBiteMask" maskUnits="objectBoundingBox" maskContentUnits="objectBoundingBox">
+                      <!-- Fondo blanco (Mantiene visible el croissant) -->
+                      <rect x="0" y="0" width="1" height="1" fill="white" />
+                      
+                      <!-- 1. Mordisco CHICO en la punta derecha -->
+                      <circle class="bite-mark bite-1" cx="0.88" cy="0.28" r="0.20" fill="black" />
+                      
+                      <!-- 2. Mordisco MEDIANO en el cuerpo superior -->
+                      <circle class="bite-mark bite-2" cx="0.66" cy="0.40" r="0.27" fill="black" />
+                      
+                      <!-- 3. Mordisco GRANDE en la panza/centro -->
+                      <circle class="bite-mark bite-3" cx="0.42" cy="0.58" r="0.33" fill="black" />
+                      
+                      <!-- 4. Mordisco FINAL que devora la punta izquierda -->
+                      <circle class="bite-mark bite-4" cx="0.18" cy="0.75" r="0.40" fill="black" />
+                    </mask>
+                  </defs>
+                </svg>
+                <img src="/static/croissant.png" class="croiss-bite-img" alt="Cargando...">
+            </div>
+        `,
+        showConfirmButton: false,
+        allowOutsideClick: false,
+        background: 'transparent',
+        customClass: {
+            popup: 'croiss-swal-popup-transparent'
+        }
+    });
+}
+
+// CONFIRMACIÓN DE ÉXITO ESTILO IOS
+function mostrarCroissExito(titulo, mensaje = '') {
+    Swal.fire({
+        title: `<strong style="color:var(--text-main); font-size:1.2rem;">${titulo}</strong>`,
+        html: mensaje ? `<p style="font-size:0.88rem; color:var(--text-muted); font-weight:600; margin-top:6px; line-height:1.4;">${mensaje}</p>` : '',
+        timer: 2000,
+        showConfirmButton: false,
+        background: '#FFFFFF',
+        customClass: {
+            popup: 'croiss-swal-popup'
+        }
+    });
+}
+
+function mostrarLoaderSutil() {
+    mostrarCroissLoader();
+}
+
 // Abrir Google Maps con la dirección
 function abrirGoogleMaps(direccion) {
     if (!direccion) {
@@ -286,12 +341,12 @@ function editarStockProducto(prodNombre, stockActual, precioActual) {
         buttonsStyling: false,
         html: `
             <div style="text-align: left; margin-top: 14px;">
-                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
                     Stock Disponible (Unidades)
                 </label>
                 <input type="number" id="editStockInput" class="croiss-swal-input" value="${stockActual}" min="0">
 
-                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">
+                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
                     Precio de Venta ($)
                 </label>
                 <input type="number" id="editPrecioInput" class="croiss-swal-input" value="${precioActual}" min="0" step="0.5" style="margin-bottom: 0 !important;">
@@ -313,7 +368,7 @@ function editarStockProducto(prodNombre, stockActual, precioActual) {
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
-            mostrarLoaderSutil('Actualizando producto...');
+            mostrarCroissLoader();
 
             try {
                 const res = await fetch('/api/stock/actualizar', {
@@ -326,21 +381,14 @@ function editarStockProducto(prodNombre, stockActual, precioActual) {
                     })
                 });
                 const data = await res.json();
-                Swal.close();
 
                 if (data.status === 'exito') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Stock Actualizado!',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
+                    mostrarCroissExito('¡Stock Actualizado!', 'El catálogo de productos ya tiene la nueva información.');
                     cargarStock();
                 } else {
                     Swal.fire('Error', data.mensaje, 'error');
                 }
             } catch (err) {
-                Swal.close();
                 console.error("Error al actualizar stock:", err);
                 Swal.fire('Error', 'No se pudo actualizar el stock', 'error');
             }
@@ -415,7 +463,6 @@ async function cargarAgenda() {
 
 // Cargar Cuentas
 async function cargarCuentas() {
-    mostrarLoaderSutil('Consultando entregas...');
     const contPago = document.getElementById('listaPendientesPago');
     const contEntrega = document.getElementById('listaPendientesEntrega');
     const bannerTotal = document.getElementById('cMontoPendienteTotal');
@@ -423,7 +470,6 @@ async function cargarCuentas() {
     try {
         const res = await fetch('/api/cuentas');
         const data = await res.json();
-        Swal.close();
 
         if (data.status === 'exito') {
             if(bannerTotal) bannerTotal.innerText = `$${data.total_por_cobrar}`;
@@ -489,25 +535,27 @@ async function cargarCuentas() {
             }
         }
     } catch (err) {
-        Swal.close();
         console.error("Error al cargar entregas:", err);
     }
 }
 
-// Eliminar / Cancelar Pedido
+// 🗑️ ELIMINAR / CANCELAR PEDIDO
 async function eliminarPedido(numFila, clienteNombre) {
     Swal.fire({
-        title: '¿Cancelar este pedido?',
-        text: `Se eliminará permanentemente la orden de ${clienteNombre} de la planilla.`,
-        icon: 'warning',
+        title: `<div style="font-size:2.4rem; margin-bottom:8px;">🗑️</div><strong style="color:var(--text-main); font-size:1.2rem;">¿Cancelar este pedido?</strong>`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted); font-weight:600; margin-top:4px; line-height:1.4;">Se eliminará la orden de <strong style="color:var(--text-main);">${clienteNombre}</strong> de la planilla.</p>`,
         showCancelButton: true,
-        confirmButtonColor: '#dc2626',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, eliminar pedido',
-        cancelButtonText: 'No, conservar'
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'No, conservar',
+        buttonsStyling: false,
+        customClass: {
+            popup: 'croiss-swal-popup',
+            confirmButton: 'croiss-btn-danger',
+            cancelButton: 'croiss-swal-cancel'
+        }
     }).then(async (result) => {
         if (result.isConfirmed) {
-            mostrarLoaderSutil('Eliminando pedido...');
+            mostrarCroissLoader();
             try {
                 const res = await fetch('/api/eliminar_venta', {
                     method: 'POST',
@@ -515,22 +563,15 @@ async function eliminarPedido(numFila, clienteNombre) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
-                Swal.close();
 
                 if (data.status === 'exito') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Pedido Eliminado',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
+                    mostrarCroissExito('Pedido Cancelado', 'Se removió la orden de la agenda.');
                     cargarCuentas();
                     if (typeof cargarAgenda === 'function') cargarAgenda();
                 } else {
                     Swal.fire('Error', data.mensaje, 'error');
                 }
             } catch (err) {
-                Swal.close();
                 console.error("Error al eliminar pedido:", err);
                 Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             }
@@ -538,18 +579,23 @@ async function eliminarPedido(numFila, clienteNombre) {
     });
 }
 
+// 🚚 NOTIFICAR ENTREGA
 async function notificarEntrega(numFila, nombreCliente) {
     Swal.fire({
-        title: '¿Confirmar entrega?',
-        text: `Se marcará como entregado y se enviará el mail de agradecimiento a ${nombreCliente}`,
-        icon: 'question',
+        title: `<div style="font-size:2.4rem; margin-bottom:8px;">📦</div><strong style="color:var(--text-main); font-size:1.2rem;">¿Confirmar entrega?</strong>`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted); font-weight:600; margin-top:4px; line-height:1.4;">Se enviará el mail de agradecimiento a <strong style="color:var(--text-main);">${nombreCliente}</strong>.</p>`,
         showCancelButton: true,
-        confirmButtonColor: '#C86D28',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, entregar y notificar por mail'
+        confirmButtonText: 'Sí, entregar y notificar',
+        cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
+        customClass: {
+            popup: 'croiss-swal-popup',
+            confirmButton: 'croiss-swal-confirm',
+            cancelButton: 'croiss-swal-cancel'
+        }
     }).then(async (result) => {
         if (result.isConfirmed) {
-            mostrarLoaderSutil('Registrando entrega...');
+            mostrarCroissLoader();
             try {
                 const res = await fetch('/api/marcar_entregado', {
                     method: 'POST',
@@ -557,22 +603,14 @@ async function notificarEntrega(numFila, nombreCliente) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
-                Swal.close();
 
                 if (data.status === 'exito') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Pedido Entregado!',
-                        text: 'Se actualizó el estado y se envió el correo de confirmación.',
-                        timer: 1800,
-                        showConfirmButton: false
-                    });
+                    mostrarCroissExito('¡Pedido Entregado!', `Notificación enviada a ${nombreCliente}.`);
                     cargarCuentas();
                 } else {
                     Swal.fire('Atención', data.mensaje, 'warning');
                 }
             } catch (err) {
-                Swal.close();
                 console.error("Error al notificar entrega:", err);
                 Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             }
@@ -580,18 +618,23 @@ async function notificarEntrega(numFila, nombreCliente) {
     });
 }
 
+// 💳 MARCAR COMO PAGADO
 async function marcarComoPagado(numFila, nombreCliente) {
     Swal.fire({
-        title: '¿Confirmar cobro?',
-        text: `Se marcará el pedido de ${nombreCliente} como PAGADO`,
-        icon: 'question',
+        title: `<div style="font-size:2.4rem; margin-bottom:8px;">💰</div><strong style="color:var(--text-main); font-size:1.2rem;">¿Confirmar cobro?</strong>`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted); font-weight:600; margin-top:4px; line-height:1.4;">Se marcará la orden de <strong style="color:var(--text-main);">${nombreCliente}</strong> como PAGADA.</p>`,
         showCancelButton: true,
-        confirmButtonColor: '#16a34a',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, cobrado'
+        confirmButtonText: 'Sí, cobrado',
+        cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
+        customClass: {
+            popup: 'croiss-swal-popup',
+            confirmButton: 'croiss-swal-confirm',
+            cancelButton: 'croiss-swal-cancel'
+        }
     }).then(async (result) => {
         if (result.isConfirmed) {
-            mostrarLoaderSutil('Actualizando en Google Sheets...');
+            mostrarCroissLoader();
             
             try {
                 const res = await fetch('/api/cambiar_estado_pago', {
@@ -602,21 +645,12 @@ async function marcarComoPagado(numFila, nombreCliente) {
                 const data = await res.json();
 
                 if (data.status === 'exito') {
-                    await new Promise(r => setTimeout(r, 600));
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Cobro registrado!',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
+                    mostrarCroissExito('¡Cobro Registrado!', `El pedido de ${nombreCliente} ya figura al día.`);
                     cargarCuentas();
                 } else {
-                    Swal.close();
                     Swal.fire('Error', data.mensaje, 'error');
                 }
             } catch (err) {
-                Swal.close();
                 console.error("Error en la petición:", err);
                 Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             }
@@ -627,15 +661,12 @@ async function marcarComoPagado(numFila, nombreCliente) {
 // Cargar Balance
 async function cargarBalance() {
     try {
-        mostrarLoaderSutil('Actualizando balance...');
-
         const mesVal = document.getElementById('bMesFilter').value;
         let url = '/api/balance';
         if (mesVal) url += `?mes=${mesVal}`;
 
         const res = await fetch(url);
         const data = await res.json();
-        Swal.close();
 
         if(data.status === 'exito') {
             document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
@@ -682,7 +713,6 @@ async function cargarBalance() {
             }
         }
     } catch(err) {
-        Swal.close();
         console.error("Error al cargar balance:", err);
     }
 }
@@ -699,13 +729,11 @@ function cambiarSegmentoBalance(segmento) {
 
 // Cargar Inventario Unificado
 async function cargarInsumosYGastos() {
-    mostrarLoaderSutil('Cargando inventario...');
     cargarStock();
 
     try {
         const res = await fetch('/api/gastos_e_insumos');
         const data = await res.json();
-        Swal.close();
 
         if (data.status === 'exito') {
             const contInsumos = document.getElementById('listaInsumosStock');
@@ -761,20 +789,16 @@ async function cargarInsumosYGastos() {
             }
         }
     } catch (err) {
-        Swal.close();
         console.error("Error cargando inventario:", err);
     }
 }
 
 // Cargar Clientes
 async function cargarClientes() {
-    mostrarLoaderSutil('Cargando clientes...');
-
     try {
         const mesVal = document.getElementById('cMesFilter').value || hoy.substring(0, 7);
         const res = await fetch(`/api/clientes?mes=${mesVal}`);
         const data = await res.json();
-        Swal.close();
 
         if (data.status === 'exito') {
             datosClientesGlobal.todos = data.clientes_todos;
@@ -819,7 +843,6 @@ async function cargarClientes() {
             }
         }
     } catch (err) {
-        Swal.close();
         console.error("Error al cargar clientes:", err);
     }
 }
@@ -956,7 +979,7 @@ function abrirModalEditarCliente(clienteObj) {
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
-            mostrarLoaderSutil('Actualizando cliente...');
+            mostrarCroissLoader();
 
             try {
                 const res = await fetch('/api/cliente/editar', {
@@ -965,22 +988,15 @@ function abrirModalEditarCliente(clienteObj) {
                     body: JSON.stringify(result.value)
                 });
                 const data = await res.json();
-                Swal.close();
 
                 if (data.status === 'exito') {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Cliente Actualizado!',
-                        timer: 1600,
-                        showConfirmButton: false
-                    });
+                    mostrarCroissExito('¡Cliente Actualizado!', 'Datos guardados en la planilla.');
                     cargarClientes();
                     volverASeccionAnterior();
                 } else {
                     Swal.fire('Error', data.mensaje, 'error');
                 }
             } catch (err) {
-                Swal.close();
                 console.error("Error al editar cliente:", err);
                 Swal.fire('Error', 'No se pudo actualizar la información', 'error');
             }
@@ -990,19 +1006,6 @@ function abrirModalEditarCliente(clienteObj) {
 
 function volverASeccionAnterior() {
     cambiarSegmentoCliente(datosClientesGlobal.subOrigen || 'lista');
-}
-
-function mostrarLoaderSutil(mensaje = 'Actualizando...') {
-    Swal.fire({
-        title: mensaje,
-        toast: true,
-        position: 'top',
-        showConfirmButton: false,
-        background: '#FAF0EB',
-        color: '#0F172A',
-        customClass: { popup: 'croiss-toast-loader' },
-        didOpen: () => { Swal.showLoading(); }
-    });
 }
 
 // Reglas de negocio para ticket
@@ -1063,15 +1066,35 @@ function renderizarCarrito() {
         return;
     }
 
-    const totalCroissants = carrito.reduce((sum, item) => sum + item.cantidad, 0);
-    const precioBase = calcularPrecioBase(totalCroissants);
+    const totalCroissantsNormales = carrito.reduce((sum, item) => {
+        if (item.producto.toLowerCase().includes('pop')) return sum;
+        return sum + item.cantidad;
+    }, 0);
+
+    const precioBaseNormales = calcularPrecioBase(totalCroissantsNormales);
 
     listEl.innerHTML = '';
     let totalGeneral = 0;
 
     carrito.forEach((item, index) => {
-        const extraRelleno = obtenerExtraRelleno(item.producto);
-        const precioUnitario = precioBase + extraRelleno;
+        const esPop = item.producto.toLowerCase().includes('pop');
+        let precioUnitario = 0;
+
+        if (esPop) {
+            const prodMatch = catalogoProductos.find(p => {
+                const nombre = p.Nombre || p.Producto || p.nombre || p.producto || p.Croissant || '';
+                return nombre.trim().toLowerCase() === item.producto.trim().toLowerCase();
+            });
+
+            if (prodMatch) {
+                const rawP = prodMatch['Precio Venta'] !== undefined ? prodMatch['Precio Venta'] : (prodMatch['Precio'] || 0);
+                precioUnitario = parseFloat(String(rawP).replace('$', '').replace(',', '.').trim()) || 0;
+            }
+        } else {
+            const extraRelleno = obtenerExtraRelleno(item.producto);
+            precioUnitario = precioBaseNormales + extraRelleno;
+        }
+
         const subtotal = precioUnitario * item.cantidad;
         
         item.precio_unitario = precioUnitario;
@@ -1114,11 +1137,7 @@ if (formFinalizarPedido) {
             return;
         }
 
-        Swal.fire({
-            title: 'Guardando Pedido...',
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); }
-        });
+        mostrarCroissLoader();
 
         const clienteNombre = getInputValueSafe('vCliente', 'Consumidor Final');
         const telCliente = getInputValueSafe('vTelefonoCliente');
@@ -1159,13 +1178,10 @@ if (formFinalizarPedido) {
                 if(document.getElementById('vFecha')) document.getElementById('vFecha').value = hoy;
                 if(document.getElementById('vFechaEntrega')) document.getElementById('vFechaEntrega').value = hoy;
 
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Pedido Registrado! 🥐',
-                    text: emailCliente ? 'Se envió el correo de confirmación al cliente.' : 'El pedido se guardó correctamente.',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
+                mostrarCroissExito(
+                    '¡Pedido Registrado!', 
+                    emailCliente ? 'Se envió el correo de confirmación al cliente.' : 'El pedido se guardó correctamente en la agenda.'
+                );
 
                 if (typeof cargarAgenda === 'function') cargarAgenda();
                 if (typeof cargarStock === 'function') cargarStock();
@@ -1184,11 +1200,7 @@ if (formGasto) {
     formGasto.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        Swal.fire({
-            title: 'Guardando Compra...',
-            allowOutsideClick: false,
-            didOpen: () => { Swal.showLoading(); }
-        });
+        mostrarCroissLoader();
 
         const payload = {
             fecha: document.getElementById('gFecha').value,
@@ -1209,12 +1221,7 @@ if (formGasto) {
             const data = await res.json();
 
             if (data.status === 'exito') {
-                Swal.fire({
-                    icon: 'success',
-                    title: '¡Compra / Gasto Registrado!',
-                    timer: 1800,
-                    showConfirmButton: false
-                });
+                mostrarCroissExito('¡Compra / Gasto Registrado!', 'Se actualizó el historial y el stock de insumos.');
                 formGasto.reset();
                 if(document.getElementById('gFecha')) document.getElementById('gFecha').value = hoy;
                 toggleCamposMateriaPrima();

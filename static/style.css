@@ -421,16 +421,6 @@ button.btn-submit:active {
     font-size: 1.6rem;
 }
 
-/* Loader Toast iOS */
-.croiss-toast-loader {
-    border-radius: 30px !important;
-    padding: 6px 18px !important;
-    box-shadow: 0 10px 25px rgba(45, 30, 24, 0.1) !important;
-    border: 1px solid var(--border-color) !important;
-    font-size: 0.85rem !important;
-    font-weight: 600 !important;
-}
-
 /* Tarjeta de Pantalla Principal (Foto limpia) */
 .home-card {
     position: relative;
@@ -508,7 +498,7 @@ button.btn-submit:active {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px; /* Asegura separación constante entre el texto y el botón */
+    gap: 12px;
     padding: 12px 0;
     border-bottom: 1px dashed var(--border-color);
 }
@@ -517,7 +507,6 @@ button.btn-submit:active {
     border-bottom: none;
 }
 
-/* Fuerza al bloque de texto a adaptarse sin empujar el botón */
 .cuenta-item > div:first-child {
     flex: 1;
     min-width: 0;
@@ -535,8 +524,8 @@ button.btn-submit:active {
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2);
     transition: all 0.2s ease;
-    flex-shrink: 0; /* PROHIBE que el botón se reduzca o deforme */
-    white-space: nowrap; /* Mantiene el texto del botón en una sola línea */
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .btn-pagar-ahora:active {
@@ -571,54 +560,6 @@ button.btn-submit:active {
     font-weight: 800;
 }
 
-/* Item de Ranking */
-.cliente-rank-item {
-    background: #FAF9F8;
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    padding: 14px;
-    margin-bottom: 10px;
-}
-
-.cliente-rank-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-}
-
-.cliente-pos {
-    font-weight: 800;
-    color: var(--accent);
-    font-size: 1.1rem;
-    min-width: 28px;
-}
-
-.cliente-historial-detalle {
-    display: none;
-    margin-top: 12px;
-    padding-top: 10px;
-    border-top: 1px dashed var(--border-color);
-}
-
-.cliente-historial-detalle.active {
-    display: block;
-}
-
-.historial-compra-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 6px 0;
-    font-size: 0.83rem;
-    color: var(--text-main);
-    border-bottom: 1px dotted #EFEAE6;
-}
-
-.historial-compra-row:last-child {
-    border-bottom: none;
-}
-
 /* Segmented Control Estilo iOS */
 .ios-segmented-control {
     display: flex;
@@ -647,7 +588,6 @@ button.btn-submit:active {
     box-shadow: 0 3px 8px rgba(45, 30, 24, 0.1);
 }
 
-/* Transición Sub-Secciones */
 .sub-seccion {
     display: none;
 }
@@ -662,7 +602,6 @@ button.btn-submit:active {
     to { opacity: 1; transform: translateX(0); }
 }
 
-/* Filas Estilo Lista iOS */
 .ios-cliente-row {
     display: flex;
     justify-content: space-between;
@@ -680,14 +619,6 @@ button.btn-submit:active {
     background: #F2E6DF;
 }
 
-.cliente-rank-pos {
-    font-weight: 800;
-    color: var(--accent);
-    font-size: 1.05rem;
-    min-width: 28px;
-}
-
-/* Botón Volver iOS */
 .btn-ios-back {
     background: transparent;
     border: none;
@@ -718,7 +649,7 @@ button.btn-submit:active {
 }
 
 /* ==========================================
-   MODAL FLOTANTE ESTILO CROISS / iOS
+   MODALES Y DIÁLOGOS DE CONFIRMACIÓN
    ========================================== */
 .croiss-swal-popup {
     border-radius: 28px !important;
@@ -751,13 +682,6 @@ button.btn-submit:active {
     outline: none !important;
     margin: 6px 0 16px 0 !important;
     box-sizing: border-box !important;
-    transition: all 0.2s ease !important;
-}
-
-.croiss-swal-input:focus {
-    border-color: var(--accent) !important;
-    background-color: #FFFFFF !important;
-    box-shadow: 0 0 0 4px rgba(200, 109, 40, 0.12) !important;
 }
 
 .croiss-swal-confirm {
@@ -770,11 +694,6 @@ button.btn-submit:active {
     box-shadow: 0 4px 12px rgba(200, 109, 40, 0.25) !important;
     border: none !important;
     cursor: pointer !important;
-    transition: all 0.2s ease !important;
-}
-
-.croiss-swal-confirm:active {
-    transform: scale(0.96) !important;
 }
 
 .croiss-swal-cancel {
@@ -786,14 +705,99 @@ button.btn-submit:active {
     font-size: 0.88rem !important;
     border: none !important;
     cursor: pointer !important;
-    transition: all 0.2s ease !important;
 }
 
-.croiss-swal-cancel:active {
-    transform: scale(0.96) !important;
+/* ==========================================
+   LOADER 100% TRANSPARENTE CON ANIMACIÓN DE MORDISCOS
+   ========================================== */
+.croiss-swal-popup-transparent {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+    padding: 0 !important;
+    overflow: hidden !important;
 }
 
-/* Buscador estilo iOS */
+/* Limpia cualquier elemento o barra de SweetAlert */
+.croiss-swal-popup-transparent .swal2-html-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.croiss-swal-popup-transparent .swal2-actions,
+.croiss-swal-popup-transparent .swal2-loader,
+.croiss-swal-popup-transparent .swal2-title,
+.croiss-swal-popup-transparent .swal2-icon {
+    display: none !important;
+}
+
+.croiss-bite-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.croiss-bite-img {
+    width: 150px;
+    height: auto;
+    display: block;
+    mask: url(#croissantBiteMask);
+    -webkit-mask: url(#croissantBiteMask);
+    filter: drop-shadow(0 12px 22px rgba(45, 30, 24, 0.28));
+    animation: croissChompWobble 2.4s infinite cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Movimiento de impacto en cada mordisco */
+@keyframes croissChompWobble {
+    0%   { transform: scale(1) rotate(0deg); }
+    22%  { transform: scale(0.91) rotate(-6deg); } /* Mordisco 1 */
+    25%  { transform: scale(1.05) rotate(3deg); }
+    47%  { transform: scale(0.89) rotate(8deg); }  /* Mordisco 2 */
+    50%  { transform: scale(1.05) rotate(-3deg); }
+    72%  { transform: scale(0.86) rotate(-10deg); } /* Mordisco 3 */
+    75%  { transform: scale(1.08) rotate(4deg); }
+    95%  { transform: scale(0) opacity(0); }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Animación progresiva de los recortes circulares */
+.bite-mark {
+    transform-origin: center;
+    transform-box: fill-box;
+}
+
+.bite-1 {
+    animation: bite1Anim 2.4s infinite step-end;
+}
+.bite-2 {
+    animation: bite2Anim 2.4s infinite step-end;
+}
+.bite-3 {
+    animation: bite3Anim 2.4s infinite step-end;
+}
+
+@keyframes bite1Anim {
+    0%, 20% { transform: scale(0); }
+    22%, 100% { transform: scale(1); }
+}
+
+@keyframes bite2Anim {
+    0%, 45% { transform: scale(0); }
+    47%, 100% { transform: scale(1); }
+}
+
+@keyframes bite3Anim {
+    0%, 70% { transform: scale(0); }
+    72%, 100% { transform: scale(1); }
+}
+
 .ios-search-box {
     margin-bottom: 12px;
 }
@@ -807,12 +811,6 @@ button.btn-submit:active {
     background-color: #EFEAE6;
     color: var(--text-main);
     outline: none;
-    transition: all 0.2s ease;
-}
-
-.ios-search-box input:focus {
-    background-color: #E5DDD7;
-    box-shadow: 0 0 0 3px rgba(200, 109, 40, 0.15);
 }
 
 .directorio-header-count {
@@ -821,17 +819,14 @@ button.btn-submit:active {
     color: var(--text-muted);
     text-transform: uppercase;
     margin-bottom: 8px;
-    letter-spacing: 0.5px;
 }
 
-/* Contenedor scrolleable con límite de altura */
 .ios-list-container {
     max-height: 420px;
     overflow-y: auto;
     padding-right: 4px;
 }
 
-/* Personalización del scrollbar minimalista */
 .ios-list-container::-webkit-scrollbar {
     width: 5px;
 }
@@ -840,19 +835,131 @@ button.btn-submit:active {
     border-radius: 10px;
 }
 
-/* Filas Compactas estilo iOS Table View */
 .ios-cliente-row.compact {
-    padding: 10px 12px; /* Reducido de 14px */
-    margin-bottom: 6px;  /* Reducido de 8px */
+    padding: 10px 12px;
+    margin-bottom: 6px;
     border-radius: 12px;
     background: #FAF9F8;
     border: 1px solid var(--border-color);
 }
 
-.ios-cliente-row.compact strong {
-    font-size: 0.88rem;
+/* ==========================================
+   LOADER TRANSPARENTE - BOCADOS DE PUNTA A PUNTA
+   ========================================== */
+.croiss-swal-popup-transparent {
+    background: transparent !important;
+    box-shadow: none !important;
+    border: none !important;
+    outline: none !important;
+    padding: 0 !important;
+    overflow: hidden !important;
 }
 
-.ios-cliente-row.compact small {
-    font-size: 0.75rem;
+.croiss-swal-popup-transparent .swal2-html-container {
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
 }
+
+.croiss-swal-popup-transparent .swal2-actions,
+.croiss-swal-popup-transparent .swal2-loader,
+.croiss-swal-popup-transparent .swal2-title,
+.croiss-swal-popup-transparent .swal2-icon {
+    display: none !important;
+}
+
+.croiss-bite-container {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.croiss-bite-img {
+    width: 155px;
+    height: auto;
+    display: block;
+    mask: url(#croissantBiteMask);
+    -webkit-mask: url(#croissantBiteMask);
+    filter: drop-shadow(0 14px 24px rgba(45, 30, 24, 0.3));
+    animation: croissChompSequence 2.8s infinite cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Movimiento de impacto (CHOMP) en cada bocado */
+@keyframes croissChompSequence {
+    0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+    
+    /* Bocado 1: Punta derecha */
+    17%  { transform: scale(0.93) rotate(-5deg); }
+    20%  { transform: scale(1.02) rotate(2deg); }
+    
+    /* Bocado 2: Cuerpo */
+    37%  { transform: scale(0.90) rotate(6deg); }
+    40%  { transform: scale(1.03) rotate(-3deg); }
+    
+    /* Bocado 3: Centro grande */
+    57%  { transform: scale(0.86) rotate(-8deg); }
+    60%  { transform: scale(1.04) rotate(4deg); }
+    
+    /* Bocado 4: Devorado completo */
+    77%  { transform: scale(0.80) rotate(10deg); }
+    82%  { transform: scale(0); opacity: 0; }
+    
+    /* Reinicio suave */
+    92%  { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* Tiempos de disparo de cada recorte circular */
+.bite-mark {
+    transform-origin: center;
+    transform-box: fill-box;
+}
+
+.bite-1 { animation: bite1Anim 2.8s infinite step-end; }
+.bite-2 { animation: bite2Anim 2.8s infinite step-end; }
+.bite-3 { animation: bite3Anim 2.8s infinite step-end; }
+.bite-4 { animation: bite4Anim 2.8s infinite step-end; }
+
+@keyframes bite1Anim {
+    0%, 16% { transform: scale(0); }
+    18%, 100% { transform: scale(1); }
+}
+
+@keyframes bite2Anim {
+    0%, 36% { transform: scale(0); }
+    38%, 100% { transform: scale(1); }
+}
+
+@keyframes bite3Anim {
+    0%, 56% { transform: scale(0); }
+    58%, 100% { transform: scale(1); }
+}
+
+@keyframes bite4Anim {
+    0%, 76% { transform: scale(0); }
+    78%, 100% { transform: scale(1); }
+}
+
+/* Botón Rojo Estilo CROISS para Cancelar / Eliminar */
+.croiss-btn-danger {
+    background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+    color: #FFFFFF !important;
+    border-radius: 14px !important;
+    padding: 12px 20px !important;
+    font-weight: 700 !important;
+    font-size: 0.88rem !important;
+    box-shadow: 0 4px 12px rgba(220, 38, 38, 0.25) !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.croiss-btn-danger:active {
+    transform: scale(0.96) !important;
+}
+
