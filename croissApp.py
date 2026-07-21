@@ -132,7 +132,7 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
 
         pass_clean = EMAIL_PASSWORD.replace(" ", "").strip()
         if not pass_clean:
-            print("❌ [EMAIL] Error: La contraseña EMAIL_PASSWORD no está cargada en las variables de entorno.", flush=True)
+            print("❌ [EMAIL] Error: La variable EMAIL_PASSWORD no está cargada en Render.", flush=True)
             return
 
         msg = MIMEMultipart("alternative")
@@ -141,32 +141,45 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
         msg["To"] = destinatario
         msg.attach(MIMEText(cuerpo_html, "html"))
 
-        # Intento 1: Puerto 587 STARTTLS (Estándar de Nube)
-        try:
-            context = ssl.create_default_context()
-            with smtplib.SMTP(SMTP_SERVER, 587, timeout=15) as server:
-                server.ehlo()
-                server.starttls(context=context)
-                server.ehlo()
-                server.login(EMAIL_EMISOR, pass_clean)
-                server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
-                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 587)", flush=True)
-                return
-        except Exception as e587:
-            print(f"⚠️ Puerto 587 falló ({e587}), reintentando por Puerto 465 SSL...", flush=True)
+        # 🛠️ Forzado de IPv4 a nivel de Socket (Resuelve [Errno 101] Network is unreachable en Render)
+        original_getaddrinfo = socket.getaddrinfo
 
-        # Intento 2: Puerto 465 SSL Directo
+        def getaddrinfo_ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
+            return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
         try:
-            context = ssl.create_default_context()
-            with smtplib.SMTP_SSL(SMTP_SERVER, 465, context=context, timeout=15) as server:
-                server.login(EMAIL_EMISOR, pass_clean)
-                server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
-                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 465 SSL)", flush=True)
-        except Exception as e465:
-            print(f"❌ [EMAIL] Error crítico enviando correo a {destinatario}: {e465}", flush=True)
+            socket.getaddrinfo = getaddrinfo_ipv4_only
+
+            # Intento 1: Puerto 587 STARTTLS (IPv4)
+            try:
+                context = ssl.create_default_context()
+                with smtplib.SMTP(SMTP_SERVER, 587, timeout=15) as server:
+                    server.ehlo()
+                    server.starttls(context=context)
+                    server.ehlo()
+                    server.login(EMAIL_EMISOR, pass_clean)
+                    server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
+                    print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 587 IPv4)", flush=True)
+                    return
+            except Exception as e587:
+                print(f"⚠️ Puerto 587 falló ({e587}), reintentando por Puerto 465 SSL...", flush=True)
+
+            # Intento 2: Puerto 465 SSL Directo (IPv4)
+            try:
+                context = ssl.create_default_context()
+                with smtplib.SMTP_SSL(SMTP_SERVER, 465, context=context, timeout=15) as server:
+                    server.login(EMAIL_EMISOR, pass_clean)
+                    server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
+                    print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 465 SSL IPv4)", flush=True)
+            except Exception as e465:
+                print(f"❌ [EMAIL] Error crítico enviando correo a {destinatario}: {e465}", flush=True)
+
+        finally:
+            # Restaura el resolvedor de DNS original
+            socket.getaddrinfo = original_getaddrinfo
 
     threading.Thread(target=_enviar).start()
-
+    
 # --- PLANTILLAS VISUALES DE EMAIL ---
 
 def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
