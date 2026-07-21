@@ -15,8 +15,8 @@ from google.oauth2.service_account import Credentials
 app = Flask(__name__)
 
 # Configuración de Resend API por HTTP
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "croiss.uy@gmail.com")
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -121,28 +121,30 @@ def get_field_val(record, *possible_keys):
                 return str(val).strip()
     return ""
 
+
 def enviar_email_async(destinatario, asunto, cuerpo_html):
     def _enviar():
         if not destinatario or "@" not in str(destinatario):
             print(f"⚠️ [EMAIL] No se envió correo: dirección inválida ('{destinatario}')", flush=True)
             return
 
-        api_key = RESEND_API_KEY.strip()
+        api_key = BREVO_API_KEY.strip()
         if not api_key:
-            print("❌ [EMAIL] Error: La variable RESEND_API_KEY no está configurada en las variables de entorno.", flush=True)
+            print("❌ [EMAIL] Error: La variable BREVO_API_KEY no está configurada en Render.", flush=True)
             return
 
-        url = "https://api.resend.com/emails"
+        url = "https://api.brevo.com/v3/smtp/email"
         headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
+            "api-key": api_key,
+            "Content-Type": "application/json",
+            "Accept": "application/json"
         }
         
         payload = {
-            "from": "CROISS <onboarding@resend.dev>",
-            "to": [destinatario],
+            "sender": {"name": "CROISS", "email": EMAIL_EMISOR},
+            "to": [{"email": destinatario}],
             "subject": asunto,
-            "html": cuerpo_html
+            "htmlContent": cuerpo_html
         }
 
         try:
@@ -154,14 +156,14 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
             )
             with urllib.request.urlopen(req, timeout=10) as response:
                 if response.status in [200, 201]:
-                    print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario} vía Resend HTTP API!", flush=True)
+                    print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario} vía Brevo API!", flush=True)
                 else:
-                    print(f"⚠️ [EMAIL] Resend devolvió estado HTTP: {response.status}", flush=True)
+                    print(f"⚠️ [EMAIL] Brevo devolvió estado HTTP: {response.status}", flush=True)
         except Exception as e:
-            print(f"❌ [EMAIL] Error enviando correo vía Resend API a {destinatario}: {e}", flush=True)
+            print(f"❌ [EMAIL] Error enviando correo vía Brevo API a {destinatario}: {e}", flush=True)
 
     threading.Thread(target=_enviar).start()
-
+    
 # --- PLANTILLAS VISUALES DE EMAIL ---
 
 def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
