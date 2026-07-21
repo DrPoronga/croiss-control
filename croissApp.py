@@ -1,10 +1,8 @@
 import os
 import re
+import json
 import socket
-import ssl
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import urllib.request
 import threading
 from datetime import datetime, timedelta
 from flask import Flask, jsonify, render_template, request
@@ -16,10 +14,9 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 app = Flask(__name__)
 
-SMTP_SERVER = "smtp.gmail.com"
+# Configuración de Resend API por HTTP
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
 EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "croiss.uy@gmail.com")
-# Lee la contraseña desde las variables de entorno de Render
-EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -130,56 +127,41 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
             print(f"⚠️ [EMAIL] No se envió correo: dirección inválida ('{destinatario}')", flush=True)
             return
 
-        pass_clean = EMAIL_PASSWORD.replace(" ", "").strip()
-        if not pass_clean:
-            print("❌ [EMAIL] Error: La variable EMAIL_PASSWORD no está cargada en Render.", flush=True)
+        api_key = RESEND_API_KEY.strip()
+        if not api_key:
+            print("❌ [EMAIL] Error: La variable RESEND_API_KEY no está configurada en las variables de entorno.", flush=True)
             return
 
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = asunto
-        msg["From"] = f"CROISS <{EMAIL_EMISOR}>"
-        msg["To"] = destinatario
-        msg.attach(MIMEText(cuerpo_html, "html"))
-
-        # 🛠️ Forzado de IPv4 a nivel de Socket (Resuelve [Errno 101] Network is unreachable en Render)
-        original_getaddrinfo = socket.getaddrinfo
-
-        def getaddrinfo_ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
-            return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+        url = "https://api.resend.com/emails"
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
+        
+        payload = {
+            "from": "CROISS <onboarding@resend.dev>",
+            "to": [destinatario],
+            "subject": asunto,
+            "html": cuerpo_html
+        }
 
         try:
-            socket.getaddrinfo = getaddrinfo_ipv4_only
-
-            # Intento 1: Puerto 587 STARTTLS (IPv4)
-            try:
-                context = ssl.create_default_context()
-                with smtplib.SMTP(SMTP_SERVER, 587, timeout=15) as server:
-                    server.ehlo()
-                    server.starttls(context=context)
-                    server.ehlo()
-                    server.login(EMAIL_EMISOR, pass_clean)
-                    server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
-                    print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 587 IPv4)", flush=True)
-                    return
-            except Exception as e587:
-                print(f"⚠️ Puerto 587 falló ({e587}), reintentando por Puerto 465 SSL...", flush=True)
-
-            # Intento 2: Puerto 465 SSL Directo (IPv4)
-            try:
-                context = ssl.create_default_context()
-                with smtplib.SMTP_SSL(SMTP_SERVER, 465, context=context, timeout=15) as server:
-                    server.login(EMAIL_EMISOR, pass_clean)
-                    server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
-                    print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 465 SSL IPv4)", flush=True)
-            except Exception as e465:
-                print(f"❌ [EMAIL] Error crítico enviando correo a {destinatario}: {e465}", flush=True)
-
-        finally:
-            # Restaura el resolvedor de DNS original
-            socket.getaddrinfo = original_getaddrinfo
+            req = urllib.request.Request(
+                url, 
+                data=json.dumps(payload).encode("utf-8"), 
+                headers=headers, 
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                if response.status in [200, 201]:
+                    print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario} vía Resend HTTP API!", flush=True)
+                else:
+                    print(f"⚠️ [EMAIL] Resend devolvió estado HTTP: {response.status}", flush=True)
+        except Exception as e:
+            print(f"❌ [EMAIL] Error enviando correo vía Resend API a {destinatario}: {e}", flush=True)
 
     threading.Thread(target=_enviar).start()
-    
+
 # --- PLANTILLAS VISUALES DE EMAIL ---
 
 def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
