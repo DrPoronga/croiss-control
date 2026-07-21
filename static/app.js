@@ -11,6 +11,29 @@ let catalogoProductos = [];
 let carrito = [];
 let datosClientesGlobal = { todos: [], ranking: [], subOrigen: 'lista' };
 let directorioClientesCache = [];
+let isFetchingStock = false;
+let clienteUltimoAutocompletado = '';
+
+// Helper seguro para leer valores de inputs
+function getInputValueSafe(id, defaultVal = '') {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : defaultVal;
+}
+
+// Abrir Google Maps con la dirección
+function abrirGoogleMaps(direccion) {
+    if (!direccion) {
+        Swal.fire('Sin Dirección', 'No hay una dirección registrada para este cliente/pedido.', 'info');
+        return;
+    }
+    const url = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
+    window.open(url, '_blank');
+}
+
+function abrirGoogleMapsIngresado() {
+    const dir = getInputValueSafe('vDireccionCliente');
+    abrirGoogleMaps(dir);
+}
 
 // Cargar sugerencias de clientes registrados
 async function cargarSugerenciasClientes() {
@@ -24,9 +47,11 @@ async function cargarSugerenciasClientes() {
             if (datalist) {
                 datalist.innerHTML = '';
                 directorioClientesCache.forEach(c => {
-                    const opt = document.createElement('option');
-                    opt.value = c.nombre;
-                    datalist.appendChild(opt);
+                    if (c.nombre) {
+                        const opt = document.createElement('option');
+                        opt.value = c.nombre;
+                        datalist.appendChild(opt);
+                    }
                 });
             }
         }
@@ -35,22 +60,47 @@ async function cargarSugerenciasClientes() {
     }
 }
 
-// Auto-poblar Email y Teléfono al seleccionar/tipear un cliente
+// Auto-poblar Teléfono, Email y Dirección al seleccionar o tipear un cliente
 function autocompletarDatosCliente() {
-    const nombreIngresado = document.getElementById('vCliente').value.trim().toLowerCase();
-    if (!nombreIngresado) return;
+    const inputNombre = document.getElementById('vCliente');
+    if (!inputNombre) return;
 
-    const clienteEncontrado = directorioClientesCache.find(c => c.nombre.toLowerCase() === nombreIngresado);
+    const nombreIngresado = inputNombre.value.trim().toLowerCase();
+    
+    const emailEl = document.getElementById('vEmailCliente');
+    const telEl = document.getElementById('vTelefonoCliente');
+    const dirEl = document.getElementById('vDireccionCliente');
+
+    if (!nombreIngresado) {
+        if (emailEl) emailEl.value = '';
+        if (telEl) telEl.value = '';
+        if (dirEl) dirEl.value = '';
+        clienteUltimoAutocompletado = '';
+        return;
+    }
+
+    const clienteEncontrado = directorioClientesCache.find(c => 
+        c.nombre && c.nombre.trim().toLowerCase() === nombreIngresado
+    );
 
     if (clienteEncontrado) {
-        const emailEl = document.getElementById('vEmailCliente');
-        const telEl = document.getElementById('vTelefonoCliente');
+        if (emailEl) emailEl.value = clienteEncontrado.email || '';
+        if (telEl) telEl.value = clienteEncontrado.telefono || '';
+        if (dirEl) dirEl.value = clienteEncontrado.direccion || '';
 
-        if (emailEl && clienteEncontrado.email) {
-            emailEl.value = clienteEncontrado.email;
-        }
-        if (telEl && clienteEncontrado.telefono) {
-            telEl.value = clienteEncontrado.telefono;
+        if (clienteUltimoAutocompletado !== clienteEncontrado.nombre) {
+            clienteUltimoAutocompletado = clienteEncontrado.nombre;
+            
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'info',
+                title: `👥 Datos de ${clienteEncontrado.nombre} cargados`,
+                showConfirmButton: false,
+                timer: 2000,
+                background: '#FAF0EB',
+                color: '#2D1E18'
+            });
         }
     }
 }
@@ -128,15 +178,8 @@ function toggleCamposMateriaPrima() {
         const esInsumoOEmbalaje = (catEl.value === 'Materia Prima' || catEl.value === 'Embalaje');
         box.style.display = esInsumoOEmbalaje ? 'flex' : 'none';
 
-        // Muestra sugerencias de Materia Prima
-        if (boxMP) {
-            boxMP.style.display = (catEl.value === 'Materia Prima') ? 'flex' : 'none';
-        }
-
-        // Muestra sugerencias de Cajas
-        if (boxCajas) {
-            boxCajas.style.display = (catEl.value === 'Embalaje') ? 'flex' : 'none';
-        }
+        if (boxMP) boxMP.style.display = (catEl.value === 'Materia Prima') ? 'flex' : 'none';
+        if (boxCajas) boxCajas.style.display = (catEl.value === 'Embalaje') ? 'flex' : 'none';
 
         if (catEl.value === 'Embalaje' && unidadEl) {
             unidadEl.value = 'un';
@@ -153,54 +196,81 @@ function seleccionarInsumoRapido(nombreInsumo, unidadPredeterminada = '') {
     if (unidadEl && unidadPredeterminada) unidadEl.value = unidadPredeterminada;
 }
 
-// Cargar Stock de Productos y Sugerencias de Clientes
-async function cargarStock() {
-    // 👥 Carga en segundo plano la lista de clientes registrados para el autocompletado
+// Cargar Stock de Productos (Protegido contra peticiones duplicadas en segundo plano)
+async function cargarStock(forzar = false) {
+    if (isFetchingStock) return;
+
     cargarSugerenciasClientes();
+
+    if (catalogoProductos.length > 0 && !forzar) {
+        renderizarMenuYStock();
+        return;
+    }
+
+    isFetchingStock = true;
 
     try {
         const res = await fetch('/api/stock');
         const data = await res.json();
         
-        if(data.status === 'exito') {
+        if (data.status === 'exito' && Array.isArray(data.productos)) {
             catalogoProductos = data.productos;
-            const select = document.getElementById('vProductoSelect');
-            const lista = document.getElementById('listaStock');
-            
-            if(select) select.innerHTML = '<option value="">Seleccionar croissant...</option>';
-            if(lista) lista.innerHTML = '';
-
-            catalogoProductos.forEach(prod => {
-                if(select) {
-                    const opt = document.createElement('option');
-                    opt.value = prod.Nombre;
-                    opt.innerText = `${prod.Nombre}`;
-                    select.appendChild(opt);
-                }
-
-                if(lista) {
-                    const stockCant = prod['Stock Actual'] !== undefined ? prod['Stock Actual'] : 0;
-                    const precioVenta = prod['Precio Venta'] !== undefined ? prod['Precio Venta'] : 0;
-
-                    const div = document.createElement('div');
-                    div.className = 'stock-item clickable';
-                    div.onclick = () => editarStockProducto(prod.Nombre, stockCant, precioVenta);
-                    div.innerHTML = `
-                        <div>
-                            <strong>${prod.Nombre}</strong><br>
-                            <small style="color:var(--text-muted);">$${precioVenta} c/u</small>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span class="stock-cant">${stockCant} un.</span>
-                            <span style="color:#CBD5E1; font-weight:bold; font-size:1.1rem;">›</span>
-                        </div>
-                    `;
-                    lista.appendChild(div);
-                }
-            });
+            renderizarMenuYStock();
         }
     } catch (err) {
         console.error("Error al cargar stock:", err);
+    } finally {
+        isFetchingStock = false;
+    }
+}
+
+// Dibuja el menú desplegable y conserva la selección actual
+function renderizarMenuYStock() {
+    const select = document.getElementById('vProductoSelect');
+    const lista = document.getElementById('listaStock');
+
+    const seleccionPrevia = select ? select.value : '';
+
+    if (select) {
+        select.innerHTML = '<option value="" disabled selected>Seleccionar croissant...</option>';
+    }
+    if (lista) lista.innerHTML = '';
+
+    catalogoProductos.forEach(prod => {
+        const nombreProd = prod.Nombre || prod.Producto || prod.nombre || prod.producto || prod.Croissant || '';
+        if (!nombreProd) return;
+
+        if (select) {
+            const opt = document.createElement('option');
+            opt.value = nombreProd;
+            opt.innerText = nombreProd;
+            select.appendChild(opt);
+        }
+
+        if (lista) {
+            const stockCant = prod['Stock Actual'] !== undefined ? prod['Stock Actual'] : (prod['Stock'] || 0);
+            const precioVenta = prod['Precio Venta'] !== undefined ? prod['Precio Venta'] : (prod['Precio'] || 0);
+
+            const div = document.createElement('div');
+            div.className = 'stock-item clickable';
+            div.onclick = () => editarStockProducto(nombreProd, stockCant, precioVenta);
+            div.innerHTML = `
+                <div>
+                    <strong>${nombreProd}</strong><br>
+                    <small style="color:var(--text-muted);">$${precioVenta} c/u</small>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px;">
+                    <span class="stock-cant">${stockCant} un.</span>
+                    <span style="color:#CBD5E1; font-weight:bold; font-size:1.1rem;">›</span>
+                </div>
+            `;
+            lista.appendChild(div);
+        }
+    });
+
+    if (select && seleccionPrevia) {
+        const existe = Array.from(select.options).some(o => o.value === seleccionPrevia);
+        if (existe) select.value = seleccionPrevia;
     }
 }
 
@@ -305,10 +375,14 @@ async function cargarAgenda() {
                     htmlPedidos = '<p style="font-size:0.85rem; color:#94a3b8; font-style:italic;">Sin pedidos para este día.</p>';
                 } else {
                     dia.pedidos.forEach(p => {
+                        const btnMaps = p.direccion ? `
+                            <button type="button" class="btn-jalea-chip" style="font-size:0.7rem; padding: 2px 8px; margin-left:6px;" onclick="abrirGoogleMaps('${p.direccion}')">📍 Maps</button>
+                        ` : '';
+
                         htmlPedidos += `
                             <div class="agenda-pedido-item">
                                 <div>
-                                    <strong>👤 ${p.cliente}</strong> <small style="color:#64748b;">(${p.estado})</small><br>
+                                    <strong>👤 ${p.cliente}</strong> <small style="color:#64748b;">(${p.estado})</small>${btnMaps}<br>
                                     <span style="font-size:0.85rem; color:#334155;">📦 ${p.descripcion}</span>
                                 </div>
                                 <span style="font-weight:700; color:#d97706;">${p.cantidad} un.</span>
@@ -385,16 +459,22 @@ async function cargarCuentas() {
                         const badgeClase = esPagado ? 'badge-ok' : 'badge-full';
                         const badgeTexto = esPagado ? 'Pagado 🟢' : 'Debe 🔴';
 
+                        const btnMaps = e.direccion ? `
+                            <button type="button" class="btn-jalea-chip" style="padding: 4px 8px; font-size: 0.72rem; margin-top:0;" onclick="abrirGoogleMaps('${e.direccion}')">📍 Ver Mapa</button>
+                        ` : '';
+
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
                         div.innerHTML = `
                             <div>
                                 <strong>📅 ${e.fecha_entrega} — 👤 ${e.cliente}</strong><br>
                                 <span style="font-size:0.85rem; color:#334155;">📦 ${e.producto} (${e.cantidad} un.)</span>
+                                ${e.direccion ? `<br><small style="color:#64748b;">📍 ${e.direccion}</small>` : ''}
                             </div>
-                            <div style="display:flex; align-items:center; gap:8px;">
+                            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                                 <span class="agenda-badge ${badgeClase}">${badgeTexto}</span>
-                                <button class="btn-jalea-chip active" style="padding: 6px 10px; font-size: 0.75rem;" onclick="notificarEntrega(${e.fila}, '${e.cliente}')">🚚 Notificar Entrega</button>
+                                ${btnMaps}
+                                <button class="btn-jalea-chip active" style="padding: 6px 10px; font-size: 0.75rem;" onclick="notificarEntrega(${e.fila}, '${e.cliente}')">🚚 Entregado</button>
                             </div>
                         `;
                         contEntrega.appendChild(div);
@@ -411,12 +491,12 @@ async function cargarCuentas() {
 async function notificarEntrega(numFila, nombreCliente) {
     Swal.fire({
         title: '¿Confirmar entrega?',
-        text: `Se marcará como entregado y se enviará el mail con el link de reseñas a ${nombreCliente}`,
+        text: `Se marcará como entregado y se enviará el mail de agradecimiento a ${nombreCliente}`,
         icon: 'question',
         showCancelButton: true,
         confirmButtonColor: '#C86D28',
         cancelButtonColor: '#64748b',
-        confirmButtonText: 'Sí, marcar y enviar'
+        confirmButtonText: 'Sí, entregar y notificar por mail'
     }).then(async (result) => {
         if (result.isConfirmed) {
             mostrarLoaderSutil('Registrando entrega...');
@@ -433,7 +513,7 @@ async function notificarEntrega(numFila, nombreCliente) {
                     Swal.fire({
                         icon: 'success',
                         title: '¡Pedido Entregado!',
-                        text: 'Se actualizó Google Sheets y se envió el correo al cliente.',
+                        text: 'Se actualizó el estado y se envió el correo de confirmación.',
                         timer: 1800,
                         showConfirmButton: false
                     });
@@ -557,7 +637,6 @@ async function cargarBalance() {
     }
 }
 
-// Navegación limpia en Balance
 function cambiarSegmentoBalance(segmento) {
     document.getElementById('segBtnBalance').classList.toggle('active', segmento === 'balance');
     document.getElementById('segBtnEvolucion').classList.toggle('active', segmento === 'evolucion');
@@ -568,11 +647,9 @@ function cambiarSegmentoBalance(segmento) {
     if (segmento === 'balance' || segmento === 'evolucion') cargarBalance();
 }
 
-// Cargar Inventario Unificado (Croissants + Insumos + Gastos)
+// Cargar Inventario Unificado
 async function cargarInsumosYGastos() {
     mostrarLoaderSutil('Cargando inventario...');
-    
-    // Carga paralela de stock de productos
     cargarStock();
 
     try {
@@ -581,7 +658,6 @@ async function cargarInsumosYGastos() {
         Swal.close();
 
         if (data.status === 'exito') {
-            // Renderizar Insumos y Cajas
             const contInsumos = document.getElementById('listaInsumosStock');
             if (contInsumos) {
                 contInsumos.innerHTML = '';
@@ -606,7 +682,6 @@ async function cargarInsumosYGastos() {
                 }
             }
 
-            // Renderizar Histórico de Gastos
             const contGastos = document.getElementById('listaGastosHistorico');
             if (contGastos) {
                 contGastos.innerHTML = '';
@@ -746,6 +821,20 @@ function verDetalleCliente(clienteObj) {
     document.getElementById('detClienteNombre').innerText = clienteObj.nombre;
     document.getElementById('detClienteStats').innerText = `Histórico: $${clienteObj.total_gastado} gastados en ${clienteObj.total_croissants} croissants (${clienteObj.total_pedidos} pedidos)`;
 
+    const contContacto = document.getElementById('detClienteContacto');
+    if (contContacto) {
+        let datosStr = [];
+        if (clienteObj.telefono) datosStr.push(`📞 ${clienteObj.telefono}`);
+        if (clienteObj.email) datosStr.push(`✉️ ${clienteObj.email}`);
+        
+        let mapsBtn = clienteObj.direccion ? `
+            <br><span style="color:var(--text-main); font-weight:600;">📍 ${clienteObj.direccion}</span>
+            <button type="button" class="btn-jalea-chip" style="margin-left:6px; font-size:0.7rem; padding: 2px 8px;" onclick="abrirGoogleMaps('${clienteObj.direccion}')">🗺️ Abrir Maps</button>
+        ` : '';
+
+        contContacto.innerHTML = (datosStr.join(' | ') || 'Sin datos de contacto') + mapsBtn;
+    }
+
     const contHist = document.getElementById('detClienteHistorial');
     contHist.innerHTML = '';
 
@@ -797,12 +886,15 @@ function calcularPrecioBase(totalCroissants) {
     return 140;
 }
 
+// Agregar producto al ticket de compra
 function agregarAlPedido() {
-    const prodNombre = document.getElementById('vProductoSelect').value;
-    const cant = parseInt(document.getElementById('vCantidadItem').value) || 1;
+    const selectEl = document.getElementById('vProductoSelect');
+    const prodNombre = selectEl ? selectEl.value.trim() : '';
+    const cantInput = document.getElementById('vCantidadItem');
+    const cant = cantInput ? (parseInt(cantInput.value) || 1) : 1;
 
-    if(!prodNombre) {
-        Swal.fire('Atención', 'Selecciona un producto primero', 'warning');
+    if (!prodNombre || prodNombre === 'Seleccionar croissant...') {
+        Swal.fire('Atención', 'Seleccioná un croissant del menú desplegable primero.', 'warning');
         return;
     }
 
@@ -814,7 +906,7 @@ function agregarAlPedido() {
         subtotal: 0
     });
 
-    document.getElementById('vCantidadItem').value = 1;
+    if (cantInput) cantInput.value = 1;
     renderizarCarrito();
 }
 
@@ -878,42 +970,46 @@ function renderizarCarrito() {
     totalEl.innerText = totalGeneral;
 }
 
-// FORM SUBMITS (UNIFICADOS)
-const formPedido = document.getElementById('formFinalizarPedido');
-if (formPedido) {
-    formPedido.addEventListener('submit', async (e) => {
+// LISTENER DE REGISTRO DE PEDIDOS (Limpio y directo)
+const formFinalizarPedido = document.getElementById('formFinalizarPedido');
+if (formFinalizarPedido) {
+    formFinalizarPedido.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        if (carrito.length === 0) {
-            Swal.fire('Ticket Vacío', 'Agregá al menos un croissant al pedido con el botón "+ Agregar al Ticket"', 'warning');
+        if (typeof carrito === 'undefined' || carrito.length === 0) {
+            Swal.fire('Carrito vacío', 'Agregá al menos un producto al pedido.', 'warning');
             return;
         }
 
-        const totalMonto = carrito.reduce((sum, i) => sum + i.subtotal, 0);
-
-        const getVal = (id, def = '') => {
-            const el = document.getElementById(id);
-            return el ? el.value : def;
-        };
-
-        const payload = {
-			fecha: getVal('vFecha', hoy),
-			fecha_entrega: getVal('vFechaEntrega', hoy),
-			cliente: getVal('vCliente', 'Consumidor Final'),
-			telefono: getVal('vTelefonoCliente', ''),
-			email: getVal('vEmailCliente', ''),
-			items: carrito,
-			monto_total: totalMonto,
-			estado: getVal('vEstado', 'Pendiente'),
-			medio_pago: getVal('vMedio', 'Efectivo')
-		};
-
         Swal.fire({
-            title: 'Confirmando Pedido...',
-            text: 'Guardando en Google Sheets y enviando email...',
+            title: 'Guardando Pedido...',
             allowOutsideClick: false,
             didOpen: () => { Swal.showLoading(); }
         });
+
+        const clienteNombre = getInputValueSafe('vCliente', 'Consumidor Final');
+        const telCliente = getInputValueSafe('vTelefonoCliente');
+        const emailCliente = getInputValueSafe('vEmailCliente');
+        const dirCliente = getInputValueSafe('vDireccionCliente');
+        const fechaVal = getInputValueSafe('vFecha', hoy);
+        const fechaEntregaVal = getInputValueSafe('vFechaEntrega', fechaVal);
+        const estadoVal = getInputValueSafe('vEstado', 'Pendiente');
+        const medioVal = getInputValueSafe('vMedio', 'Efectivo');
+
+        const totalMonto = carrito.reduce((acc, i) => acc + (i.precio_unitario * i.cantidad), 0);
+
+        const payload = {
+            fecha: fechaVal,
+            fecha_entrega: fechaEntregaVal,
+            cliente: clienteNombre,
+            telefono: telCliente,
+            email: emailCliente,
+            direccion: dirCliente,
+            items: carrito,
+            monto_total: totalMonto,
+            estado: estadoVal,
+            medio_pago: medioVal
+        };
 
         try {
             const res = await fetch('/api/venta', {
@@ -924,26 +1020,27 @@ if (formPedido) {
             const data = await res.json();
 
             if (data.status === 'exito') {
+                carrito = [];
+                renderizarCarrito();
+                formFinalizarPedido.reset();
+                if(document.getElementById('vFecha')) document.getElementById('vFecha').value = hoy;
+                if(document.getElementById('vFechaEntrega')) document.getElementById('vFechaEntrega').value = hoy;
+
                 Swal.fire({
                     icon: 'success',
-                    title: '¡Pedido Registrado!',
-                    text: `Código: ${data.id}`,
+                    title: '¡Pedido Registrado! 🥐',
+                    text: emailCliente ? 'Se envió el correo de confirmación al cliente.' : 'El pedido se guardó correctamente.',
                     timer: 2000,
                     showConfirmButton: false
                 });
-                carrito = [];
-                renderizarCarrito();
-                formPedido.reset();
-                
-                if (document.getElementById('vFecha')) document.getElementById('vFecha').value = hoy;
-                if (document.getElementById('vFechaEntrega')) document.getElementById('vFechaEntrega').value = hoy;
-                
-                cargarStock();
+
+                if (typeof cargarAgenda === 'function') cargarAgenda();
+                if (typeof cargarStock === 'function') cargarStock();
             } else {
-                Swal.fire('Error', data.mensaje || 'No se pudo guardar el pedido', 'error');
+                Swal.fire('Error', data.mensaje || 'Error al guardar pedido', 'error');
             }
         } catch (err) {
-            console.error("Error enviando pedido:", err);
+            console.error("Error en submit de venta:", err);
             Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
         }
     });
@@ -988,8 +1085,6 @@ if (formGasto) {
                 formGasto.reset();
                 if(document.getElementById('gFecha')) document.getElementById('gFecha').value = hoy;
                 toggleCamposMateriaPrima();
-                
-                // 🔄 Refresca el Stock de Insumos inmediatamente
                 cargarInsumosYGastos();
             } else {
                 Swal.fire('Error', data.mensaje, 'error');

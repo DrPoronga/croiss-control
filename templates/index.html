@@ -68,26 +68,46 @@
                                 <div class="total-banner">Total: $<span id="cartTotal">0</span></div>
                             </div>
 
-                            <!-- CAMPOS DE CLIENTE CON ALINEACIÓN PERFECTA DE CAJAS -->
-							<div class="row" style="display: flex; gap: 12px; align-items: flex-end;">
-								<div class="form-group" style="flex: 1.2; margin: 0;">
-									<label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Cliente</label>
-									<input type="text" id="vCliente" placeholder="Ej: María Pérez" list="listaClientesDatalist" oninput="autocompletarDatosCliente()" autocomplete="off" required style="height: 42px; padding: 6px 10px; box-sizing: border-box; margin: 0; width: 100%;">
-									<datalist id="listaClientesDatalist"></datalist>
-								</div>
-								
-								<div class="form-group" style="flex: 1; margin: 0;">
-									<label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Teléfono (Opcional)</label>
-									<input type="tel" id="vTelefonoCliente" placeholder="Ej: 099 123 456" style="height: 42px; padding: 6px 10px; box-sizing: border-box; margin: 0; width: 100%;">
-								</div>
-								
-								<div class="form-group" style="flex: 1.2; margin: 0;">
-									<label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Email (Opcional)</label>
-									<input type="email" id="vEmailCliente" placeholder="cliente@gmail.com" style="height: 42px; padding: 6px 10px; box-sizing: border-box; margin: 0; width: 100%;">
-								</div>
-							</div>
+                            <!-- DATOS DEL CLIENTE (FILA 1: NOMBRE Y TELÉFONO) -->
+                            <div class="row" style="display: flex; gap: 12px; align-items: flex-end;">
+                                <div class="form-group" style="flex: 1.2; margin: 0;">
+                                    <label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Cliente</label>
+                                    <input type="text" 
+									   id="vCliente" 
+									   placeholder="Ej: María Pérez" 
+									   list="listaClientesDatalist" 
+									   oninput="autocompletarDatosCliente()" 
+									   onchange="autocompletarDatosCliente()" 
+									   onkeyup="autocompletarDatosCliente()" 
+									   autocomplete="off" 
+									   required 
+									   style="height: 42px; padding: 6px 10px; box-sizing: border-box; margin: 0; width: 100%;">
+                                    <datalist id="listaClientesDatalist"></datalist>
+                                </div>
+                                
+                                <div class="form-group" style="flex: 1; margin: 0;">
+                                    <label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Teléfono (Opcional)</label>
+                                    <input type="tel" id="vTelefonoCliente" placeholder="Ej: 099 123 456" style="height: 42px; padding: 6px 10px; box-sizing: border-box; margin: 0; width: 100%;">
+                                </div>
+                            </div>
 
-                            <div class="row">
+                            <!-- DATOS DEL CLIENTE (FILA 2: EMAIL Y DIRECCIÓN CON MAPS) -->
+                            <div class="row" style="display: flex; gap: 12px; align-items: flex-end; margin-top: 12px;">
+                                <div class="form-group" style="flex: 1.1; margin: 0;">
+                                    <label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Email (Opcional)</label>
+                                    <input type="email" id="vEmailCliente" placeholder="cliente@gmail.com" style="height: 42px; padding: 6px 10px; box-sizing: border-box; margin: 0; width: 100%;">
+                                </div>
+
+                                <div class="form-group" style="flex: 1.3; margin: 0;">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 6px; min-height: 28px;">
+                                        <label style="margin: 0;">Dirección (Opcional)</label>
+                                        <button type="button" class="btn-jalea-chip" onclick="abrirGoogleMapsIngresado()" style="margin: 0; padding: 2px 8px; font-size: 0.7rem;">📍 Maps</button>
+                                    </div>
+                                    <input type="text" id="vDireccionCliente" placeholder="Ej: Av. Brasil 2450 Apt 302" style="height: 42px; padding: 6px 10px; box-sizing: border-box; margin: 0; width: 100%;">
+                                </div>
+                            </div>
+
+                            <div class="row" style="margin-top: 12px;">
                                 <div class="form-group">
                                     <label>Fecha Pedido</label>
                                     <input type="date" id="vFecha" required>
@@ -183,52 +203,51 @@
                                 </div>
 
                                 <div class="form-group">
-									<label>Nombre del Insumo / Descripción</label>
-									<input type="text" id="gDescripcion" placeholder="Ej: Harina 000, Manteca, Caja 6 Croiss..." required>
+                                    <label>Nombre del Insumo / Descripción</label>
+                                    <input type="text" id="gDescripcion" placeholder="Ej: Harina 000, Manteca, Caja 6 Croiss..." required>
 
-									<!-- Botones rápidos para Materia Prima -->
-									<div id="boxSugerenciasMateriaPrima" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Harina 000', 'kg')">+ Harina 000</button>
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Manteca', 'kg')">+ Manteca</button>
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Azúcar', 'kg')">+ Azúcar</button>
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Sal', 'kg')">+ Sal</button>
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Esencia de Vainilla', 'ml')">+ Vainilla</button>
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Huevos', 'un')">+ Huevos</button>
-									</div>
+                                    <!-- Botones rápidos para Materia Prima -->
+                                    <div id="boxSugerenciasMateriaPrima" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Harina 000', 'kg')">+ Harina 000</button>
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Manteca', 'kg')">+ Manteca</button>
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Azúcar', 'kg')">+ Azúcar</button>
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Sal', 'kg')">+ Sal</button>
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Esencia de Vainilla', 'ml')">+ Vainilla</button>
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Huevos', 'un')">+ Huevos</button>
+                                    </div>
 
-									<!-- Botones rápidos para Cajas / Embalaje -->
-									<div id="boxSugerenciasCajas" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja 6 Croiss (Ventana)', 'un')">+ Caja 6 (Ventana)</button>
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja 6 Croiss (Ciega)', 'un')">+ Caja 6 (Ciega)</button>
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja 3 Croiss (Ventana)', 'un')">+ Caja 3 (Ventana)</button>
-										<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja 3 Croiss (Ciega)', 'un')">+ Caja 3 (Ciega)</button>
-									</div>
-								</div>
+                                    <!-- Botones rápidos para Cajas / Embalaje -->
+                                    <div id="boxSugerenciasCajas" style="display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap;">
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja 6 Croiss (Ventana)', 'un')">+ Caja 6 (Ventana)</button>
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja 6 Croiss (Ciega)', 'un')">+ Caja 6 (Ciega)</button>
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja 3 Croiss (Ventana)', 'un')">+ Caja 3 (Ventana)</button>
+                                        <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja 3 Croiss (Ciega)', 'un')">+ Caja 3 (Ciega)</button>
+                                    </div>
+                                </div>
 
-                                <!-- Campos de Materia Prima Alineados y Texto Completo -->
-								<div id="boxCamposInsumo" class="row" style="display: flex; gap: 12px; align-items: flex-end;">
-									<div class="form-group" style="flex: 1; margin: 0;">
-										<label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Cantidad Comprada</label>
-										<input type="number" id="gCantidad" placeholder="Ej: 10" step="0.01" value="1" style="height: 42px; padding: 6px 10px; line-height: normal; box-sizing: border-box; margin: 0; width: 100%;">
-									</div>
-									
-									<div class="form-group" style="flex: 1; margin: 0;">
-										<label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Unidad</label>
-										<select id="gUnidad" style="height: 42px; padding: 0 8px; line-height: normal; box-sizing: border-box; margin: 0; width: 100%; font-size: 0.88rem; vertical-align: middle;">
-											<option value="kg">kg (Kilos)</option>
-											<option value="gr">gr (Gramos)</option>
-											<option value="L">ml (Mililitros)</option>
-											<option value="un">un (Unidades)</option>
-										</select>
-									</div>
-									
-									<div class="form-group" style="flex: 1.2; margin: 0;">
-										<label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Vencimiento (Opcional)</label>
-										<input type="date" id="gVencimiento" style="height: 42px; padding: 6px 10px; line-height: normal; box-sizing: border-box; margin: 0; width: 100%;">
-									</div>
-								</div>
+                                <div id="boxCamposInsumo" class="row" style="display: flex; gap: 12px; align-items: flex-end;">
+                                    <div class="form-group" style="flex: 1; margin: 0;">
+                                        <label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Cantidad Comprada</label>
+                                        <input type="number" id="gCantidad" placeholder="Ej: 10" step="0.01" value="1" style="height: 42px; padding: 6px 10px; line-height: normal; box-sizing: border-box; margin: 0; width: 100%;">
+                                    </div>
+                                    
+                                    <div class="form-group" style="flex: 1; margin: 0;">
+                                        <label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Unidad</label>
+                                        <select id="gUnidad" style="height: 42px; padding: 0 8px; line-height: normal; box-sizing: border-box; margin: 0; width: 100%; font-size: 0.88rem; vertical-align: middle;">
+                                            <option value="kg">kg (Kilos)</option>
+                                            <option value="gr">gr (Gramos)</option>
+                                            <option value="ml">ml (Mililitros)</option>
+                                            <option value="un">un (Unidades)</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group" style="flex: 1.2; margin: 0;">
+                                        <label style="min-height: 28px; display: flex; align-items: flex-end; margin-bottom: 6px;">Vencimiento (Opcional)</label>
+                                        <input type="date" id="gVencimiento" style="height: 42px; padding: 6px 10px; line-height: normal; box-sizing: border-box; margin: 0; width: 100%;">
+                                    </div>
+                                </div>
 
-                                <div class="form-group">
+                                <div class="form-group" style="margin-top: 12px;">
                                     <label>Monto Total Gastado ($)</label>
                                     <input type="number" id="gMonto" placeholder="0" required step="0.5">
                                 </div>
@@ -238,85 +257,80 @@
                         </div>
 
                         <!-- SUB-SECCIÓN 2 DE GASTOS: INVENTARIO COMPLETO Y HISTÓRICO -->
-						<div id="subSecHistorialGasto" class="sub-seccion">
-							<!-- 1. STOCK DE CROISSANTS LISTOS -->
-							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
-								🥐 Croissants Listos para Vender
-							</h4>
-							<div id="listaStock" style="margin-bottom: 20px;">Cargando productos...</div>
+                        <div id="subSecHistorialGasto" class="sub-seccion">
+                            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
+                                🥐 Croissants Listos para Vender
+                            </h4>
+                            <div id="listaStock" style="margin-bottom: 20px;">Cargando productos...</div>
 
-							<!-- 2. STOCK DE MATERIA PRIMA E INSUMOS -->
-							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; border-top: 2px dashed var(--border-color); padding-top: 15px;">
-								🥖 Materia Prima e Insumos
-							</h4>
-							<div id="listaInsumosStock" class="ios-list-container" style="margin-bottom: 20px;">
-								Cargando insumos...
-							</div>
+                            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; border-top: 2px dashed var(--border-color); padding-top: 15px;">
+                                🥖 Materia Prima e Insumos
+                            </h4>
+                            <div id="listaInsumosStock" class="ios-list-container" style="margin-bottom: 20px;">
+                                Cargando insumos...
+                            </div>
 
-							<!-- 3. HISTÓRICO DE GASTOS -->
-							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; border-top: 2px dashed var(--border-color); padding-top: 15px;">
-								📜 Últimos Gastos Registrados
-							</h4>
-							<div id="listaGastosHistorico" class="ios-list-container">
-								Cargando historial de gastos...
-							</div>
-						</div>
+                            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; border-top: 2px dashed var(--border-color); padding-top: 15px;">
+                                📜 Últimos Gastos Registrados
+                            </h4>
+                            <div id="listaGastosHistorico" class="ios-list-container">
+                                Cargando historial de gastos...
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <!-- SECCIÓN: BALANCE (100% FINANCIERO) -->
-				<div id="sec-balance" class="section">
-					<div class="card ios-card">
-						<div class="ios-segmented-control">
-							<button id="segBtnBalance" class="seg-btn active" onclick="cambiarSegmentoBalance('balance')">📊 Resumen Financiero</button>
-							<button id="segBtnEvolucion" class="seg-btn" onclick="cambiarSegmentoBalance('evolucion')">📈 Evolución Mensual</button>
-						</div>
+                <div id="sec-balance" class="section">
+                    <div class="card ios-card">
+                        <div class="ios-segmented-control">
+                            <button id="segBtnBalance" class="seg-btn active" onclick="cambiarSegmentoBalance('balance')">📊 Resumen Financiero</button>
+                            <button id="segBtnEvolucion" class="seg-btn" onclick="cambiarSegmentoBalance('evolucion')">📈 Evolución Mensual</button>
+                        </div>
 
-						<!-- SUB-SECCIÓN 1: BALANCE DEL MES -->
-						<div id="subSecBalance" class="sub-seccion active">
-							<div class="row" style="margin-bottom: 15px;">
-								<div class="form-group" style="margin-bottom: 0;">
-									<label>Seleccionar Mes</label>
-									<input type="month" id="bMesFilter" onchange="cargarBalance()">
-								</div>
-							</div>
+                        <div id="subSecBalance" class="sub-seccion active">
+                            <div class="row" style="margin-bottom: 15px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label>Seleccionar Mes</label>
+                                    <input type="month" id="bMesFilter" onchange="cargarBalance()">
+                                </div>
+                            </div>
 
-							<div class="balance-grid">
-								<div class="balance-item pos">
-									<small>Ingresos Totales</small>
-									<strong id="bIngresos">$0</strong>
-								</div>
-								<div class="balance-item neg">
-									<small>Costo Producción</small>
-									<strong id="bCostos">$0</strong>
-								</div>
-								<div class="balance-item neg">
-									<small>Gastos Registrados</small>
-									<strong id="bGastos">$0</strong>
-								</div>
-								<div class="balance-item total">
-									<small>Ganancia Neta Real</small>
-									<strong id="bGanancia">$0</strong>
-								</div>
-							</div>
+                            <div class="balance-grid">
+                                <div class="balance-item pos">
+                                    <small>Ingresos Totales</small>
+                                    <strong id="bIngresos">$0</strong>
+                                </div>
+                                <div class="balance-item neg">
+                                    <small>Costo Producción</small>
+                                    <strong id="bCostos">$0</strong>
+                                </div>
+                                <div class="balance-item neg">
+                                    <small>Gastos Registrados</small>
+                                    <strong id="bGastos">$0</strong>
+                                </div>
+                                <div class="balance-item total">
+                                    <small>Ganancia Neta Real</small>
+                                    <strong id="bGanancia">$0</strong>
+                                </div>
+                            </div>
 
-							<div class="ticket-promedio-banner" style="margin-top: 15px; background: #FAF9F8; padding: 12px; border-radius: 14px; text-align: center; border: 1px solid var(--border-color);">
-								<small style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Ticket Promedio por Pedido</small><br>
-								<strong id="bTicketPromedio" style="font-size: 1.2rem; color: var(--accent);">$0</strong>
-							</div>
-						</div>
+                            <div class="ticket-promedio-banner" style="margin-top: 15px; background: #FAF9F8; padding: 12px; border-radius: 14px; text-align: center; border: 1px solid var(--border-color);">
+                                <small style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Ticket Promedio por Pedido</small><br>
+                                <strong id="bTicketPromedio" style="font-size: 1.2rem; color: var(--accent);">$0</strong>
+                            </div>
+                        </div>
 
-						<!-- SUB-SECCIÓN 2: EVOLUCIÓN HISTÓRICA POR MESES -->
-						<div id="subSecEvolucion" class="sub-seccion">
-							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">
-								Ganancias por Mes
-							</h4>
-							<div id="listaEvolucionMeses" class="ios-list-container">
-								Cargando historial...
-							</div>
-						</div>
-					</div>
-				</div>
+                        <div id="subSecEvolucion" class="sub-seccion">
+                            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">
+                                Ganancias por Mes
+                            </h4>
+                            <div id="listaEvolucionMeses" class="ios-list-container">
+                                Cargando historial...
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- SECCIÓN: CLIENTES -->
                 <div id="sec-clientes" class="section">
@@ -368,6 +382,7 @@
                             <div class="cliente-perfil-header">
                                 <h2 id="detClienteNombre">Nombre Cliente</h2>
                                 <p id="detClienteStats" style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;"></p>
+                                <div id="detClienteContacto" style="margin-top: 8px; font-size: 0.85rem;"></div>
                             </div>
 
                             <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin: 20px 0 10px 0; text-transform: uppercase;">

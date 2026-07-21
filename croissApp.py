@@ -33,8 +33,6 @@ SPREADSHEET_ID = "1-HZ19zxOZWJXizFSrhb5m6OKJJWQ_207SuRqdLVNWWE"
 def obtener_receta_producto(producto_nombre):
     """Genera la receta aproximada en Kilos/Litros según el nombre del producto"""
     p_lower = str(producto_nombre).lower()
-    
-    # Receta base para 1 croissant (50g Harina, 25g Manteca)
     receta = {"harina": 0.05, "manteca": 0.025}
     
     if "dulce" in p_lower or "ddl" in p_lower:
@@ -61,6 +59,7 @@ def conectar_sheet(nombre_pestaña):
     sheet = cliente.open_by_key(SPREADSHEET_ID)
     return sheet.worksheet(nombre_pestaña)
 
+
 def normalizar_fecha(fecha_raw):
     if not fecha_raw:
         return ""
@@ -73,7 +72,7 @@ def normalizar_fecha(fecha_raw):
     return f_str
 
 def get_clean_records(sheet):
-    """Lee la planilla ignorando columnas vacías o encabezados duplicados a la derecha"""
+    """Lee la planilla ignorando columnas vacías a la derecha"""
     try:
         data = sheet.get_all_values()
         if not data or len(data) < 2:
@@ -83,7 +82,6 @@ def get_clean_records(sheet):
         headers = []
         for idx, h in enumerate(raw_headers):
             h_str = str(h).strip()
-            # Si el encabezado no está vacío y no está repetido, lo guarda
             if h_str and h_str not in [name for _, name in headers]:
                 headers.append((idx, h_str))
 
@@ -100,7 +98,18 @@ def get_clean_records(sheet):
     except Exception as e:
         print(f"⚠️ Error leyendo registros de {sheet.title}: {e}")
         return []
-        
+
+def get_field_val(record, *possible_keys):
+    """Busca un valor en el registro de forma insensible a mayúsculas, minúsculas y tildes"""
+    if not record: return ""
+    for target in possible_keys:
+        target_clean = target.lower().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").strip()
+        for k, val in record.items():
+            k_clean = str(k).lower().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").strip()
+            if k_clean == target_clean and val:
+                return str(val).strip()
+    return ""
+
 def enviar_email_async(destinatario, asunto, cuerpo_html):
     def _enviar():
         if not destinatario or "@" not in str(destinatario):
@@ -221,7 +230,6 @@ def plantilla_email_entregado(cliente, link_google_review="https://share.google/
 # ==========================================
 # RUTAS DE LA APLICACIÓN (ENDPOINTS)
 # ==========================================
-
 @app.route('/')
 def inicio():
     return render_template('index.html')
@@ -230,7 +238,8 @@ def inicio():
 def obtener_agenda():
     try:
         sheet_ventas = conectar_sheet("Ventas")
-        registros = sheet_ventas.get_all_records()
+        asegurar_encabezados_ventas(sheet_ventas)
+        registros = get_clean_records(sheet_ventas)
         
         hoy = datetime.now().date()
         dias_agenda = {}
@@ -249,17 +258,19 @@ def obtener_agenda():
             }
         
         for reg in registros:
-            f_entrega_raw = reg.get("Fecha Entrega", "")
+            f_entrega_raw = get_field_val(reg, "Fecha Entrega", "Fecha")
             f_entrega_norm = normalizar_fecha(f_entrega_raw)
 
             if f_entrega_norm in dias_agenda:
-                cant = int(reg.get("Cantidad", 0) or 0)
+                cant_str = get_field_val(reg, "Cantidad")
+                cant = int(cant_str) if cant_str.isdigit() else 0
                 dias_agenda[f_entrega_norm]["pedidos"].append({
-                    "id": reg.get("ID Venta"),
-                    "cliente": reg.get("Cliente"),
-                    "descripcion": reg.get("Producto"),
+                    "id": get_field_val(reg, "ID Venta", "ID"),
+                    "cliente": get_field_val(reg, "Cliente"),
+                    "descripcion": get_field_val(reg, "Producto"),
                     "cantidad": cant,
-                    "estado": reg.get("Estado")
+                    "estado": get_field_val(reg, "Estado"),
+                    "direccion": get_field_val(reg, "Dirección", "Direccion")
                 })
                 dias_agenda[f_entrega_norm]["total_croissants"] += cant
                 
@@ -271,7 +282,8 @@ def obtener_agenda():
 def obtener_cuentas():
     try:
         sheet_ventas = conectar_sheet("Ventas")
-        registros = sheet_ventas.get_all_records()
+        asegurar_encabezados_ventas(sheet_ventas)
+        registros = get_clean_records(sheet_ventas)
         hoy_str = datetime.now().date().strftime("%Y-%m-%d")
 
         pendientes_pago = []
@@ -279,19 +291,21 @@ def obtener_cuentas():
         total_por_cobrar = 0.0
 
         for idx, reg in enumerate(registros, start=2):
-            cliente = reg.get("Cliente") or "Cliente"
-            prod = reg.get("Producto") or ""
-            cant = reg.get("Cantidad") or 0
+            cliente = get_field_val(reg, "Cliente") or "Cliente"
+            prod = get_field_val(reg, "Producto")
+            cant_str = get_field_val(reg, "Cantidad")
+            cant = int(cant_str) if cant_str.isdigit() else 0
+            direccion_item = get_field_val(reg, "Dirección", "Direccion")
             
-            raw_monto = str(reg.get("Monto Total") or reg.get("Monto") or 0).replace("$", "").replace(",", "").strip()
+            raw_monto = get_field_val(reg, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip()
             try:
                 monto = float(raw_monto)
             except ValueError:
                 monto = 0.0
 
-            estado_pago = str(reg.get("Estado") or "").strip()
-            estado_entrega = str(reg.get("Entrega") or reg.get("Estado Entrega") or "").strip()
-            f_entrega = normalizar_fecha(reg.get("Fecha Entrega") or "")
+            estado_pago = get_field_val(reg, "Estado")
+            estado_entrega = get_field_val(reg, "Entrega", "Estado Entrega")
+            f_entrega = normalizar_fecha(get_field_val(reg, "Fecha Entrega", "Fecha"))
 
             item = {
                 "fila": idx,
@@ -301,7 +315,8 @@ def obtener_cuentas():
                 "monto": monto,
                 "estado": estado_pago,
                 "fecha_entrega": f_entrega,
-                "entrega": estado_entrega
+                "entrega": estado_entrega,
+                "direccion": direccion_item
             }
 
             if estado_pago.lower() == "pendiente":
@@ -317,45 +332,6 @@ def obtener_cuentas():
             "pendientes_entrega": pendientes_entrega,
             "total_por_cobrar": round(total_por_cobrar, 2)
         }), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-
-@app.route('/api/marcar_entregado', methods=['POST'])
-def marcar_entregado():
-    try:
-        datos = request.json or {}
-        num_fila = datos.get("fila")
-
-        if not num_fila:
-            return jsonify({"status": "error", "mensaje": "Número de fila no especificado"}), 400
-
-        sheet_ventas = conectar_sheet("Ventas")
-        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
-
-        col_email, col_cliente, col_entrega = 10, 4, 11
-        for i, h in enumerate(headers, start=1):
-            if "email" in h or "correo" in h: 
-                col_email = i
-            elif "cliente" in h: 
-                col_cliente = i
-            elif "entrega" in h and "fecha" not in h:
-                col_entrega = i
-
-        if len(headers) < 11 or headers[10] != "entrega":
-            sheet_ventas.update_cell(1, 11, "Entrega")
-
-        sheet_ventas.update_cell(int(num_fila), col_entrega, "Entregado")
-
-        fila_vals = sheet_ventas.row_values(int(num_fila))
-        email_cliente = str(fila_vals[col_email - 1]).strip() if len(fila_vals) >= col_email else ""
-        cliente_nombre = str(fila_vals[col_cliente - 1]).strip() if len(fila_vals) >= col_cliente else "Cliente"
-
-        if email_cliente and "@" in email_cliente:
-            link_review = "https://share.google/dTCn5wDuysp01wARR"
-            html = plantilla_email_entregado(cliente_nombre, link_review)
-            enviar_email_async(email_cliente, "✨ ¡Tu pedido de CROISS fue entregado! Dejanos tu reseña", html)
-
-        return jsonify({"status": "exito", "mensaje": "Pedido marcado como entregado con éxito"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
@@ -396,7 +372,6 @@ def cambiar_estado_pago():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 def obtener_o_crear_sheet_insumos():
-    """Conecta a Insumos_Stock o la crea automáticamente con sus encabezados si no existe"""
     ruta_credenciales = "credentials.json"
     creds = Credentials.from_service_account_file(ruta_credenciales, scopes=SCOPES)
     cliente = gspread.authorize(creds)
@@ -405,16 +380,13 @@ def obtener_o_crear_sheet_insumos():
     try:
         return doc.worksheet("Insumos_Stock")
     except Exception:
-        # Si la pestaña no existe en Google Sheets, la crea de cero con la Fila 1 lista
         ws = doc.add_worksheet(title="Insumos_Stock", rows="100", cols="10")
         ws.append_row(["Insumo", "Stock Actual", "Unidad", "Vencimiento Proximo"])
         return ws
 
 @app.route('/api/gastos_e_insumos', methods=['GET'])
 def obtener_gastos_e_insumos():
-    """Consulta insumos y gastos de manera ultra segura sin errores 500"""
     try:
-        # 1. Leer Gastos
         gastos = []
         try:
             sheet_gastos = conectar_sheet("Gastos")
@@ -423,7 +395,6 @@ def obtener_gastos_e_insumos():
         except Exception as eg:
             print(f"Aviso leyendo Gastos: {eg}")
 
-        # 2. Leer Insumos (Auto-crea la pestaña si no existe)
         insumos = []
         try:
             sheet_insumos = obtener_o_crear_sheet_insumos()
@@ -439,14 +410,14 @@ def obtener_gastos_e_insumos():
     except Exception as error:
         print(f"❌ Error en /api/gastos_e_insumos: {error}")
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 @app.route('/api/balance', methods=['GET'])
 def obtener_balance():
-    """Endpoint defensivo con métricas del mes actual y desglose mensual histórico"""
     try:
         mes_filtro = request.args.get('mes', '').strip() or datetime.now().strftime("%Y-%m")
 
         sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
         sheet_gastos = conectar_sheet("Gastos")
         sheet_stock = conectar_sheet("Productos_Stock")
 
@@ -454,11 +425,10 @@ def obtener_balance():
         gastos = get_clean_records(sheet_gastos)
         stock = get_clean_records(sheet_stock)
 
-        # Mapa de costos de producción por producto
         costos_map = {}
         for s in stock:
-            prod_name = str(s.get("Nombre", "") or "").strip().lower()
-            raw_costo = str(s.get("Costo Producción", 0) or s.get("Costo Produccion", 0) or 0).replace("$", "").replace(",", ".").strip()
+            prod_name = get_field_val(s, "Nombre", "Producto").lower()
+            raw_costo = get_field_val(s, "Costo Producción", "Costo Produccion", "Costo").replace("$", "").replace(",", ".").strip()
             try:
                 costos_map[prod_name] = float(raw_costo)
             except ValueError:
@@ -470,23 +440,23 @@ def obtener_balance():
         historico_dict = {}
 
         for v in ventas:
-            f_norm = normalizar_fecha(v.get("Fecha Pedido") or v.get("Fecha") or "")
+            f_norm = normalizar_fecha(get_field_val(v, "Fecha Pedido", "Fecha"))
             if not f_norm or len(f_norm) < 7: continue
 
             key_mes = f_norm[:7]
             if key_mes not in historico_dict:
                 historico_dict[key_mes] = {"ingresos": 0.0, "costos": 0.0, "gastos": 0.0, "pedidos": 0}
 
-            raw_monto = str(v.get("Monto Total") or v.get("Monto") or 0).replace("$", "").replace(",", ".").strip()
+            raw_monto = get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip()
             try:
                 monto = float(raw_monto)
             except ValueError:
                 monto = 0.0
 
-            raw_cant = str(v.get("Cantidad") or 0).strip()
+            raw_cant = get_field_val(v, "Cantidad")
             cant = int(raw_cant) if raw_cant.isdigit() else 0
 
-            prod_name = str(v.get("Producto") or "").strip().lower()
+            prod_name = get_field_val(v, "Producto").lower()
             costo_unit = costos_map.get(prod_name, 0.0)
             costo_total_item = costo_unit * cant
 
@@ -501,14 +471,14 @@ def obtener_balance():
 
         gastos_mes = 0.0
         for g in gastos:
-            f_norm = normalizar_fecha(g.get("Fecha") or "")
+            f_norm = normalizar_fecha(get_field_val(g, "Fecha"))
             if not f_norm or len(f_norm) < 7: continue
 
             key_mes = f_norm[:7]
             if key_mes not in historico_dict:
                 historico_dict[key_mes] = {"ingresos": 0.0, "costos": 0.0, "gastos": 0.0, "pedidos": 0}
 
-            raw_monto_g = str(g.get("Monto") or 0).replace("$", "").replace(",", ".").strip()
+            raw_monto_g = get_field_val(g, "Monto").replace("$", "").replace(",", ".").strip()
             try:
                 monto_g = float(raw_monto_g)
             except ValueError:
@@ -557,11 +527,27 @@ def obtener_stock():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+def asegurar_encabezados_ventas(sheet_ventas):
+    """Verifica que existan encabezados sin pisar columnas existentes"""
+    headers_esperados = [
+        "ID Venta", "Fecha Pedido", "Fecha Entrega", "Cliente",
+        "Producto", "Cantidad", "Monto Total", "Estado",
+        "Medio de Pago", "Email", "Teléfono", "Dirección", "Entrega"
+    ]
+    try:
+        fila_1 = sheet_ventas.row_values(1)
+        if not fila_1 or len(fila_1) < len(headers_esperados):
+            sheet_ventas.update('A1:M1', [headers_esperados])
+    except Exception as e:
+        print(f"Aviso verificando encabezados de Ventas: {e}")
+
 @app.route('/api/venta', methods=['POST'])
 def registrar_venta():
+    """Registra el pedido, descuenta stock/insumos y guarda email, teléfono y dirección"""
     try:
         datos = request.json or {}
         sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
         sheet_stock = conectar_sheet("Productos_Stock")
         
         registros = get_clean_records(sheet_ventas)
@@ -594,58 +580,115 @@ def registrar_venta():
         cliente_nombre = datos.get("cliente", "Consumidor Final")
         email_cliente = str(datos.get("email", "")).strip()
         telefono_cliente = str(datos.get("telefono", "")).strip()
+        direccion_cliente = str(datos.get("direccion", "")).strip()
         fecha_entrega = datos.get("fecha_entrega", datos.get("fecha"))
         monto_total = datos.get("monto_total", 0)
         estado_pedido = datos.get("estado", "Pendiente")
         
         nueva_fila = [
-            nuevo_id, datos.get("fecha"), fecha_entrega, cliente_nombre,
-            descripcion_final, total_unidades, monto_total, estado_pedido,
-            datos.get("medio_pago", "Efectivo"), email_cliente, telefono_cliente
+            nuevo_id,
+            datos.get("fecha"),
+            fecha_entrega,
+            cliente_nombre,
+            descripcion_final,
+            total_unidades,
+            monto_total,
+            estado_pedido,
+            datos.get("medio_pago", "Efectivo"),
+            email_cliente,
+            telefono_cliente,
+            direccion_cliente,
+            "Pendiente"  # Estado de entrega en Columna M (13)
         ]
         sheet_ventas.append_row(nueva_fila)
 
         if email_cliente:
-            html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
-            enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
+            try:
+                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
+                enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
+            except Exception as ee:
+                print(f"Aviso al enviar email: {ee}")
 
         return jsonify({"status": "exito", "mensaje": "Pedido registrado correctamente", "id": nuevo_id}), 200
     except Exception as error:
+        print(f"❌ Error en /api/venta: {error}")
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+@app.route('/api/marcar_entregado', methods=['POST'])
+def marcar_entregado():
+    try:
+        datos = request.json or {}
+        num_fila = datos.get("fila")
+
+        if not num_fila:
+            return jsonify({"status": "error", "mensaje": "Número de fila no especificado"}), 400
+
+        sheet_ventas = conectar_sheet("Ventas")
+        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
+
+        col_email = 10
+        col_cliente = 4
+        col_entrega = 13  # Por defecto columna M (13)
+        
+        for i, h in enumerate(headers, start=1):
+            if "email" in h or "correo" in h: 
+                col_email = i
+            elif "cliente" in h: 
+                col_cliente = i
+            elif "entrega" in h and "fecha" not in h:
+                col_entrega = i
+
+        sheet_ventas.update_cell(int(num_fila), col_entrega, "Entregado")
+
+        fila_vals = sheet_ventas.row_values(int(num_fila))
+        email_cliente = str(fila_vals[col_email - 1]).strip() if len(fila_vals) >= col_email else ""
+        cliente_nombre = str(fila_vals[col_cliente - 1]).strip() if len(fila_vals) >= col_cliente else "Cliente"
+
+        if email_cliente and "@" in email_cliente:
+            link_review = "https://share.google/dTCn5wDuysp01wARR"
+            html = plantilla_email_entregado(cliente_nombre, link_review)
+            enviar_email_async(email_cliente, "✨ ¡Tu pedido de CROISS fue entregado! Dejanos tu reseña", html)
+
+        return jsonify({"status": "exito", "mensaje": "Pedido marcado como entregado con éxito"}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 @app.route('/api/clientes', methods=['GET'])
 def obtener_clientes():
     try:
         mes_filtro = request.args.get('mes', '').strip() or datetime.now().strftime("%Y-%m")
         sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
         ventas = get_clean_records(sheet_ventas)
 
         clientes_historico, clientes_mes = {}, {}
 
         for v in ventas:
-            cliente_nombre = str(v.get("Cliente") or "Consumidor Final").strip()
+            cliente_nombre = get_field_val(v, "Cliente") or "Consumidor Final"
             if not cliente_nombre or cliente_nombre.lower() == "consumidor final": continue
 
-            email_c = str(v.get("Email") or v.get("Correo", "")).strip()
-            tel_c = str(v.get("Teléfono") or v.get("Telefono", "")).strip()
-            fecha_norm = normalizar_fecha(v.get("Fecha Pedido") or v.get("Fecha") or v.get("Fecha Entrega") or "")
+            email_c = get_field_val(v, "Email", "Correo")
+            tel_c = get_field_val(v, "Teléfono", "Telefono", "Tel")
+            dir_c = get_field_val(v, "Dirección", "Direccion")
+            fecha_norm = normalizar_fecha(get_field_val(v, "Fecha Pedido", "Fecha", "Fecha Entrega"))
             
             try:
-                monto = float(str(v.get("Monto Total") or v.get("Monto") or 0).replace("$", "").replace(",", ".").strip())
+                monto = float(get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
             except ValueError:
                 monto = 0.0
 
-            raw_cant = str(v.get("Cantidad") or 0).strip()
+            raw_cant = get_field_val(v, "Cantidad")
             cant = int(raw_cant) if raw_cant.isdigit() else 0
             key_norm = cliente_nombre.lower()
 
             pedido_item = {
-                "id": str(v.get("ID Venta") or "").strip(),
+                "id": get_field_val(v, "ID Venta", "ID"),
                 "fecha": fecha_norm,
-                "producto": str(v.get("Producto", "")),
+                "producto": get_field_val(v, "Producto"),
                 "cantidad": cant,
                 "monto": monto,
-                "estado": str(v.get("Estado", ""))
+                "estado": get_field_val(v, "Estado"),
+                "direccion": dir_c
             }
 
             if key_norm not in clientes_historico:
@@ -653,16 +696,16 @@ def obtener_clientes():
                     "nombre": cliente_nombre,
                     "email": email_c,
                     "telefono": tel_c,
+                    "direccion": dir_c,
                     "total_gastado": 0.0,
                     "total_croissants": 0,
                     "total_pedidos": 0,
                     "historial": []
                 }
             else:
-                if email_c and not clientes_historico[key_norm].get("email"):
-                    clientes_historico[key_norm]["email"] = email_c
-                if tel_c and not clientes_historico[key_norm].get("telefono"):
-                    clientes_historico[key_norm]["telefono"] = tel_c
+                if email_c: clientes_historico[key_norm]["email"] = email_c
+                if tel_c: clientes_historico[key_norm]["telefono"] = tel_c
+                if dir_c: clientes_historico[key_norm]["direccion"] = dir_c
 
             clientes_historico[key_norm]["total_gastado"] += monto
             clientes_historico[key_norm]["total_croissants"] += cant
@@ -675,11 +718,17 @@ def obtener_clientes():
                         "nombre": cliente_nombre,
                         "email": email_c,
                         "telefono": tel_c,
+                        "direccion": dir_c,
                         "total_gastado": 0.0,
                         "total_croissants": 0,
                         "total_pedidos": 0,
                         "historial": []
                     }
+                else:
+                    if email_c: clientes_mes[key_norm]["email"] = email_c
+                    if tel_c: clientes_mes[key_norm]["telefono"] = tel_c
+                    if dir_c: clientes_mes[key_norm]["direccion"] = dir_c
+
                 clientes_mes[key_norm]["total_gastado"] += monto
                 clientes_mes[key_norm]["total_croissants"] += cant
                 clientes_mes[key_norm]["total_pedidos"] += 1
@@ -704,7 +753,7 @@ def obtener_clientes():
         }), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 @app.route('/api/stock/actualizar', methods=['POST'])
 def actualizar_stock():
     try:
@@ -745,27 +794,24 @@ def actualizar_stock():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croissants_pedido=0):
-    """Descuenta ingredientes y cajas de la pestaña Insumos_Stock"""
     try:
         sheet_insumos = obtener_o_crear_sheet_insumos()
         registros = get_clean_records(sheet_insumos)
         if not registros:
             return
 
-        # 1. Descuento de Materia Prima por Receta
         receta = obtener_receta_producto(producto_nombre)
         for ing_clave, cant_unit in receta.items():
             cant_total_a_descontar = cant_unit * cantidad_vendida
             for idx, ins_row in enumerate(registros, start=2):
-                nombre_insumo = str(ins_row.get("Insumo", "")).lower()
+                nombre_insumo = get_field_val(ins_row, "Insumo").lower()
                 if ing_clave in nombre_insumo:
-                    raw_st = str(ins_row.get("Stock Actual", 0) or 0).replace(",", ".").strip()
+                    raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
                     stock_actual = float(raw_st) if raw_st else 0.0
                     nuevo_stock = max(0.0, round(stock_actual - cant_total_a_descontar, 3))
                     sheet_insumos.update_cell(idx, 2, nuevo_stock)
                     break
 
-        # 2. Descuento Inteligente de Cajas
         if total_croissants_pedido > 0:
             cajas_6_necesarias = total_croissants_pedido // 6
             resto = total_croissants_pedido % 6
@@ -774,9 +820,9 @@ def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croiss
             def descontar_caja(tipo_capacidad, cantidad_cajas):
                 if cantidad_cajas <= 0: return
                 for idx, ins_row in enumerate(registros, start=2):
-                    nombre_insumo = str(ins_row.get("Insumo", "")).lower()
+                    nombre_insumo = get_field_val(ins_row, "Insumo").lower()
                     if "caja" in nombre_insumo and tipo_capacidad in nombre_insumo:
-                        raw_st = str(ins_row.get("Stock Actual", 0) or 0).replace(",", ".").strip()
+                        raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
                         stock_actual = float(raw_st) if raw_st else 0.0
                         if stock_actual > 0:
                             nuevo_stock = max(0.0, stock_actual - cantidad_cajas)
@@ -789,11 +835,9 @@ def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croiss
 
     except Exception as e:
         print(f"⚠️ Error descontando insumos/cajas: {e}")
-        
 
 @app.route('/api/gasto', methods=['POST'])
 def registrar_gasto():
-    """Registra el gasto y suma al stock de insumos"""
     try:
         datos = request.json or {}
         sheet_gastos = conectar_sheet("Gastos")
@@ -819,7 +863,6 @@ def registrar_gasto():
         ]
         sheet_gastos.append_row(nueva_fila)
 
-        # Si es Materia Prima o Embalaje, sumar o crear en Insumos_Stock
         if cat in ["Materia Prima", "Embalaje"]:
             try:
                 sheet_insumos = obtener_o_crear_sheet_insumos()
@@ -829,10 +872,10 @@ def registrar_gasto():
                 stock_previo = 0.0
                 
                 for idx, ins in enumerate(insumos_regs, start=2):
-                    ins_nombre = str(ins.get("Insumo", "")).strip().lower()
+                    ins_nombre = get_field_val(ins, "Insumo").lower()
                     if ins_nombre == desc.lower():
                         fila_encontrada = idx
-                        raw_st = str(ins.get("Stock Actual", 0) or 0).replace(",", ".").strip()
+                        raw_st = get_field_val(ins, "Stock Actual").replace(",", ".").strip()
                         stock_previo = float(raw_st) if raw_st else 0.0
                         break
 
@@ -849,6 +892,6 @@ def registrar_gasto():
         return jsonify({"status": "exito", "mensaje": "Gasto registrado", "id": nuevo_id}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
