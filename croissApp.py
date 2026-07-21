@@ -17,8 +17,8 @@ from google.oauth2.service_account import Credentials
 app = Flask(__name__)
 
 SMTP_SERVER = "smtp.gmail.com"
-EMAIL_EMISOR = "croiss.uy@gmail.com"
-EMAIL_PASSWORD = "ofvn auvr ntuw ykli"
+EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "croiss.uy@gmail.com")
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "wmce qcmv xcfw twgs")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -59,6 +59,19 @@ def conectar_sheet(nombre_pestaña):
     sheet = cliente.open_by_key(SPREADSHEET_ID)
     return sheet.worksheet(nombre_pestaña)
 
+def asegurar_encabezados_ventas(sheet_ventas):
+    """Verifica que existan encabezados en Fila 1"""
+    headers_esperados = [
+        "ID Venta", "Fecha Pedido", "Fecha Entrega", "Cliente",
+        "Producto", "Cantidad", "Monto Total", "Estado",
+        "Medio de Pago", "Email", "Teléfono", "Dirección", "Entrega"
+    ]
+    try:
+        fila_1 = sheet_ventas.row_values(1)
+        if not fila_1 or len(fila_1) < len(headers_esperados):
+            sheet_ventas.update('A1:M1', [headers_esperados])
+    except Exception as e:
+        print(f"Aviso verificando encabezados de Ventas: {e}")
 
 def normalizar_fecha(fecha_raw):
     if not fecha_raw:
@@ -72,7 +85,7 @@ def normalizar_fecha(fecha_raw):
     return f_str
 
 def get_clean_records(sheet):
-    """Lee la planilla ignorando columnas vacías a la derecha"""
+    """Lee la planilla convirtiendo cada fila en un diccionario limpio"""
     try:
         data = sheet.get_all_values()
         if not data or len(data) < 2:
@@ -100,7 +113,7 @@ def get_clean_records(sheet):
         return []
 
 def get_field_val(record, *possible_keys):
-    """Busca un valor en el registro de forma insensible a mayúsculas, minúsculas y tildes"""
+    """Busca un valor en el registro de forma flexible frente a tildes o mayúsculas"""
     if not record: return ""
     for target in possible_keys:
         target_clean = target.lower().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").strip()
@@ -113,31 +126,56 @@ def get_field_val(record, *possible_keys):
 def enviar_email_async(destinatario, asunto, cuerpo_html):
     def _enviar():
         if not destinatario or "@" not in str(destinatario):
+            print(f"⚠️ [EMAIL] No se envió correo: dirección inválida ('{destinatario}')")
             return
+
+        pass_clean = EMAIL_PASSWORD.replace(" ", "").strip()
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = asunto
+        msg["From"] = f"CROISS <{EMAIL_EMISOR}>"
+        msg["To"] = destinatario
+        msg.attach(MIMEText(cuerpo_html, "html"))
+
+        # -------------------------------------------------------------
+        # INTENTO 1: Puerto 587 (STARTTLS Estándar)
+        # -------------------------------------------------------------
         try:
-            msg = MIMEMultipart("alternative")
-            msg["Subject"] = asunto
-            msg["From"] = f"CROISS <{EMAIL_EMISOR}>"
-            msg["To"] = destinatario
-            msg.attach(MIMEText(cuerpo_html, "html"))
-
-            pass_clean = EMAIL_PASSWORD.replace(" ", "").strip()
             context = ssl.create_default_context()
-            context.check_hostname = False
-            context.verify_mode = ssl.CERT_NONE
-
-            try:
-                ip_v4_gmail = socket.gethostbyname(SMTP_SERVER)
-            except Exception:
-                ip_v4_gmail = SMTP_SERVER
-
-            with smtplib.SMTP_SSL(ip_v4_gmail, 465, context=context, timeout=12) as server:
+            with smtplib.SMTP(SMTP_SERVER, 587, timeout=15) as server:
+                server.ehlo()
+                server.starttls(context=context)
+                server.ehlo()
                 server.login(EMAIL_EMISOR, pass_clean)
                 server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
-                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}!")
+                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 587)")
+                return
+        except Exception as e587:
+            print(f"⚠️ Puerto 587 falló ({e587}), reintentando por Puerto 465 SSL...")
 
-        except Exception as e:
-            print(f"❌ [EMAIL] Error enviando correo: {e}")
+        # -------------------------------------------------------------
+        # INTENTO 2: Puerto 465 (SSL Directo)
+        # -------------------------------------------------------------
+        try:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(SMTP_SERVER, 465, context=context, timeout=15) as server:
+                server.login(EMAIL_EMISOR, pass_clean)
+                server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
+                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 465 SSL)")
+                return
+        except Exception as e465:
+            print(f"⚠️ Puerto 465 SSL falló ({e465}), intentando modo permisivo local...")
+
+        # -------------------------------------------------------------
+        # INTENTO 3: Puerto 465 Permisivo (Antivirus / Firewall local en PC)
+        # -------------------------------------------------------------
+        try:
+            context_unverified = ssl._create_unverified_context()
+            with smtplib.SMTP_SSL(SMTP_SERVER, 465, context=context_unverified, timeout=15) as server:
+                server.login(EMAIL_EMISOR, pass_clean)
+                server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
+                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 465 Permisivo)")
+        except Exception as e_final:
+            print(f"❌ [EMAIL] Error crítico enviando correo a {destinatario}: {e_final}")
 
     threading.Thread(target=_enviar).start()
 
@@ -335,6 +373,51 @@ def obtener_cuentas():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+@app.route('/api/marcar_entregado', methods=['POST'])
+def marcar_entregado():
+    try:
+        datos = request.json or {}
+        num_fila = datos.get("fila")
+
+        if not num_fila:
+            return jsonify({"status": "error", "mensaje": "Número de fila no especificado"}), 400
+
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+
+        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
+        col_entrega = 13  # Por defecto Columna M (13)
+
+        for i, h in enumerate(headers, start=1):
+            if "entrega" in h and "fecha" not in h:
+                col_entrega = i
+
+        # 1. Actualiza celda en Google Sheets
+        sheet_ventas.update_cell(int(num_fila), col_entrega, "Entregado")
+
+        # 2. Lee el registro exacto usando get_clean_records
+        registros = get_clean_records(sheet_ventas)
+        idx_registro = int(num_fila) - 2  # Fila 2 es índice 0 en registros
+
+        if 0 <= idx_registro < len(registros):
+            reg = registros[idx_registro]
+            email_cliente = get_field_val(reg, "Email", "Correo")
+            cliente_nombre = get_field_val(reg, "Cliente") or "Cliente"
+
+            print(f"🚚 Marca de Entrega Fila {num_fila} -> Cliente: '{cliente_nombre}' | Email: '{email_cliente}'")
+
+            if email_cliente and "@" in email_cliente:
+                link_review = "https://share.google/dTCn5wDuysp01wARR"
+                html = plantilla_email_entregado(cliente_nombre, link_review)
+                enviar_email_async(email_cliente, "✨ ¡Tu pedido de CROISS fue entregado! Dejanos tu reseña", html)
+            else:
+                print(f"⚠️ [AVISO] El cliente '{cliente_nombre}' no tiene email registrado en la planilla. No se envía mail.")
+
+        return jsonify({"status": "exito", "mensaje": "Pedido marcado como entregado con éxito"}), 200
+    except Exception as error:
+        print(f"❌ Error en /api/marcar_entregado: {error}")
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
 @app.route('/api/cambiar_estado_pago', methods=['POST'])
 def cambiar_estado_pago():
     try:
@@ -346,26 +429,30 @@ def cambiar_estado_pago():
             return jsonify({"status": "error", "mensaje": "Número de fila no especificado"}), 400
 
         sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+
         headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
-        col_estado, col_email, col_monto, col_cliente = 8, 10, 7, 4
+        col_estado = 8  # Por defecto columna H (8)
 
         for i, h in enumerate(headers, start=1):
-            if "estado" in h: col_estado = i
-            elif "email" in h or "correo" in h: col_email = i
-            elif "monto" in h: col_monto = i
-            elif "cliente" in h: col_cliente = i
+            if "estado" in h:
+                col_estado = i
 
         sheet_ventas.update_cell(int(num_fila), col_estado, nuevo_estado)
 
         if nuevo_estado.lower() == "pagado":
-            fila_vals = sheet_ventas.row_values(int(num_fila))
-            email_cliente = str(fila_vals[col_email - 1]).strip() if len(fila_vals) >= col_email else ""
-            cliente_nombre = str(fila_vals[col_cliente - 1]).strip() if len(fila_vals) >= col_cliente else "Cliente"
-            monto = str(fila_vals[col_monto - 1]).strip() if len(fila_vals) >= col_monto else "0"
+            registros = get_clean_records(sheet_ventas)
+            idx_registro = int(num_fila) - 2
 
-            if email_cliente and "@" in email_cliente:
-                html = plantilla_email_pago_recibido(cliente_nombre, monto)
-                enviar_email_async(email_cliente, "✨ ¡Pago Recibido! - CROISS", html)
+            if 0 <= idx_registro < len(registros):
+                reg = registros[idx_registro]
+                email_cliente = get_field_val(reg, "Email", "Correo")
+                cliente_nombre = get_field_val(reg, "Cliente") or "Cliente"
+                monto = get_field_val(reg, "Monto Total", "Monto") or "0"
+
+                if email_cliente and "@" in email_cliente:
+                    html = plantilla_email_pago_recibido(cliente_nombre, monto)
+                    enviar_email_async(email_cliente, "✨ ¡Pago Recibido! - CROISS", html)
 
         return jsonify({"status": "exito", "mensaje": "Estado actualizado correctamente"}), 200
     except Exception as error:
@@ -527,20 +614,6 @@ def obtener_stock():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-def asegurar_encabezados_ventas(sheet_ventas):
-    """Verifica que existan encabezados sin pisar columnas existentes"""
-    headers_esperados = [
-        "ID Venta", "Fecha Pedido", "Fecha Entrega", "Cliente",
-        "Producto", "Cantidad", "Monto Total", "Estado",
-        "Medio de Pago", "Email", "Teléfono", "Dirección", "Entrega"
-    ]
-    try:
-        fila_1 = sheet_ventas.row_values(1)
-        if not fila_1 or len(fila_1) < len(headers_esperados):
-            sheet_ventas.update('A1:M1', [headers_esperados])
-    except Exception as e:
-        print(f"Aviso verificando encabezados de Ventas: {e}")
-
 @app.route('/api/venta', methods=['POST'])
 def registrar_venta():
     """Registra el pedido, descuenta stock/insumos y guarda email, teléfono y dirección"""
@@ -614,45 +687,6 @@ def registrar_venta():
         print(f"❌ Error en /api/venta: {error}")
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-@app.route('/api/marcar_entregado', methods=['POST'])
-def marcar_entregado():
-    try:
-        datos = request.json or {}
-        num_fila = datos.get("fila")
-
-        if not num_fila:
-            return jsonify({"status": "error", "mensaje": "Número de fila no especificado"}), 400
-
-        sheet_ventas = conectar_sheet("Ventas")
-        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
-
-        col_email = 10
-        col_cliente = 4
-        col_entrega = 13  # Por defecto columna M (13)
-        
-        for i, h in enumerate(headers, start=1):
-            if "email" in h or "correo" in h: 
-                col_email = i
-            elif "cliente" in h: 
-                col_cliente = i
-            elif "entrega" in h and "fecha" not in h:
-                col_entrega = i
-
-        sheet_ventas.update_cell(int(num_fila), col_entrega, "Entregado")
-
-        fila_vals = sheet_ventas.row_values(int(num_fila))
-        email_cliente = str(fila_vals[col_email - 1]).strip() if len(fila_vals) >= col_email else ""
-        cliente_nombre = str(fila_vals[col_cliente - 1]).strip() if len(fila_vals) >= col_cliente else "Cliente"
-
-        if email_cliente and "@" in email_cliente:
-            link_review = "https://share.google/dTCn5wDuysp01wARR"
-            html = plantilla_email_entregado(cliente_nombre, link_review)
-            enviar_email_async(email_cliente, "✨ ¡Tu pedido de CROISS fue entregado! Dejanos tu reseña", html)
-
-        return jsonify({"status": "exito", "mensaje": "Pedido marcado como entregado con éxito"}), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
 @app.route('/api/clientes', methods=['GET'])
 def obtener_clientes():
     try:
