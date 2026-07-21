@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Croiss Control</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+
+    <div class="app-layout">
+        <!-- SIDEBAR IZQUIERDO -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="{{ url_for('static', filename='logo.png') }}" alt="Croiss Logo" class="brand-logo">
+            </div>
+            <nav class="sidebar-nav">
+                <button class="nav-btn" onclick="cambiarTab(event, 'ventas')">
+                    <span class="label">Pedido</span>
+                </button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'agenda')">
+                    <span class="label">Agenda</span>
+                </button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'cuentas')">
+                    <span class="label">Cuentas</span>
+                </button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'gastos')">
+                    <span class="label">Gasto</span>
+                </button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'stock')">
+                    <span class="label">Stock</span>
+                </button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'balance')">
+                    <span class="label">Balance</span>
+                </button>
+            </nav>
+        </aside>
+
+        <!-- CONTENIDO CENTRAL -->
+        <main class="main-content">
+            <div class="content-wrapper">
+
+                <!-- SECCIÓN PRINCIPAL (HOME CLEAN) -->
+                <div id="sec-home" class="section active">
+                    <div class="home-card"></div>
+                </div>
+
+                <!-- SECCIÓN: ARMA TU PEDIDO -->
+                <div id="sec-ventas" class="section">
+                    <div class="card ios-card">
+                        <div class="add-product-box">
+                            <label>Agregar Producto al Pedido</label>
+                            <select id="vProductoSelect">
+                                <option value="">Cargando menu...</option>
+                            </select>
+
+                            <div class="row" style="margin-top: 10px;">
+                                <div class="form-group">
+                                    <label>Cantidad</label>
+                                    <input type="number" id="vCantidadItem" value="1" min="1">
+                                </div>
+                            </div>
+                            <button type="button" class="btn-add-item" onclick="agregarAlPedido()">+ Agregar al Ticket</button>
+                        </div>
+
+                        <form id="formFinalizarPedido">
+                            <label>Resumen del Ticket</label>
+                            <div class="cart-box">
+                                <div id="cartList"><p style="color: #94a3b8; text-align: center;">El ticket esta vacio</p></div>
+                                <div class="total-banner">Total: $<span id="cartTotal">0</span></div>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Cliente</label>
+                                <input type="text" id="vCliente" placeholder="Ej: Maria" required>
+                            </div>
+
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Fecha Pedido</label>
+                                    <input type="date" id="vFecha" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Fecha Entrega</label>
+                                    <input type="date" id="vFechaEntrega" required>
+                                </div>
+                            </div>
+
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Estado</label>
+                                    <select id="vEstado">
+                                        <option value="Pagado">Pagado</option>
+                                        <option value="Pendiente">Pendiente</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Medio de Pago</label>
+                                    <select id="vMedio">
+                                        <option value="Efectivo">Efectivo</option>
+                                        <option value="Transferencia">Transferencia</option>
+                                        <option value="Tarjeta">Tarjeta</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <button type="submit" class="btn-submit">Confirmar Pedido</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: CUENTAS Y ENTREGAS -->
+                <div id="sec-cuentas" class="section">
+                    <div class="card ios-card">
+                        <h3 style="margin-bottom: 15px; font-weight:800;">Estado de Cuentas y Pedidos</h3>
+                        
+                        <div class="cuentas-total-banner">
+                            <small>Total Pendiente de Cobro</small>
+                            <strong id="cMontoPendienteTotal">$0</strong>
+                        </div>
+
+                        <div style="margin-top: 20px;">
+                            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
+                                💸 Quien me debe dinero (Por Cobrar)
+                            </h4>
+                            <div id="listaPendientesPago">Cargando cuentas...</div>
+                        </div>
+
+                        <div style="margin-top: 25px; border-top: 2px dashed var(--border-color); padding-top: 20px;">
+                            <h4 style="font-size: 0.9rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
+                                📦 Pedidos Pendientes de Entrega
+                            </h4>
+                            <div id="listaPendientesEntrega">Cargando entregas...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: REGISTRAR GASTO -->
+                <div id="sec-gastos" class="section">
+                    <div class="card ios-card">
+                        <form id="formGasto">
+                            <div class="form-group">
+                                <label>Fecha</label>
+                                <input type="date" id="gFecha" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Categoria</label>
+                                <select id="gCategoria">
+                                    <option value="Materia Prima">Materia Prima</option>
+                                    <option value="Embalaje">Embalaje / Cajas</option>
+                                    <option value="Servicios">Servicios</option>
+                                    <option value="Otros">Otros</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Descripcion</label>
+                                <input type="text" id="gDescripcion" placeholder="Ej: Manteca" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Monto ($)</label>
+                                <input type="number" id="gMonto" placeholder="0" required>
+                            </div>
+                            <button type="submit" class="btn-submit">Registrar Gasto</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- SECCIÓN: STOCK -->
+                <div id="sec-stock" class="section">
+                    <div class="card ios-card">
+                        <h3 style="margin-bottom: 15px; font-weight:700;">Disponibilidad Actual</h3>
+                        <div id="listaStock">Cargando stock...</div>
+                    </div>
+                </div>
+                
+                <!-- SECCIÓN: AGENDA PROXIMOS 7 DIAS -->
+                <div id="sec-agenda" class="section">
+                    <div id="listaAgenda">Cargando agenda de produccion...</div>
+                </div>
+
+                <!-- SECCIÓN: BALANCE Y GANANCIAS -->
+                <div id="sec-balance" class="section">
+                    <div class="card ios-card">
+                        <h3 style="margin-bottom: 15px; font-weight:800;">Resumen Financiero</h3>
+                        
+                        <div class="row" style="margin-bottom: 15px; align-items: flex-end;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>Filtrar por Mes</label>
+                                <input type="month" id="bMesFilter" onchange="cargarBalance()">
+                            </div>
+                            <button type="button" class="btn-jalea-chip" style="padding: 12px 10px; font-size: 0.8rem; border-radius: 12px;" onclick="verHistoricoBalance()">Ver Historico</button>
+                        </div>
+
+                        <div class="balance-grid">
+                            <div class="balance-item pos">
+                                <small>Ingresos Totales</small>
+                                <strong id="bIngresos">$0</strong>
+                            </div>
+                            <div class="balance-item neg">
+                                <small>Costo Produccion</small>
+                                <strong id="bCostos">$0</strong>
+                            </div>
+                            <div class="balance-item neg">
+                                <small>Gastos Registrados</small>
+                                <strong id="bGastos">$0</strong>
+                            </div>
+                            <div class="balance-item total">
+                                <small>Ganancia Neta Real</small>
+                                <strong id="bGanancia">$0</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>
