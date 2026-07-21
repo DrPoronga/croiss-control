@@ -18,7 +18,8 @@ app = Flask(__name__)
 
 SMTP_SERVER = "smtp.gmail.com"
 EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "croiss.uy@gmail.com")
-EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "wmce qcmv xcfw twgs")
+# Lee la contraseña desde las variables de entorno de Render
+EMAIL_PASSWORD = os.environ.get("EMAIL_PASSWORD", "")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -71,7 +72,7 @@ def asegurar_encabezados_ventas(sheet_ventas):
         if not fila_1 or len(fila_1) < len(headers_esperados):
             sheet_ventas.update('A1:M1', [headers_esperados])
     except Exception as e:
-        print(f"Aviso verificando encabezados de Ventas: {e}")
+        print(f"Aviso verificando encabezados de Ventas: {e}", flush=True)
 
 def normalizar_fecha(fecha_raw):
     if not fecha_raw:
@@ -109,7 +110,7 @@ def get_clean_records(sheet):
 
         return records
     except Exception as e:
-        print(f"⚠️ Error leyendo registros de {sheet.title}: {e}")
+        print(f"⚠️ Error leyendo registros de {sheet.title}: {e}", flush=True)
         return []
 
 def get_field_val(record, *possible_keys):
@@ -126,19 +127,21 @@ def get_field_val(record, *possible_keys):
 def enviar_email_async(destinatario, asunto, cuerpo_html):
     def _enviar():
         if not destinatario or "@" not in str(destinatario):
-            print(f"⚠️ [EMAIL] No se envió correo: dirección inválida ('{destinatario}')")
+            print(f"⚠️ [EMAIL] No se envió correo: dirección inválida ('{destinatario}')", flush=True)
             return
 
         pass_clean = EMAIL_PASSWORD.replace(" ", "").strip()
+        if not pass_clean:
+            print("❌ [EMAIL] Error: La contraseña EMAIL_PASSWORD no está cargada en las variables de entorno.", flush=True)
+            return
+
         msg = MIMEMultipart("alternative")
         msg["Subject"] = asunto
         msg["From"] = f"CROISS <{EMAIL_EMISOR}>"
         msg["To"] = destinatario
         msg.attach(MIMEText(cuerpo_html, "html"))
 
-        # -------------------------------------------------------------
-        # INTENTO 1: Puerto 587 (STARTTLS Estándar)
-        # -------------------------------------------------------------
+        # Intento 1: Puerto 587 STARTTLS (Estándar de Nube)
         try:
             context = ssl.create_default_context()
             with smtplib.SMTP(SMTP_SERVER, 587, timeout=15) as server:
@@ -147,35 +150,20 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
                 server.ehlo()
                 server.login(EMAIL_EMISOR, pass_clean)
                 server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
-                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 587)")
+                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 587)", flush=True)
                 return
         except Exception as e587:
-            print(f"⚠️ Puerto 587 falló ({e587}), reintentando por Puerto 465 SSL...")
+            print(f"⚠️ Puerto 587 falló ({e587}), reintentando por Puerto 465 SSL...", flush=True)
 
-        # -------------------------------------------------------------
-        # INTENTO 2: Puerto 465 (SSL Directo)
-        # -------------------------------------------------------------
+        # Intento 2: Puerto 465 SSL Directo
         try:
             context = ssl.create_default_context()
             with smtplib.SMTP_SSL(SMTP_SERVER, 465, context=context, timeout=15) as server:
                 server.login(EMAIL_EMISOR, pass_clean)
                 server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
-                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 465 SSL)")
-                return
+                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 465 SSL)", flush=True)
         except Exception as e465:
-            print(f"⚠️ Puerto 465 SSL falló ({e465}), intentando modo permisivo local...")
-
-        # -------------------------------------------------------------
-        # INTENTO 3: Puerto 465 Permisivo (Antivirus / Firewall local en PC)
-        # -------------------------------------------------------------
-        try:
-            context_unverified = ssl._create_unverified_context()
-            with smtplib.SMTP_SSL(SMTP_SERVER, 465, context=context_unverified, timeout=15) as server:
-                server.login(EMAIL_EMISOR, pass_clean)
-                server.sendmail(EMAIL_EMISOR, destinatario, msg.as_string())
-                print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario}! (Puerto 465 Permisivo)")
-        except Exception as e_final:
-            print(f"❌ [EMAIL] Error crítico enviando correo a {destinatario}: {e_final}")
+            print(f"❌ [EMAIL] Error crítico enviando correo a {destinatario}: {e465}", flush=True)
 
     threading.Thread(target=_enviar).start()
 
@@ -404,18 +392,18 @@ def marcar_entregado():
             email_cliente = get_field_val(reg, "Email", "Correo")
             cliente_nombre = get_field_val(reg, "Cliente") or "Cliente"
 
-            print(f"🚚 Marca de Entrega Fila {num_fila} -> Cliente: '{cliente_nombre}' | Email: '{email_cliente}'")
+            print(f"🚚 Marca de Entrega Fila {num_fila} -> Cliente: '{cliente_nombre}' | Email: '{email_cliente}'", flush=True)
 
             if email_cliente and "@" in email_cliente:
                 link_review = "https://share.google/dTCn5wDuysp01wARR"
                 html = plantilla_email_entregado(cliente_nombre, link_review)
                 enviar_email_async(email_cliente, "✨ ¡Tu pedido de CROISS fue entregado! Dejanos tu reseña", html)
             else:
-                print(f"⚠️ [AVISO] El cliente '{cliente_nombre}' no tiene email registrado en la planilla. No se envía mail.")
+                print(f"⚠️ [AVISO] El cliente '{cliente_nombre}' no tiene email registrado en la planilla. No se envía mail.", flush=True)
 
         return jsonify({"status": "exito", "mensaje": "Pedido marcado como entregado con éxito"}), 200
     except Exception as error:
-        print(f"❌ Error en /api/marcar_entregado: {error}")
+        print(f"❌ Error en /api/marcar_entregado: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/cambiar_estado_pago', methods=['POST'])
@@ -480,14 +468,14 @@ def obtener_gastos_e_insumos():
             gastos = get_clean_records(sheet_gastos)
             gastos.reverse()
         except Exception as eg:
-            print(f"Aviso leyendo Gastos: {eg}")
+            print(f"Aviso leyendo Gastos: {eg}", flush=True)
 
         insumos = []
         try:
             sheet_insumos = obtener_o_crear_sheet_insumos()
             insumos = get_clean_records(sheet_insumos)
         except Exception as ei:
-            print(f"Aviso leyendo Insumos: {ei}")
+            print(f"Aviso leyendo Insumos: {ei}", flush=True)
 
         return jsonify({
             "status": "exito",
@@ -495,7 +483,7 @@ def obtener_gastos_e_insumos():
             "gastos": gastos[:15]
         }), 200
     except Exception as error:
-        print(f"❌ Error en /api/gastos_e_insumos: {error}")
+        print(f"❌ Error en /api/gastos_e_insumos: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/balance', methods=['GET'])
@@ -602,7 +590,7 @@ def obtener_balance():
         }), 200
 
     except Exception as error:
-        print(f"❌ Error en /api/balance: {error}")
+        print(f"❌ Error en /api/balance: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/stock', methods=['GET'])
@@ -647,7 +635,7 @@ def registrar_venta():
                     stock_actual = int(sheet_stock.cell(fila, 4).value or 0)
                     sheet_stock.update_cell(fila, 4, max(0, stock_actual - cant))
             except Exception as e:
-                print(f"Aviso: No se pudo descontar stock del producto {prod_nombre}: {e}")
+                print(f"Aviso: No se pudo descontar stock del producto {prod_nombre}: {e}", flush=True)
 
         descripcion_final = ", ".join(resumen_productos)
         cliente_nombre = datos.get("cliente", "Consumidor Final")
@@ -680,11 +668,11 @@ def registrar_venta():
                 html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
                 enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
             except Exception as ee:
-                print(f"Aviso al enviar email: {ee}")
+                print(f"Aviso al enviar email: {ee}", flush=True)
 
         return jsonify({"status": "exito", "mensaje": "Pedido registrado correctamente", "id": nuevo_id}), 200
     except Exception as error:
-        print(f"❌ Error en /api/venta: {error}")
+        print(f"❌ Error en /api/venta: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/clientes', methods=['GET'])
@@ -861,14 +849,14 @@ def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croiss
                         if stock_actual > 0:
                             nuevo_stock = max(0.0, stock_actual - cantidad_cajas)
                             sheet_insumos.update_cell(idx, 2, nuevo_stock)
-                            print(f"📦 [DESCUENTO CAJA] {nombre_insumo}: -{cantidad_cajas}")
+                            print(f"📦 [DESCUENTO CAJA] {nombre_insumo}: -{cantidad_cajas}", flush=True)
                             break
 
             descontar_caja("6", cajas_6_necesarias)
             descontar_caja("3", cajas_3_necesarias)
 
     except Exception as e:
-        print(f"⚠️ Error descontando insumos/cajas: {e}")
+        print(f"⚠️ Error descontando insumos/cajas: {e}", flush=True)
 
 @app.route('/api/gasto', methods=['POST'])
 def registrar_gasto():
@@ -921,7 +909,7 @@ def registrar_gasto():
                 else:
                     sheet_insumos.append_row([desc, cant, unidad or "un", venc])
             except Exception as e:
-                print(f"⚠️ Error actualizando Insumos_Stock: {e}")
+                print(f"⚠️ Error actualizando Insumos_Stock: {e}", flush=True)
 
         return jsonify({"status": "exito", "mensaje": "Gasto registrado", "id": nuevo_id}), 200
     except Exception as error:
