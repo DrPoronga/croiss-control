@@ -294,8 +294,22 @@ button.btn-submit:active {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 16px 0;
+    padding: 16px 12px;
     border-bottom: 1px solid var(--border-color);
+    border-radius: 14px;
+    transition: background 0.2s ease;
+}
+
+.stock-item.clickable {
+    cursor: pointer;
+}
+
+.stock-item.clickable:hover {
+    background: #FAF9F8;
+}
+
+.stock-item.clickable:active {
+    background: #F2E6DF;
 }
 
 .stock-item:last-child {
@@ -494,12 +508,20 @@ button.btn-submit:active {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px; /* Asegura separación constante entre el texto y el botón */
     padding: 12px 0;
     border-bottom: 1px dashed var(--border-color);
 }
 
 .cuenta-item:last-child {
     border-bottom: none;
+}
+
+/* Fuerza al bloque de texto a adaptarse sin empujar el botón */
+.cuenta-item > div:first-child {
+    flex: 1;
+    min-width: 0;
+    word-wrap: break-word;
 }
 
 .btn-pagar-ahora {
@@ -513,9 +535,324 @@ button.btn-submit:active {
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(22, 163, 74, 0.2);
     transition: all 0.2s ease;
+    flex-shrink: 0; /* PROHIBE que el botón se reduzca o deforme */
+    white-space: nowrap; /* Mantiene el texto del botón en una sola línea */
 }
 
 .btn-pagar-ahora:active {
     transform: scale(0.95);
 }
 
+/* Tarjeta Cliente Top del Mes */
+.top-cliente-card {
+    background: linear-gradient(135deg, #C86D28, #9A4D15);
+    color: white;
+    padding: 20px;
+    border-radius: 20px;
+    text-align: center;
+    box-shadow: 0 8px 20px rgba(200, 109, 40, 0.25);
+    margin-bottom: 15px;
+}
+
+.top-cliente-card small {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: rgba(255, 255, 255, 0.2);
+    padding: 4px 12px;
+    border-radius: 12px;
+    display: inline-block;
+    margin-bottom: 6px;
+}
+
+.top-cliente-card h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+}
+
+/* Item de Ranking */
+.cliente-rank-item {
+    background: #FAF9F8;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 10px;
+}
+
+.cliente-rank-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.cliente-pos {
+    font-weight: 800;
+    color: var(--accent);
+    font-size: 1.1rem;
+    min-width: 28px;
+}
+
+.cliente-historial-detalle {
+    display: none;
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
+}
+
+.cliente-historial-detalle.active {
+    display: block;
+}
+
+.historial-compra-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 0.83rem;
+    color: var(--text-main);
+    border-bottom: 1px dotted #EFEAE6;
+}
+
+.historial-compra-row:last-child {
+    border-bottom: none;
+}
+
+/* Segmented Control Estilo iOS */
+.ios-segmented-control {
+    display: flex;
+    background: #EFEAE6;
+    padding: 3px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+}
+
+.seg-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 0;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.seg-btn.active {
+    background: #FFFFFF;
+    color: var(--text-main);
+    box-shadow: 0 3px 8px rgba(45, 30, 24, 0.1);
+}
+
+/* Transición Sub-Secciones */
+.sub-seccion {
+    display: none;
+}
+
+.sub-seccion.active {
+    display: block;
+    animation: iosSlide 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes iosSlide {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+/* Filas Estilo Lista iOS */
+.ios-cliente-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    background: #FAF9F8;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.ios-cliente-row:active {
+    background: #F2E6DF;
+}
+
+.cliente-rank-pos {
+    font-weight: 800;
+    color: var(--accent);
+    font-size: 1.05rem;
+    min-width: 28px;
+}
+
+/* Botón Volver iOS */
+.btn-ios-back {
+    background: transparent;
+    border: none;
+    color: var(--accent);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    padding: 0;
+    margin-bottom: 16px;
+    display: inline-block;
+}
+
+.cliente-perfil-header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+}
+
+.historial-compra-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #FAF9F8;
+    border-radius: 14px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-color);
+}
+
+/* ==========================================
+   MODAL FLOTANTE ESTILO CROISS / iOS
+   ========================================== */
+.croiss-swal-popup {
+    border-radius: 28px !important;
+    padding: 24px 20px !important;
+    background: #FFFFFF !important;
+    border: 1px solid var(--border-color) !important;
+    box-shadow: 0 20px 40px rgba(45, 30, 24, 0.12), 0 4px 12px rgba(45, 30, 24, 0.04) !important;
+    font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+    width: 360px !important;
+    max-width: 90vw !important;
+}
+
+.croiss-swal-title {
+    color: var(--text-main) !important;
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
+    padding: 0 0 10px 0 !important;
+    border-bottom: 1px dashed var(--border-color) !important;
+}
+
+.croiss-swal-input {
+    width: 100% !important;
+    padding: 12px 16px !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 14px !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    background-color: #FAF9F8 !important;
+    color: var(--text-main) !important;
+    outline: none !important;
+    margin: 6px 0 16px 0 !important;
+    box-sizing: border-box !important;
+    transition: all 0.2s ease !important;
+}
+
+.croiss-swal-input:focus {
+    border-color: var(--accent) !important;
+    background-color: #FFFFFF !important;
+    box-shadow: 0 0 0 4px rgba(200, 109, 40, 0.12) !important;
+}
+
+.croiss-swal-confirm {
+    background: linear-gradient(135deg, #C86D28, #9A4D15) !important;
+    color: #FFFFFF !important;
+    border-radius: 14px !important;
+    padding: 12px 20px !important;
+    font-weight: 700 !important;
+    font-size: 0.88rem !important;
+    box-shadow: 0 4px 12px rgba(200, 109, 40, 0.25) !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.croiss-swal-confirm:active {
+    transform: scale(0.96) !important;
+}
+
+.croiss-swal-cancel {
+    background: #EFEAE6 !important;
+    color: var(--text-muted) !important;
+    border-radius: 14px !important;
+    padding: 12px 16px !important;
+    font-weight: 600 !important;
+    font-size: 0.88rem !important;
+    border: none !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+}
+
+.croiss-swal-cancel:active {
+    transform: scale(0.96) !important;
+}
+
+/* Buscador estilo iOS */
+.ios-search-box {
+    margin-bottom: 12px;
+}
+
+.ios-search-box input {
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 0.88rem;
+    background-color: #EFEAE6;
+    color: var(--text-main);
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.ios-search-box input:focus {
+    background-color: #E5DDD7;
+    box-shadow: 0 0 0 3px rgba(200, 109, 40, 0.15);
+}
+
+.directorio-header-count {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    letter-spacing: 0.5px;
+}
+
+/* Contenedor scrolleable con límite de altura */
+.ios-list-container {
+    max-height: 420px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+/* Personalización del scrollbar minimalista */
+.ios-list-container::-webkit-scrollbar {
+    width: 5px;
+}
+.ios-list-container::-webkit-scrollbar-thumb {
+    background: #D8CFC8;
+    border-radius: 10px;
+}
+
+/* Filas Compactas estilo iOS Table View */
+.ios-cliente-row.compact {
+    padding: 10px 12px; /* Reducido de 14px */
+    margin-bottom: 6px;  /* Reducido de 8px */
+    border-radius: 12px;
+    background: #FAF9F8;
+    border: 1px solid var(--border-color);
+}
+
+.ios-cliente-row.compact strong {
+    font-size: 0.88rem;
+}
+
+.ios-cliente-row.compact small {
+    font-size: 0.75rem;
+}
