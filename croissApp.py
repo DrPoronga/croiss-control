@@ -14,9 +14,9 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 app = Flask(__name__)
 
-# Configuración de Resend API por HTTP
-EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "croiss.uy@gmail.com")
+# Configuración de Brevo API por HTTP
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "croiss.uy@gmail.com")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -121,7 +121,6 @@ def get_field_val(record, *possible_keys):
                 return str(val).strip()
     return ""
 
-
 def enviar_email_async(destinatario, asunto, cuerpo_html):
     def _enviar():
         if not destinatario or "@" not in str(destinatario):
@@ -163,7 +162,7 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
             print(f"❌ [EMAIL] Error enviando correo vía Brevo API a {destinatario}: {e}", flush=True)
 
     threading.Thread(target=_enviar).start()
-    
+
 # --- PLANTILLAS VISUALES DE EMAIL ---
 
 def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
@@ -377,12 +376,10 @@ def marcar_entregado():
             if "entrega" in h and "fecha" not in h:
                 col_entrega = i
 
-        # 1. Actualiza celda en Google Sheets
         sheet_ventas.update_cell(int(num_fila), col_entrega, "Entregado")
 
-        # 2. Lee el registro exacto usando get_clean_records
         registros = get_clean_records(sheet_ventas)
-        idx_registro = int(num_fila) - 2  # Fila 2 es índice 0 en registros
+        idx_registro = int(num_fila) - 2
 
         if 0 <= idx_registro < len(registros):
             reg = registros[idx_registro]
@@ -395,12 +392,69 @@ def marcar_entregado():
                 link_review = "https://share.google/dTCn5wDuysp01wARR"
                 html = plantilla_email_entregado(cliente_nombre, link_review)
                 enviar_email_async(email_cliente, "✨ ¡Tu pedido de CROISS fue entregado! Dejanos tu reseña", html)
-            else:
-                print(f"⚠️ [AVISO] El cliente '{cliente_nombre}' no tiene email registrado en la planilla. No se envía mail.", flush=True)
 
         return jsonify({"status": "exito", "mensaje": "Pedido marcado como entregado con éxito"}), 200
     except Exception as error:
         print(f"❌ Error en /api/marcar_entregado: {error}", flush=True)
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/eliminar_venta', methods=['POST'])
+def eliminar_venta():
+    """Elimina permanentemente una orden/fila de la pestaña Ventas"""
+    try:
+        datos = request.json or {}
+        num_fila = datos.get("fila")
+
+        if not num_fila:
+            return jsonify({"status": "error", "mensaje": "Número de fila no especificado"}), 400
+
+        sheet_ventas = conectar_sheet("Ventas")
+        sheet_ventas.delete_rows(int(num_fila))
+
+        print(f"🗑️ [PEDIDO ELIMINADO] Se borró la fila {num_fila} de Google Sheets", flush=True)
+        return jsonify({"status": "exito", "mensaje": "Pedido eliminado correctamente"}), 200
+    except Exception as error:
+        print(f"❌ Error en /api/eliminar_venta: {error}", flush=True)
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/cliente/editar', methods=['POST'])
+def editar_cliente():
+    """Actualiza email, teléfono y dirección de un cliente en todas sus órdenes"""
+    try:
+        datos = request.json or {}
+        nombre_cliente = str(datos.get("nombre", "")).strip()
+        nuevo_email = str(datos.get("email", "")).strip()
+        nuevo_telefono = str(datos.get("telefono", "")).strip()
+        nueva_direccion = str(datos.get("direccion", "")).strip()
+
+        if not nombre_cliente:
+            return jsonify({"status": "error", "mensaje": "Nombre de cliente no especificado"}), 400
+
+        sheet_ventas = conectar_sheet("Ventas")
+        data = sheet_ventas.get_all_values()
+        if not data or len(data) < 2:
+            return jsonify({"status": "exito", "mensaje": "No hay filas para actualizar"}), 200
+
+        headers = [str(h).strip().lower() for h in data[0]]
+        
+        col_cliente = headers.index("cliente") + 1 if "cliente" in headers else 4
+        col_email = headers.index("email") + 1 if "email" in headers else 10
+        col_tel = next((i + 1 for i, h in enumerate(headers) if "tel" in h), 11)
+        col_dir = next((i + 1 for i, h in enumerate(headers) if "direc" in h), 12)
+
+        filas_modificadas = 0
+        for idx, row in enumerate(data[1:], start=2):
+            val_cli = row[col_cliente - 1] if col_cliente - 1 < len(row) else ""
+            if val_cli.strip().lower() == nombre_cliente.lower():
+                sheet_ventas.update_cell(idx, col_email, nuevo_email)
+                sheet_ventas.update_cell(idx, col_tel, nuevo_telefono)
+                sheet_ventas.update_cell(idx, col_dir, nueva_direccion)
+                filas_modificadas += 1
+
+        print(f"✏️ [CLIENTE EDITADO] '{nombre_cliente}' actualizado en {filas_modificadas} fila(s).", flush=True)
+        return jsonify({"status": "exito", "mensaje": f"Cliente actualizado en {filas_modificadas} registro(s)"}), 200
+    except Exception as error:
+        print(f"❌ Error en /api/cliente/editar: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/cambiar_estado_pago', methods=['POST'])
@@ -417,7 +471,7 @@ def cambiar_estado_pago():
         asegurar_encabezados_ventas(sheet_ventas)
 
         headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
-        col_estado = 8  # Por defecto columna H (8)
+        col_estado = 8
 
         for i, h in enumerate(headers, start=1):
             if "estado" in h:
@@ -601,7 +655,6 @@ def obtener_stock():
 
 @app.route('/api/venta', methods=['POST'])
 def registrar_venta():
-    """Registra el pedido, descuenta stock/insumos y guarda email, teléfono y dirección"""
     try:
         datos = request.json or {}
         sheet_ventas = conectar_sheet("Ventas")
@@ -656,7 +709,7 @@ def registrar_venta():
             email_cliente,
             telefono_cliente,
             direccion_cliente,
-            "Pendiente"  # Estado de entrega en Columna M (13)
+            "Pendiente"
         ]
         sheet_ventas.append_row(nueva_fila)
 
@@ -682,7 +735,7 @@ def obtener_clientes():
 
         clientes_historico, clientes_mes = {}, {}
 
-        for v in ventas:
+        for idx, v in enumerate(ventas, start=2):
             cliente_nombre = get_field_val(v, "Cliente") or "Consumidor Final"
             if not cliente_nombre or cliente_nombre.lower() == "consumidor final": continue
 
@@ -701,6 +754,7 @@ def obtener_clientes():
             key_norm = cliente_nombre.lower()
 
             pedido_item = {
+                "fila": idx,
                 "id": get_field_val(v, "ID Venta", "ID"),
                 "fecha": fecha_norm,
                 "producto": get_field_val(v, "Producto"),

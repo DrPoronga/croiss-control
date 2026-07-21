@@ -196,7 +196,7 @@ function seleccionarInsumoRapido(nombreInsumo, unidadPredeterminada = '') {
     if (unidadEl && unidadPredeterminada) unidadEl.value = unidadPredeterminada;
 }
 
-// Cargar Stock de Productos (Protegido contra peticiones duplicadas en segundo plano)
+// Cargar Stock de Productos
 async function cargarStock(forzar = false) {
     if (isFetchingStock) return;
 
@@ -442,7 +442,10 @@ async function cargarCuentas() {
                                 <span style="font-size:0.85rem; color:#475569;">📦 ${p.producto} (${p.cantidad} un.)</span><br>
                                 <span style="font-size:0.9rem; font-weight:800; color:#dc2626;">Monto: $${p.monto}</span>
                             </div>
-                            <button class="btn-pagar-ahora" onclick="marcarComoPagado(${p.fila}, '${p.cliente}')">✓ Marcar Pagado</button>
+                            <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
+                                <button class="btn-pagar-ahora" onclick="marcarComoPagado(${p.fila}, '${p.cliente}')">✓ Marcar Pagado</button>
+                                <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${p.fila}, '${p.cliente}')">🗑️ Cancelar</button>
+                            </div>
                         `;
                         contPago.appendChild(div);
                     });
@@ -474,7 +477,10 @@ async function cargarCuentas() {
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                                 <span class="agenda-badge ${badgeClase}">${badgeTexto}</span>
                                 ${btnMaps}
-                                <button class="btn-jalea-chip active" style="padding: 6px 10px; font-size: 0.75rem;" onclick="notificarEntrega(${e.fila}, '${e.cliente}')">🚚 Entregado</button>
+                                <div style="display:flex; gap:6px; margin-top:2px;">
+                                    <button class="btn-jalea-chip active" style="padding: 6px 10px; font-size: 0.75rem;" onclick="notificarEntrega(${e.fila}, '${e.cliente}')">🚚 Entregado</button>
+                                    <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${e.fila}, '${e.cliente}')">🗑️</button>
+                                </div>
                             </div>
                         `;
                         contEntrega.appendChild(div);
@@ -486,6 +492,50 @@ async function cargarCuentas() {
         Swal.close();
         console.error("Error al cargar entregas:", err);
     }
+}
+
+// Eliminar / Cancelar Pedido
+async function eliminarPedido(numFila, clienteNombre) {
+    Swal.fire({
+        title: '¿Cancelar este pedido?',
+        text: `Se eliminará permanentemente la orden de ${clienteNombre} de la planilla.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: 'Sí, eliminar pedido',
+        cancelButtonText: 'No, conservar'
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            mostrarLoaderSutil('Eliminando pedido...');
+            try {
+                const res = await fetch('/api/eliminar_venta', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ fila: numFila })
+                });
+                const data = await res.json();
+                Swal.close();
+
+                if (data.status === 'exito') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Pedido Eliminado',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+                    cargarCuentas();
+                    if (typeof cargarAgenda === 'function') cargarAgenda();
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                Swal.close();
+                console.error("Error al eliminar pedido:", err);
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+            }
+        }
+    });
 }
 
 async function notificarEntrega(numFila, nombreCliente) {
@@ -832,7 +882,15 @@ function verDetalleCliente(clienteObj) {
             <button type="button" class="btn-jalea-chip" style="margin-left:6px; font-size:0.7rem; padding: 2px 8px;" onclick="abrirGoogleMaps('${clienteObj.direccion}')">🗺️ Abrir Maps</button>
         ` : '';
 
-        contContacto.innerHTML = (datosStr.join(' | ') || 'Sin datos de contacto') + mapsBtn;
+        const btnEditar = `
+            <div style="margin-top:10px;">
+                <button type="button" class="btn-jalea-chip active" style="font-size:0.8rem; padding:6px 12px;" onclick='abrirModalEditarCliente(${JSON.stringify(clienteObj)})'>
+                    ✏️ Editar Datos de Contacto
+                </button>
+            </div>
+        `;
+
+        contContacto.innerHTML = (datosStr.join(' | ') || 'Sin datos de contacto') + mapsBtn + btnEditar;
     }
 
     const contHist = document.getElementById('detClienteHistorial');
@@ -848,10 +906,85 @@ function verDetalleCliente(clienteObj) {
             </div>
             <div style="text-align:right;">
                 <strong style="color:var(--text-main);">$${h.monto}</strong><br>
-                <small style="color:var(--accent);">${h.cantidad} un.</small>
+                <small style="color:var(--accent);">${h.cantidad} un.</small><br>
+                ${h.fila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarPedido(${h.fila}, '${clienteObj.nombre}')">🗑️ Eliminar</button>` : ''}
             </div>
         `;
         contHist.appendChild(div);
+    });
+}
+
+function abrirModalEditarCliente(clienteObj) {
+    Swal.fire({
+        title: `✏️ Editar a ${clienteObj.nombre}`,
+        customClass: {
+            popup: 'croiss-swal-popup',
+            title: 'croiss-swal-title',
+            confirmButton: 'croiss-swal-confirm',
+            cancelButton: 'croiss-swal-cancel'
+        },
+        buttonsStyling: false,
+        html: `
+            <div style="text-align: left; margin-top: 14px;">
+                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
+                    Teléfono
+                </label>
+                <input type="text" id="editTelInput" class="croiss-swal-input" value="${clienteObj.telefono || ''}" placeholder="099 123 456">
+
+                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
+                    Email
+                </label>
+                <input type="email" id="editEmailInput" class="croiss-swal-input" value="${clienteObj.email || ''}" placeholder="correo@gmail.com">
+
+                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
+                    Dirección
+                </label>
+                <input type="text" id="editDirInput" class="croiss-swal-input" value="${clienteObj.direccion || ''}" placeholder="Av. Brasil 2450 Apt 302" style="margin-bottom:0 !important;">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Cambios',
+        cancelButtonText: 'Cancelar',
+        focusConfirm: false,
+        preConfirm: () => {
+            return {
+                nombre: clienteObj.nombre,
+                telefono: document.getElementById('editTelInput').value.trim(),
+                email: document.getElementById('editEmailInput').value.trim(),
+                direccion: document.getElementById('editDirInput').value.trim()
+            };
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            mostrarLoaderSutil('Actualizando cliente...');
+
+            try {
+                const res = await fetch('/api/cliente/editar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(result.value)
+                });
+                const data = await res.json();
+                Swal.close();
+
+                if (data.status === 'exito') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Cliente Actualizado!',
+                        timer: 1600,
+                        showConfirmButton: false
+                    });
+                    cargarClientes();
+                    volverASeccionAnterior();
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                Swal.close();
+                console.error("Error al editar cliente:", err);
+                Swal.fire('Error', 'No se pudo actualizar la información', 'error');
+            }
+        }
     });
 }
 
@@ -970,7 +1103,7 @@ function renderizarCarrito() {
     totalEl.innerText = totalGeneral;
 }
 
-// LISTENER DE REGISTRO DE PEDIDOS (Limpio y directo)
+// LISTENER DE REGISTRO DE PEDIDOS
 const formFinalizarPedido = document.getElementById('formFinalizarPedido');
 if (formFinalizarPedido) {
     formFinalizarPedido.addEventListener('submit', async (e) => {
