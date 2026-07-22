@@ -2202,6 +2202,99 @@ function abrirModalSumarStock(tipoCategoria) {
     });
 }
 
+
+// ==========================================
+// AUTENTICACIÓN BIOMÉTRICA (FACEID / TOUCHID)
+// ==========================================
+async function inicializarFaceID() {
+    const overlay = document.getElementById('lockScreenOverlay');
+    if (!overlay) return;
+
+    // Verificar si el navegador y dispositivo soportan lectura biométrica
+    if (window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) {
+        // Ejecutar solicitud de FaceID automáticamente al abrir
+        setTimeout(() => {
+            autenticarConBiometria();
+        }, 300);
+    } else {
+        // Si el dispositivo no tiene sensor biométrico o no está soportado, desbloquea directamente
+        console.log("Biometría no disponible en este dispositivo.");
+        overlay.style.display = 'none';
+    }
+}
+
+async function autenticarConBiometria() {
+    const overlay = document.getElementById('lockScreenOverlay');
+    try {
+        const credentialId = localStorage.getItem('croiss_bio_cred_id');
+
+        if (!credentialId) {
+            // REGISTRO PRIMERA VEZ (Enlaza el FaceID del iPhone con la web)
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+
+            const credential = await navigator.credentials.create({
+                publicKey: {
+                    challenge: challenge,
+                    rp: { name: "CROISS Control" },
+                    user: {
+                        id: new Uint8Array([1, 2, 3, 4]),
+                        name: "admin@croissuy.com",
+                        displayName: "Administrador CROISS"
+                    },
+                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
+                    authenticatorSelection: { 
+                        authenticatorAttachment: "platform", 
+                        userVerification: "required" 
+                    },
+                    timeout: 60000
+                }
+            });
+
+            if (credential) {
+                const idStr = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
+                localStorage.setItem('croiss_bio_cred_id', idStr);
+                overlay.style.display = 'none';
+            }
+        } else {
+            // VERIFICACIÓN HABITUAL (Llama al sensor de FaceID)
+            const challenge = new Uint8Array(32);
+            window.crypto.getRandomValues(challenge);
+
+            const rawId = Uint8Array.from(atob(credentialId), c => c.charCodeAt(0));
+
+            const assertion = await navigator.credentials.get({
+                publicKey: {
+                    challenge: challenge,
+                    allowCredentials: [{ id: rawId, type: 'public-key' }],
+                    userVerification: "required",
+                    timeout: 60000
+                }
+            });
+
+            if (assertion) {
+                overlay.style.display = 'none';
+            }
+        }
+    } catch (err) {
+        console.error("Error de autenticación FaceID:", err);
+        Swal.fire({
+            title: 'Verificación requerida',
+            text: 'Debes autenticarte con FaceID/TouchID para acceder a CROISS Control.',
+            icon: 'warning',
+            confirmButtonText: 'Reintentar',
+            customClass: {
+                popup: 'croiss-swal-popup',
+                confirmButton: 'croiss-swal-confirm'
+            }
+        });
+    }
+}
+
+// Iniciar al cargar la página
+document.addEventListener('DOMContentLoaded', inicializarFaceID);
+
+
 const formFinalizarPedido = document.getElementById('formFinalizarPedido');
 if (formFinalizarPedido) {
     formFinalizarPedido.addEventListener('submit', async (e) => {

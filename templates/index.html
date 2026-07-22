@@ -14,6 +14,17 @@
 </head>
 <body>
 
+	<!-- PANTALLA DE BLOQUEO CON FACEID -->
+	<div id="lockScreenOverlay" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #FAF9F8; z-index: 999999; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; box-sizing: border-box;">
+		<img src="{{ url_for('static', filename='logo.png') }}" alt="Croiss Logo" style="width: 110px; margin-bottom: 16px;">
+		<h2 style="color: #2D1E18; font-size: 1.6rem; font-weight: 800; margin: 0 0 6px 0;">CROISS Control</h2>
+		<p style="color: #64748b; font-size: 0.88rem; margin: 0 0 28px 0; font-weight: 600;">Acceso protegido mediante biometría</p>
+		
+		<button type="button" id="btnDesbloquearBio" onclick="autenticarConBiometria()" class="btn-submit" style="width: auto; padding: 14px 28px; font-size: 1rem; border-radius: 14px; box-shadow: 0 6px 16px rgba(200, 109, 40, 0.3);">
+			🔓 Desbloquear con FaceID / TouchID
+		</button>
+	</div>
+
     <div class="app-layout">
         <!-- SIDEBAR IZQUIERDO -->
         <aside class="sidebar">
