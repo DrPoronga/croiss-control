@@ -170,6 +170,39 @@ def plantilla_email_entregado(cliente, link_google_review="https://share.google/
 # ==========================================
 # RUTAS DE LA APLICACIÓN
 # ==========================================
+@app.route('/api/stock/congelados', methods=['GET', 'POST'])
+def stock_congelados():
+    """Gestiona el stock de masas/croissants congelados en la planilla"""
+    try:
+        sheet_stock = conectar_sheet("Productos_Stock")
+        
+        # Busca o crea la fila especial de Croissants Congelados
+        celda = None
+        try:
+            celda = sheet_stock.find(re.compile(r"^Croissants Congelados$", re.IGNORECASE))
+        except Exception:
+            pass
+
+        if not celda:
+            sheet_stock.append_row(["CONG-001", "Croissants Congelados", 0, 0])
+            celda = sheet_stock.find(re.compile(r"^Croissants Congelados$", re.IGNORECASE))
+
+        fila = celda.row
+        raw_val = sheet_stock.cell(fila, 4).value or "0"
+        stock_actual = int(raw_val) if str(raw_val).isdigit() else 0
+
+        if request.method == 'POST':
+            datos = request.json or {}
+            cantidad_sumar = int(datos.get("cantidad", 0))
+            nuevo_stock = max(0, stock_actual + cantidad_sumar)
+            sheet_stock.update_cell(fila, 4, nuevo_stock)
+            return jsonify({"status": "exito", "stock": nuevo_stock, "mensaje": "Stock congelado actualizado"})
+
+        return jsonify({"status": "exito", "stock": stock_actual}), 200
+    except Exception as error:
+        print(f"❌ Error en /api/stock/congelados: {error}", flush=True)
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 @app.route('/')
 def inicio():
     return render_template('index.html')
@@ -428,11 +461,15 @@ def obtener_gastos_e_insumos():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+import calendar
+
 @app.route('/api/balance', methods=['GET'])
 def obtener_balance():
     try:
         mes_filtro = request.args.get('mes', '').strip() or datetime.now().strftime("%Y-%m")
+
         sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
         sheet_gastos = conectar_sheet("Gastos")
         sheet_stock = conectar_sheet("Productos_Stock")
 
@@ -452,6 +489,14 @@ def obtener_balance():
         ingresos_mes = 0.0
         costos_prod_mes = 0.0
         pedidos_count_mes = 0
+        total_croiss_mes = 0
+        
+        con_jalea_count = 0
+        sin_jalea_count = 0
+        sabores_dict = {}
+        dias_semana_count = {"LUNES": 0, "MARTES": 0, "MIÉRCOLES": 0, "JUEVES": 0, "VIERNES": 0, "SÁBADO": 0, "DOMINGO": 0}
+        nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
+
         historico_dict = {}
 
         for v in ventas:
@@ -483,6 +528,40 @@ def obtener_balance():
                 ingresos_mes += monto
                 costos_prod_mes += costo_total_item
                 pedidos_count_mes += 1
+                total_croiss_mes += cant
+
+                # Analizar día de la semana
+                try:
+                    dt_v = datetime.strptime(f_norm, "%Y-%m-%d")
+                    dia_nombre = nombres_dias[dt_v.weekday()]
+                    dias_semana_count[dia_nombre] += cant
+                except Exception:
+                    pass
+
+                # Parsear descripción de productos
+                desc_prod = get_field_val(v, "Producto")
+                if desc_prod:
+                    partes = desc_prod.split(",")
+                    for item in partes:
+                        item_clean = item.strip()
+                        if not item_clean: continue
+                        
+                        tiene_jalea = "(con jalea)" in item_clean.lower()
+                        sin_jalea_str = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
+                        
+                        m = re.match(r"^(\d+)x\s+(.+)", sin_jalea_str, re.IGNORECASE)
+                        if m:
+                            c_item = int(m.group(1))
+                            sabor_item = m.group(2).strip()
+                        else:
+                            c_item = 1
+                            sabor_item = sin_jalea_str
+
+                        sabores_dict[sabor_item] = sabores_dict.get(sabor_item, 0) + c_item
+                        if tiene_jalea:
+                            con_jalea_count += c_item
+                        else:
+                            sin_jalea_count += c_item
 
         gastos_mes = 0.0
         for g in gastos:
@@ -507,6 +586,31 @@ def obtener_balance():
         ganancia_neta_mes = ingresos_mes - (costos_prod_mes + gastos_mes)
         ticket_promedio = round(ingresos_mes / pedidos_count_mes, 2) if pedidos_count_mes > 0 else 0.0
 
+        # CÁLCULO DE FUTUROLOGÍA / PROYECCIÓN
+        mes_actual_str = datetime.now().strftime("%Y-%m")
+        es_mes_actual = (mes_filtro == mes_actual_str)
+        
+        proy_croiss = total_croiss_mes
+        proy_ingresos = ingresos_mes
+
+        if es_mes_actual:
+            hoy_dia = datetime.now().day
+            year_val, month_val = map(int, mes_filtro.split("-"))
+            dias_totales = calendar.monthrange(year_val, month_val)[1]
+            if hoy_dia > 0:
+                pacing_croiss = total_croiss_mes / hoy_dia
+                pacing_ingresos = ingresos_mes / hoy_dia
+                proy_croiss = int(round(pacing_croiss * dias_totales))
+                proy_ingresos = round(pacing_ingresos * dias_totales, 2)
+
+        # Ranking de sabores
+        ranking_sabores = []
+        for sab, cant_s in sorted(sabores_dict.items(), key=lambda x: x[1], reverse=True):
+            pct = round((cant_s / total_croiss_mes * 100), 1) if total_croiss_mes > 0 else 0
+            ranking_sabores.append({"sabor": sab, "cantidad": cant_s, "porcentaje": pct})
+
+        pct_jalea = round((con_jalea_count / (con_jalea_count + sin_jalea_count) * 100), 1) if (con_jalea_count + sin_jalea_count) > 0 else 0
+
         lista_historica = []
         for m_key, vals in sorted(historico_dict.items(), reverse=True):
             g_neta = vals["ingresos"] - (vals["costos"] + vals["gastos"])
@@ -526,12 +630,26 @@ def obtener_balance():
             "gastos_varios": round(gastos_mes, 2),
             "ganancia_neta": round(ganancia_neta_mes, 2),
             "ticket_promedio": ticket_promedio,
+            "total_croissants": total_croiss_mes,
+            "proyeccion": {
+                "es_mes_actual": es_mes_actual,
+                "croissants_estimados": proy_croiss,
+                "ingresos_estimados": proy_ingresos
+            },
+            "stats_jalea": {
+                "con_jalea": con_jalea_count,
+                "sin_jalea": sin_jalea_count,
+                "porcentaje": pct_jalea
+            },
+            "ranking_sabores": ranking_sabores,
+            "dias_semana": dias_semana_count,
             "historico_meses": lista_historica
         }), 200
 
     except Exception as error:
+        print(f"❌ Error en /api/balance: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/stock', methods=['GET'])
 def obtener_stock():
     try:
@@ -566,14 +684,17 @@ def registrar_venta():
             jalea_str = " (Con Jalea)" if item.get("con_jalea") else ""
             resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
             
+            # Descontar automáticamente del stock de Croissants Congelados la cantidad total vendida
             try:
-                celda = sheet_stock.find(prod_nombre, in_column=2)
-                if celda:
-                    fila = celda.row
-                    stock_actual = int(sheet_stock.cell(fila, 4).value or 0)
-                    sheet_stock.update_cell(fila, 4, max(0, stock_actual - cant))
-            except Exception as e:
-                pass
+                celda_cong = sheet_stock.find(re.compile(r"^Croissants Congelados$", re.IGNORECASE))
+                if celda_cong:
+                    f_cong = celda_cong.row
+                    raw_st = sheet_stock.cell(f_cong, 4).value or "0"
+                    st_actual_cong = int(raw_st) if str(raw_st).isdigit() else 0
+                    nuevo_st_cong = max(0, st_actual_cong - total_unidades)
+                    sheet_stock.update_cell(f_cong, 4, nuevo_st_cong)
+            except Exception as ec:
+                print(f"Aviso descontando congelados: {ec}", flush=True)
 
         descripcion_final = ", ".join(resumen_productos)
         cliente_nombre = datos.get("cliente", "Consumidor Final")

@@ -231,6 +231,7 @@ function cambiarTab(e, tab) {
 
         if(tab === 'ventas') cargarStock();
         if(tab === 'entregas') cambiarSegmentoEntrega('cuentas');
+        if(tab === 'stock') cargarTodoElStock();
         if(tab === 'gastos') toggleCamposMateriaPrima();
         if(tab === 'balance') { cargarBalance(); cargarStock(); }
         if(tab === 'clientes') cargarClientes();
@@ -330,6 +331,7 @@ async function cargarStock(forzar = false) {
     }
 }
 
+// MUESTRA EL MENU Y PRECIOS INFORMATIVOS (SIN CONTADOR INDIVIDUAL)
 function renderizarMenuYStock() {
     const select = document.getElementById('vProductoSelect');
     const lista = document.getElementById('listaStock');
@@ -343,7 +345,7 @@ function renderizarMenuYStock() {
 
     catalogoProductos.forEach(prod => {
         const nombreProd = prod.Nombre || prod.Producto || prod.nombre || prod.producto || prod.Croissant || '';
-        if (!nombreProd) return;
+        if (!nombreProd || nombreProd.toLowerCase().includes('congelado')) return;
 
         if (select) {
             const opt = document.createElement('option');
@@ -353,20 +355,15 @@ function renderizarMenuYStock() {
         }
 
         if (lista) {
-            const stockCant = prod['Stock Actual'] !== undefined ? prod['Stock Actual'] : (prod['Stock'] || 0);
             const precioVenta = prod['Precio Venta'] !== undefined ? prod['Precio Venta'] : (prod['Precio'] || 0);
 
             const div = document.createElement('div');
-            div.className = 'stock-item clickable';
-            div.onclick = () => editarStockProducto(nombreProd, stockCant, precioVenta);
+            div.className = 'stock-item';
+            div.style.padding = '12px';
             div.innerHTML = `
                 <div>
                     <strong>${nombreProd}</strong><br>
-                    <small style="color:var(--text-muted);">$${precioVenta} c/u</small>
-                </div>
-                <div style="display:flex; align-items:center; gap:8px;">
-                    <span class="stock-cant">${stockCant} un.</span>
-                    <span style="color:#CBD5E1; font-weight:bold; font-size:1.1rem;">></span>
+                    <small style="color:var(--text-muted); font-weight:600;">$${precioVenta} c/u</small>
                 </div>
             `;
             lista.appendChild(div);
@@ -379,9 +376,32 @@ function renderizarMenuYStock() {
     }
 }
 
-function editarStockProducto(prodNombre, stockActual, precioActual) {
+async function cargarTodoElStock() {
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
+    try {
+        const resCong = await fetch('/api/stock/congelados');
+        const dataCong = await resCong.json();
+        if (dataCong.status === 'exito') {
+            const elCong = document.getElementById('cantCroissCongelados');
+            if (elCong) elCong.innerText = `${dataCong.stock} un.`;
+        }
+
+        await cargarStock(true);
+        await cargarInsumosYGastos();
+
+        await esperarAnimacionMinima(tInicio, 1500);
+        Swal.close();
+    } catch (err) {
+        Swal.close();
+        console.error("Error al cargar todo el stock:", err);
+    }
+}
+
+function abrirModalSumarCongelados() {
     Swal.fire({
-        title: prodNombre,
+        title: 'Agregar Produccion de Masas',
         customClass: {
             popup: 'croiss-swal-popup',
             title: 'croiss-swal-title',
@@ -392,29 +412,22 @@ function editarStockProducto(prodNombre, stockActual, precioActual) {
         html: `
             <div style="text-align: left; margin-top: 14px;">
                 <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
-                    Stock Disponible (Unidades)
+                    Cantidad de masas preparadas
                 </label>
-                <input type="number" id="editStockInput" class="croiss-swal-input" value="${stockActual}" min="0">
-
-                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
-                    Precio de Venta ($)
-                </label>
-                <input type="number" id="editPrecioInput" class="croiss-swal-input" value="${precioActual}" min="0" step="0.5" style="margin-bottom: 0 !important;">
+                <input type="number" id="inputSumarCongelados" class="croiss-swal-input" value="20" min="1" placeholder="Ej: 20">
             </div>
         `,
         showCancelButton: true,
-        confirmButtonText: 'Guardar Cambios',
+        confirmButtonText: '+ Sumar al Stock',
         cancelButtonText: 'Cancelar',
         focusConfirm: false,
         preConfirm: () => {
-            const nuevoStock = document.getElementById('editStockInput').value;
-            const nuevoPrecio = document.getElementById('editPrecioInput').value;
-
-            if (nuevoStock === '' || nuevoStock < 0) {
-                Swal.showValidationMessage('Ingresa un stock valido');
+            const cant = document.getElementById('inputSumarCongelados').value;
+            if (!cant || parseInt(cant) <= 0) {
+                Swal.showValidationMessage('Ingresá una cantidad valida.');
                 return false;
             }
-            return { stock: parseInt(nuevoStock), precio: parseFloat(nuevoPrecio) || 0 };
+            return parseInt(cant);
         }
     }).then(async (result) => {
         if (result.isConfirmed) {
@@ -422,35 +435,30 @@ function editarStockProducto(prodNombre, stockActual, precioActual) {
             mostrarCroissLoader();
 
             try {
-                const res = await fetch('/api/stock/actualizar', {
+                const res = await fetch('/api/stock/congelados', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        producto: prodNombre,
-                        stock: result.value.stock,
-                        precio: result.value.precio
-                    })
+                    body: JSON.stringify({ cantidad: result.value })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1500);
 
                 if (data.status === 'exito') {
-                    mostrarCroissExito('Stock Actualizado', 'El catalogo de productos ya tiene la nueva informacion.');
-                    cargarStock();
+                    mostrarCroissExito('Produccion Agregada!', `Se sumaron +${result.value} masas al stock congelado.`);
+                    const elCong = document.getElementById('cantCroissCongelados');
+                    if (elCong) elCong.innerText = `${data.stock} un.`;
                 } else {
                     Swal.fire('Error', data.mensaje, 'error');
                 }
             } catch (err) {
-                console.error("Error al actualizar stock:", err);
-                Swal.fire('Error', 'No se pudo actualizar el stock', 'error');
+                console.error("Error al actualizar congelados:", err);
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             }
         }
     });
 }
 
-// ==========================================
 // AGENDA EXPANDIBLE, EDICION Y PDF
-// ==========================================
 async function cargarAgenda() {
     const contenedor = document.getElementById('listaAgenda');
     if(!contenedor) return;
@@ -569,9 +577,7 @@ function toggleExpandirDia(idDetalle) {
     }
 }
 
-// ==========================================
-// NUEVO EDITOR INTERACTIVO DE ITEMS POR PEDIDO
-// ==========================================
+// EDITOR INTERACTIVO DE ITEMS POR PEDIDO
 function parsearDescripcionAPedidos(desc) {
     if(!desc) return [];
     let partes = desc.split(',');
@@ -613,7 +619,7 @@ function generarHtmlListaEdicion() {
         if (Array.isArray(catalogoProductos) && catalogoProductos.length > 0) {
             catalogoProductos.forEach(p => {
                 let name = p.Nombre || p.Producto || p.nombre || p.producto || p.Croissant || '';
-                if (name) {
+                if (name && !name.toLowerCase().includes('congelado')) {
                     let selected = name.toLowerCase().trim() === item.producto.toLowerCase().trim() ? 'selected' : '';
                     optionsHtml += `<option value="${name}" ${selected}>${name}</option>`;
                 }
@@ -692,7 +698,14 @@ function eliminarItemEdicion(idx) {
 }
 
 function agregarItemEdicion() {
-    let primerProducto = (catalogoProductos[0] && (catalogoProductos[0].Nombre || catalogoProductos[0].Producto)) || 'Croissant Clasico';
+    let primerProducto = 'Croissant Clasico';
+    if (Array.isArray(catalogoProductos) && catalogoProductos.length > 0) {
+        let pValid = catalogoProductos.find(p => {
+            let name = p.Nombre || p.Producto || '';
+            return name && !name.toLowerCase().includes('congelado');
+        });
+        if(pValid) primerProducto = pValid.Nombre || pValid.Producto;
+    }
     itemsEdicionTemp.push({
         cantidad: 1,
         producto: primerProducto,
@@ -1074,14 +1087,28 @@ async function marcarComoPagado(numFila, nombreCliente) {
     });
 }
 
+let chartSaboresInstance = null;
+let chartDiasInstance = null;
+
+function cambiarSegmentoBalance(segmento) {
+    document.getElementById('segBtnBalance').classList.toggle('active', segmento === 'balance');
+    document.getElementById('segBtnSabores').classList.toggle('active', segmento === 'sabores');
+    document.getElementById('segBtnEvolucion').classList.toggle('active', segmento === 'evolucion');
+    
+    document.getElementById('subSecBalance').classList.toggle('active', segmento === 'balance');
+    document.getElementById('subSecSabores').classList.toggle('active', segmento === 'sabores');
+    document.getElementById('subSecEvolucion').classList.toggle('active', segmento === 'evolucion');
+
+    cargarBalance();
+}
+
 async function cargarBalance() {
     const tInicio = Date.now();
     mostrarCroissLoader();
 
     try {
-        const mesVal = document.getElementById('bMesFilter').value;
-        let url = '/api/balance';
-        if (mesVal) url += `?mes=${mesVal}`;
+        const mesVal = document.getElementById('bMesFilter').value || hoy.substring(0, 7);
+        let url = `/api/balance?mes=${mesVal}`;
 
         const res = await fetch(url);
         const data = await res.json();
@@ -1090,6 +1117,7 @@ async function cargarBalance() {
         Swal.close();
 
         if(data.status === 'exito') {
+            // 1. Pestaña Finanzas
             document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
             document.getElementById('bCostos').innerText = `$${data.costos_produccion}`;
             document.getElementById('bGastos').innerText = `$${data.gastos_varios}`;
@@ -1097,18 +1125,57 @@ async function cargarBalance() {
 
             const gananciaEl = document.getElementById('bGanancia');
             gananciaEl.innerText = `$${data.ganancia_neta}`;
-            
-            if(data.ganancia_neta < 0) {
-                gananciaEl.style.color = "#ef4444";
+            gananciaEl.style.color = data.ganancia_neta < 0 ? "#ef4444" : "#16a34a";
+
+            // 2. Futurología y Proyección
+            const proy = data.proyeccion;
+            const txtCroiss = document.getElementById('txtProyeccionCroiss');
+            const txtIng = document.getElementById('txtProyeccionIngresos');
+
+            if (proy.es_mes_actual) {
+                txtCroiss.innerText = `~${proy.croissants_estimados} Croissants`;
+                txtIng.innerText = `Ingresos estimados: $${proy.ingresos_estimados} al cierre del mes`;
             } else {
-                gananciaEl.style.color = "#16a34a";
+                txtCroiss.innerText = `${data.total_croissants} Croissants Vendidos`;
+                txtIng.innerText = `Total final del período cerrado`;
             }
 
+            // Stat Jalea
+            document.getElementById('txtPorcentajeJalea').innerText = `${data.stats_jalea.porcentaje}% (${data.stats_jalea.con_jalea} un.)`;
+
+            // Ranking de Sabores
+            const contRank = document.getElementById('listaRankingSabores');
+            contRank.innerHTML = '';
+            if (!data.ranking_sabores || data.ranking_sabores.length === 0) {
+                contRank.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas registradas en este mes.</p>';
+            } else {
+                data.ranking_sabores.forEach(r => {
+                    const div = document.createElement('div');
+                    div.className = 'ios-cliente-row compact';
+                    div.style.cursor = 'default';
+                    div.innerHTML = `
+                        <div>
+                            <strong>🥐 ${r.sabor}</strong><br>
+                            <small style="color:var(--text-muted);">${r.porcentaje}% del total de ventas</small>
+                        </div>
+                        <strong style="color:var(--accent); font-size:0.95rem;">${r.cantidad} un.</strong>
+                    `;
+                    contRank.appendChild(div);
+                });
+            }
+
+            // Gráfico Donut - Sabores
+            renderizarGraficoSabores(data.ranking_sabores);
+
+            // Gráfico Barras - Días de la semana
+            renderizarGraficoDias(data.dias_semana);
+
+            // 3. Pestaña Evolución
             const contEvolucion = document.getElementById('listaEvolucionMeses');
             if (contEvolucion) {
                 contEvolucion.innerHTML = '';
                 if (data.historico_meses.length === 0) {
-                    contEvolucion.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay registros historicos.</p>';
+                    contEvolucion.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay registros históricos.</p>';
                 } else {
                     data.historico_meses.forEach(m => {
                         const esPositivo = m.ganancia_neta >= 0;
@@ -1138,14 +1205,61 @@ async function cargarBalance() {
     }
 }
 
-function cambiarSegmentoBalance(segmento) {
-    document.getElementById('segBtnBalance').classList.toggle('active', segmento === 'balance');
-    document.getElementById('segBtnEvolucion').classList.toggle('active', segmento === 'evolucion');
-    
-    document.getElementById('subSecBalance').classList.toggle('active', segmento === 'balance');
-    document.getElementById('subSecEvolucion').classList.toggle('active', segmento === 'evolucion');
+function renderizarGraficoSabores(ranking) {
+    const ctx = document.getElementById('chartSaboresCanvas');
+    if (!ctx) return;
 
-    if (segmento === 'balance' || segmento === 'evolucion') cargarBalance();
+    if (chartSaboresInstance) chartSaboresInstance.destroy();
+
+    const labels = ranking.map(r => r.sabor);
+    const dataVals = ranking.map(r => r.cantidad);
+
+    chartSaboresInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: dataVals,
+                backgroundColor: ['#C86D28', '#2D1E18', '#D97706', '#9A4D15', '#7A6B63', '#CBD5E1']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } }
+            }
+        }
+    });
+}
+
+function renderizarGraficoDias(diasObj) {
+    const ctx = document.getElementById('chartDiasCanvas');
+    if (!ctx) return;
+
+    if (chartDiasInstance) chartDiasInstance.destroy();
+
+    const labels = Object.keys(diasObj);
+    const dataVals = Object.values(diasObj);
+
+    chartDiasInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Croissants Entregados',
+                data: dataVals,
+                backgroundColor: '#C86D28',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } }
+            }
+        }
+    });
 }
 
 async function cargarInsumosYGastos() {
