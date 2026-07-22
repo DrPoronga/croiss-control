@@ -1,19 +1,29 @@
 import os
 import re
 import json
+import time
 import socket
 import calendar
 import urllib.request
 import threading
 from datetime import datetime, timedelta
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 import gspread
 from google.oauth2.service_account import Credentials
+from gspread.exceptions import APIError
 
 # ==========================================
 # CONFIGURACIÓN GENERAL Y FLASK
 # ==========================================
 app = Flask(__name__)
+
+# Configuración de Sesión Permanente (1 año) y Clave Secreta
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "croiss_super_secreta_2026")
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
+
+# Credenciales de Administrador para el Formulario de Login
+ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
+ADMIN_PASS = os.environ.get("ADMIN_PASSWORD", "croisscamigera")
 
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "pedidos@croissuy.com")
@@ -24,6 +34,68 @@ SCOPES = [
 ]
 
 SPREADSHEET_ID = "1-HZ19zxOZWJXizFSrhb5m6OKJJWQ_207SuRqdLVNWWE"
+
+# ==========================================
+# HELPER DE PROTECCIÓN Y REINTENTO ANTE 429 (GOOGLE SHEETS)
+# ==========================================
+def ejecutar_con_reintento(func, *args, **kwargs):
+    """Ejecuta cualquier llamado a Google Sheets y, si se agota la cuota (429),
+    espera unos segundos antes de volver a intentar."""
+    for intento in range(4):
+        try:
+            return func(*args, **kwargs)
+        except APIError as err:
+            err_str = str(err)
+            if "429" in err_str or (hasattr(err, 'response') and getattr(err.response, 'status_code', None) == 429):
+                tiempo_espera = (intento + 1) * 2.5
+                print(f"⏳ Cuota Google 429 alcanzada. Reintentando en {tiempo_espera}s (Intento {intento + 1}/4)...", flush=True)
+                time.sleep(tiempo_espera)
+            else:
+                raise err
+    raise Exception("Google Sheets está saturado. Espera 30 segundos y vuelve a intentar.")
+
+# ==========================================
+# SEGURIDAD, LOGIN Y PROTECCIÓN DE RUTAS
+# ==========================================
+@app.before_request
+def verificar_autenticacion():
+    # Permitir acceso libre a estáticos, login y logout
+    if request.endpoint in ['login', 'static']:
+        return
+    # Si no hay sesión iniciada, redirige al login web
+    if not session.get('logueado'):
+        return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        # Permite login por formulario HTML o por JSON
+        if request.is_json:
+            datos = request.json or {}
+            pwd = datos.get("password", "")
+        else:
+            pwd = request.form.get("password", "")
+
+        if pwd == ADMIN_PASS:
+            session.permanent = True
+            session['logueado'] = True
+            if request.is_json:
+                return jsonify({"status": "exito", "mensaje": "Sesión iniciada"}), 200
+            return redirect(url_for('inicio'))
+        else:
+            if request.is_json:
+                return jsonify({"status": "error", "mensaje": "Contraseña incorrecta"}), 401
+            return render_template('login.html', error="Contraseña incorrecta")
+    
+    if session.get('logueado'):
+        return redirect(url_for('inicio'))
+        
+    return render_template('login.html', error=None)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
 
 # ==========================================
 # MOTOR INTELIGENTE DE RECETAS (ESCANDALLO)
@@ -109,7 +181,6 @@ def get_clean_records(sheet):
 def get_field_val(record, *possible_keys):
     if not record: return ""
     
-    # Búsqueda exacta normalizada
     for target in possible_keys:
         target_clean = target.lower().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").strip()
         for k, val in record.items():
@@ -117,7 +188,6 @@ def get_field_val(record, *possible_keys):
             if k_clean == target_clean and val:
                 return str(val).strip()
 
-    # Búsqueda flexible (para variaciones en el encabezado 'Entrega')
     for target in possible_keys:
         target_clean = target.lower().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").strip()
         if "entrega" in target_clean:
@@ -189,7 +259,6 @@ def eliminar_cliente():
         if not nombre_cliente:
             return jsonify({"status": "error", "mensaje": "Nombre de cliente no especificado"}), 400
 
-        # Eliminar de la pestaña Clientes (CRM Maestro)
         sheet_crm = obtener_o_crear_sheet_clientes()
         data_crm = sheet_crm.get_all_values()
         
@@ -201,11 +270,10 @@ def eliminar_cliente():
                     col_nom = i
                     break
             
-            # Recorrer y eliminar la fila correspondiente
             for idx, row in enumerate(data_crm[1:], start=2):
                 val_nom = row[col_nom - 1] if col_nom - 1 < len(row) else ""
                 if val_nom.strip().lower() == nombre_cliente.lower():
-                    sheet_crm.delete_rows(idx)
+                    ejecutar_con_reintento(sheet_crm.delete_rows, idx)
                     break
 
         return jsonify({"status": "exito", "mensaje": "Cliente eliminado correctamente del directorio"}), 200
@@ -213,7 +281,7 @@ def eliminar_cliente():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 # ==========================================
-# GESTIÓN DE CLIENTES (CRM MAESTRO)
+# GESTIÓN DE CLIENTES & INSUMOS
 # ==========================================
 def obtener_o_crear_sheet_clientes():
     ruta_credenciales = "credentials.json"
@@ -248,7 +316,6 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     
     costo_croissants = 0.0
     
-    # Parsing de la descripción del pedido para detectar rellenos extras
     if desc_producto:
         partes = str(desc_producto).split(",")
         croissants_procesados = 0
@@ -267,27 +334,21 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
                 c_item = 1
                 sabor_item = sin_jalea_str.lower()
             
-            # Costo base de masa + electricidad
             c_unit = 24.10
-            
-            # Adicional por Jamón y Queso (+$25.75)
             if "jamon" in sabor_item or "jamón" in sabor_item or "queso" in sabor_item:
                 c_unit += 25.75
-            # Adicional por Dulce de Leche (60g * $0.28 = +$16.80)
             elif "dulce" in sabor_item or "ddl" in sabor_item:
                 c_unit += 16.80
             
             costo_croissants += (c_unit * c_item)
             croissants_procesados += c_item
             
-        # Resguardo si hubo unidades no parseadas en el texto
         if croissants_procesados < total_croissants:
             faltantes = total_croissants - croissants_procesados
             costo_croissants += (faltantes * 24.10)
     else:
         costo_croissants = total_croissants * 24.10
 
-    # Cálculo dinámico de empaque (Cajas + Papel manteca)
     cajas_6 = total_croissants // 6
     sobrante = total_croissants % 6
     cajas_3 = 0
@@ -350,7 +411,7 @@ def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croiss
         aplicar_descuento_insumo("papel", papel_usado)
 
         for row_idx, n_stock in modificaciones.items():
-            sheet_insumos.update_cell(row_idx, 2, n_stock)
+            ejecutar_con_reintento(sheet_insumos.update_cell, row_idx, 2, n_stock)
 
     except Exception as e:
         print(f"Aviso descontando empaque/stock: {e}", flush=True)
@@ -372,7 +433,6 @@ def obtener_balance():
         pedidos_count_mes = 0
         total_croiss_mes = 0
         
-        # Métricas Históricas Totales (Toda la vida del negocio)
         total_croiss_historico = 0
         total_pedidos_historico = 0
         total_ingresos_historico = 0.0
@@ -404,11 +464,9 @@ def obtener_balance():
 
             desc_prod = get_field_val(v, "Producto")
 
-            # Cálculo de costo de producción + empaque automático por pedido
             datos_costo = calcular_costo_y_empaque_pedido(desc_prod, cant)
             costo_pedido = datos_costo["costo_total"]
 
-            # Acumuladores Históricos
             total_croiss_historico += cant
             total_pedidos_historico += 1
             total_ingresos_historico += monto
@@ -418,19 +476,16 @@ def obtener_balance():
             historico_dict[key_mes]["pedidos"] += 1
             historico_dict[key_mes]["croissants"] += cant
 
-            # Rastrear compras por cliente (Mes e Histórico)
             cli_nombre = get_field_val(v, "Cliente").strip()
             if cli_nombre and cli_nombre.lower() != "consumidor final":
                 c_key = cli_nombre.lower()
                 
-                # Ranking Histórico
                 if c_key not in clientes_historico_dict:
                     clientes_historico_dict[c_key] = {"nombre": cli_nombre, "croissants": 0, "gastado": 0.0, "pedidos": 0}
                 clientes_historico_dict[c_key]["croissants"] += cant
                 clientes_historico_dict[c_key]["gastado"] += monto
                 clientes_historico_dict[c_key]["pedidos"] += 1
 
-                # Ranking Mes Filtrado
                 if f_norm.startswith(mes_filtro):
                     if c_key not in clientes_mes_dict:
                         clientes_mes_dict[c_key] = {"nombre": cli_nombre, "croissants": 0, "gastado": 0.0, "pedidos": 0}
@@ -475,7 +530,6 @@ def obtener_balance():
                         if tiene_jalea: con_jalea_count += c_item
                         else: sin_jalea_count += c_item
 
-        # Gastos Fijos (Excluye compras de insumos/embalaje)
         gastos_mes = 0.0
         gastos_cat_dict = {}
         CATEGORIAS_IGNORAR = ["materia prima", "embalaje", "insumo", "insumos", "caja", "cajas"]
@@ -512,7 +566,6 @@ def obtener_balance():
         ganancia_neta_mes = ingresos_mes - (costos_prod_mes + gastos_mes)
         ticket_promedio = round(ingresos_mes / pedidos_count_mes, 2) if pedidos_count_mes > 0 else 0.0
 
-        # Cálculo de Proyección / Futurología
         mes_actual_str = datetime.now().strftime("%Y-%m")
         es_mes_actual = (mes_filtro == mes_actual_str)
         proy_croiss = total_croiss_mes
@@ -528,7 +581,6 @@ def obtener_balance():
                 proy_croiss = int(round(pacing_croiss * dias_totales))
                 proy_ingresos = round(pacing_ingresos * dias_totales, 2)
 
-        # Clientes Top (Mes e Histórico)
         top_mes = max(clientes_mes_dict.values(), key=lambda x: x["croissants"]) if clientes_mes_dict else None
         top_historico = max(clientes_historico_dict.values(), key=lambda x: x["croissants"]) if clientes_historico_dict else None
 
@@ -592,7 +644,6 @@ def inicio():
 
 @app.route('/api/stock/congelados', methods=['GET', 'POST'])
 def stock_congelados():
-    """Gestiona el stock de masas/croissants congelados en la planilla"""
     try:
         sheet_stock = conectar_sheet("Productos_Stock")
         
@@ -603,7 +654,7 @@ def stock_congelados():
             pass
 
         if not celda:
-            sheet_stock.append_row(["CONG-001", "Croissants Congelados", 0, 0])
+            ejecutar_con_reintento(sheet_stock.append_row, ["CONG-001", "Croissants Congelados", 0, 0])
             celda = sheet_stock.find(re.compile(r"^Croissants Congelados$", re.IGNORECASE))
 
         fila = celda.row
@@ -614,7 +665,7 @@ def stock_congelados():
             datos = request.json or {}
             cantidad_sumar = int(datos.get("cantidad", 0))
             nuevo_stock = max(0, stock_actual + cantidad_sumar)
-            sheet_stock.update_cell(fila, 4, nuevo_stock)
+            ejecutar_con_reintento(sheet_stock.update_cell, fila, 4, nuevo_stock)
             return jsonify({"status": "exito", "stock": nuevo_stock, "mensaje": "Stock congelado actualizado"})
 
         return jsonify({"status": "exito", "stock": stock_actual}), 200
@@ -646,7 +697,6 @@ def obtener_agenda():
             }
         
         for idx, reg in enumerate(registros, start=2):
-            # 1. FILTRO DINÁMICO: Si el pedido ya fue entregado, se omite de la agenda de trabajo
             estado_entrega = get_field_val(reg, "Entrega", "Estado Entrega", "Estado de Entrega")
             if estado_entrega and "entregad" in estado_entrega.lower():
                 continue
@@ -692,10 +742,10 @@ def editar_pedido():
         col_producto = headers.index("producto") + 1 if "producto" in headers else 5
         col_cantidad = headers.index("cantidad") + 1 if "cantidad" in headers else 6
 
-        sheet_ventas.update_cell(int(num_fila), col_producto, str(nuevo_producto))
+        ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_producto, str(nuevo_producto))
 
         if nueva_cantidad is not None:
-            sheet_ventas.update_cell(int(num_fila), col_cantidad, int(nueva_cantidad))
+            ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_cantidad, int(nueva_cantidad))
 
         return jsonify({"status": "exito", "mensaje": "Pedido actualizado correctamente"}), 200
     except Exception as error:
@@ -785,7 +835,7 @@ def marcar_entregado():
             if "cliente" in h:
                 col_cliente = i
 
-        sheet_ventas.update_cell(int(num_fila), col_entrega, "Entregado")
+        ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_entrega, "Entregado")
 
         if col_email > 0 and col_cliente > 0:
             email_cliente = row_data[col_email - 1] if col_email - 1 < len(row_data) else ""
@@ -809,7 +859,6 @@ def eliminar_venta():
             return jsonify({"status": "error", "mensaje": "Fila no especificada"}), 400
 
         sheet_ventas = conectar_sheet("Ventas")
-        
         row_data = sheet_ventas.row_values(int(num_fila))
         headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
         
@@ -826,7 +875,6 @@ def eliminar_venta():
             elif "tel" in h: col_tel = i
             elif "direc" in h: col_dir = i
 
-        # Copiar cliente a pestaña CRM si aún no existe antes de eliminar su venta
         if col_cli - 1 < len(row_data):
             cli_nom = row_data[col_cli - 1].strip()
             cli_email = row_data[col_email - 1].strip() if col_email - 1 < len(row_data) else ""
@@ -834,7 +882,6 @@ def eliminar_venta():
             cli_dir = row_data[col_dir - 1].strip() if col_dir - 1 < len(row_data) else ""
             sincronizar_cliente(cli_nom, cli_email, cli_tel, cli_dir)
 
-        # Devolver congelados al stock
         cant_recuperar = 0
         if col_cant - 1 < len(row_data):
             val_cant = str(row_data[col_cant - 1]).strip()
@@ -851,11 +898,11 @@ def eliminar_venta():
                     st_actual_cong = int(raw_st) if str(raw_st).isdigit() else 0
                     
                     nuevo_st_cong = st_actual_cong + cant_recuperar
-                    sheet_stock.update_cell(f_cong, 4, nuevo_st_cong)
+                    ejecutar_con_reintento(sheet_stock.update_cell, f_cong, 4, nuevo_st_cong)
             except Exception as ec:
                 print(f"⚠️ Aviso devolviendo congelados al stock: {ec}", flush=True)
 
-        sheet_ventas.delete_rows(int(num_fila))
+        ejecutar_con_reintento(sheet_ventas.delete_rows, int(num_fila))
 
         return jsonify({"status": "exito", "mensaje": "Pedido eliminado y stock devuelto correctamente"}), 200
     except Exception as error:
@@ -883,8 +930,8 @@ def editar_cliente():
             for idx, row in enumerate(data[1:], start=2):
                 val_cli = row[col_cliente - 1] if col_cliente - 1 < len(row) else ""
                 if val_cli.strip().lower() == nombre_original.lower():
-                    sheet_ventas.update(f"D{idx}", [[nuevo_nombre]])
-                    sheet_ventas.update(f"J{idx}:L{idx}", [[nuevo_email, nuevo_telefono, nueva_direccion]])
+                    ejecutar_con_reintento(sheet_ventas.update, f"D{idx}", [[nuevo_nombre]])
+                    ejecutar_con_reintento(sheet_ventas.update, f"J{idx}:L{idx}", [[nuevo_email, nuevo_telefono, nueva_direccion]])
 
         try:
             sincronizar_cliente(nuevo_nombre, nuevo_email, nuevo_telefono, nueva_direccion)
@@ -894,7 +941,7 @@ def editar_cliente():
         return jsonify({"status": "exito", "mensaje": "Cliente actualizado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 @app.route('/api/cambiar_estado_pago', methods=['POST'])
 def cambiar_estado_pago():
     try:
@@ -923,7 +970,7 @@ def cambiar_estado_pago():
             if "monto" in h:
                 col_monto = i
 
-        sheet_ventas.update_cell(int(num_fila), col_estado, nuevo_estado)
+        ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_estado, nuevo_estado)
 
         if nuevo_estado.lower() == "pagado" and col_email > 0 and col_cliente > 0:
             email_cliente = row_data[col_email - 1] if col_email - 1 < len(row_data) else ""
@@ -938,16 +985,12 @@ def cambiar_estado_pago():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-# ==========================================
-# 1. OBTENER GASTOS E INSUMOS (CON NÚMERO DE FILA)
-# ==========================================
 @app.route('/api/gastos_e_insumos', methods=['GET'])
 def obtener_gastos_e_insumos():
     try:
         sheet_gastos = conectar_sheet("Gastos")
         gastos = get_clean_records(sheet_gastos)
         
-        # Asignamos el número de fila real en la planilla antes de invertir
         for idx, g in enumerate(gastos, start=2):
             g["fila"] = idx
 
@@ -958,9 +1001,6 @@ def obtener_gastos_e_insumos():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-# ==========================================
-# 2. RUTA PARA ELIMINAR UN GASTO
-# ==========================================
 @app.route('/api/eliminar_gasto', methods=['POST'])
 def eliminar_gasto():
     try:
@@ -971,7 +1011,7 @@ def eliminar_gasto():
             return jsonify({"status": "error", "mensaje": "Fila no especificada"}), 400
 
         sheet_gastos = conectar_sheet("Gastos")
-        sheet_gastos.delete_rows(int(num_fila))
+        ejecutar_con_reintento(sheet_gastos.delete_rows, int(num_fila))
 
         return jsonify({"status": "exito", "mensaje": "Gasto eliminado correctamente"}), 200
     except Exception as error:
@@ -1009,12 +1049,12 @@ def actualizar_stock():
             elif "precio" in h: col_precio = idx
 
         if nuevo_stock is not None and str(nuevo_stock).isdigit():
-            sheet_stock.update_cell(fila, col_stock, int(nuevo_stock))
+            ejecutar_con_reintento(sheet_stock.update_cell, fila, col_stock, int(nuevo_stock))
 
         if nuevo_precio is not None:
             try:
                 precio_val = float(str(nuevo_precio).replace("$", "").replace(",", "").strip())
-                sheet_stock.update_cell(fila, col_precio, precio_val)
+                ejecutar_con_reintento(sheet_stock.update_cell, fila, col_precio, precio_val)
             except ValueError:
                 pass
 
@@ -1055,7 +1095,7 @@ def registrar_venta():
                     raw_st = sheet_stock.cell(f_cong, 4).value or "0"
                     st_actual_cong = int(raw_st) if str(raw_st).isdigit() else 0
                     nuevo_st_cong = max(0, st_actual_cong - total_unidades)
-                    sheet_stock.update_cell(f_cong, 4, nuevo_st_cong)
+                    ejecutar_con_reintento(sheet_stock.update_cell, f_cong, 4, nuevo_st_cong)
             except Exception as ec:
                 print(f"Aviso descontando congelados: {ec}", flush=True)
 
@@ -1083,13 +1123,13 @@ def registrar_venta():
             direccion_cliente,
             "Pendiente"
         ]
-        sheet_ventas.append_row(nueva_fila)
+        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
 
         if email_cliente:
             try:
                 html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
                 enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
-            except Exception as ee:
+            except Exception:
                 pass
 
         try:
@@ -1104,7 +1144,6 @@ def registrar_venta():
 def sincronizar_cliente(nombre, email, telefono, direccion):
     if not nombre or nombre.lower() == "consumidor final": return
     
-    # Auto-corregir si el nombre y el email llegaron invertidos
     if "@" in str(nombre) and "@" not in str(email):
         nombre, email = email, nombre
 
@@ -1116,11 +1155,10 @@ def sincronizar_cliente(nombre, email, telefono, direccion):
             val_nom = get_field_val(reg, "Nombre", "Cliente", "Nombre Cliente")
 
             if val_nom and val_nom.lower() == nombre.lower():
-                # Actualiza la fila completa A:D en 1 sola petición a la API
-                sheet.update(f"A{idx}:D{idx}", [[nombre, email, telefono, direccion]])
+                ejecutar_con_reintento(sheet.update, f"A{idx}:D{idx}", [[nombre, email, telefono, direccion]])
                 return
         
-        sheet.append_row([nombre, email, telefono, direccion])
+        ejecutar_con_reintento(sheet.append_row, [nombre, email, telefono, direccion])
     except Exception as e:
         print(f"Aviso sincronizando cliente: {e}", flush=True)     
 
@@ -1142,8 +1180,8 @@ def obtener_clientes():
             if "@" in nom and "@" not in email:
                 nom, email = email, nom
                 try:
-                    sheet_crm.update_cell(idx, 1, nom)
-                    sheet_crm.update_cell(idx, 2, email)
+                    ejecutar_con_reintento(sheet_crm.update_cell, idx, 1, nom)
+                    ejecutar_con_reintento(sheet_crm.update_cell, idx, 2, email)
                 except Exception:
                     pass
 
@@ -1288,7 +1326,7 @@ def registrar_gasto():
             unidad,
             venc
         ]
-        sheet_gastos.append_row(nueva_fila)
+        ejecutar_con_reintento(sheet_gastos.append_row, nueva_fila)
 
         if cat in ["Materia Prima", "Embalaje"]:
             try:
@@ -1308,12 +1346,12 @@ def registrar_gasto():
 
                 if fila_encontrada:
                     nuevo_stock = round(stock_previo + cant, 3)
-                    sheet_insumos.update_cell(fila_encontrada, 2, nuevo_stock)
+                    ejecutar_con_reintento(sheet_insumos.update_cell, fila_encontrada, 2, nuevo_stock)
                     if venc:
-                        sheet_insumos.update_cell(fila_encontrada, 4, venc)
+                        ejecutar_con_reintento(sheet_insumos.update_cell, fila_encontrada, 4, venc)
                 else:
-                    sheet_insumos.append_row([desc, cant, unidad or "un", venc])
-            except Exception as e:
+                    ejecutar_con_reintento(sheet_insumos.append_row, [desc, cant, unidad or "un", venc])
+            except Exception:
                 pass
 
         return jsonify({"status": "exito", "mensaje": "Gasto registrado", "id": nuevo_id}), 200
@@ -1321,7 +1359,7 @@ def registrar_gasto():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 # ==========================================
-# RUTA PARA SUMAR STOCK DIRECTO (OPTIMIZADA)
+# RUTA SUMAR STOCK (PROTEGIDA CONTRA ERRORES 429)
 # ==========================================
 @app.route('/api/stock/sumar_insumo', methods=['POST'])
 def sumar_stock_insumo():
@@ -1335,13 +1373,14 @@ def sumar_stock_insumo():
         if not insumo_nom or cantidad <= 0:
             return jsonify({"status": "error", "mensaje": "Ingresa un insumo y cantidad válida."}), 400
 
-        sheet_insumos = obtener_o_crear_sheet_insumos()
-        registros = get_clean_records(sheet_insumos)
+        sheet_insumos = ejecutar_con_reintento(obtener_o_crear_sheet_insumos)
+        registros = ejecutar_con_reintento(get_clean_records, sheet_insumos)
 
-        # Buscar si el insumo ya existe para actualizar B:D en 1 SOLA PETICIÓN
+        encontrado = False
         for idx, reg in enumerate(registros, start=2):
             val_ins = get_field_val(reg, "Insumo", "Nombre")
             if val_ins and val_ins.lower() == insumo_nom.lower():
+                encontrado = True
                 raw_st = get_field_val(reg, "Stock Actual").replace(",", ".").strip()
                 stock_actual = float(raw_st) if raw_st else 0.0
                 nuevo_stock = round(stock_actual + cantidad, 2)
@@ -1349,37 +1388,23 @@ def sumar_stock_insumo():
                 venc_existente = get_field_val(reg, "Vencimiento Proximo", "Vencimiento Próximo") or "Sin fecha"
                 venc_final = vencimiento if (vencimiento and vencimiento != "Sin fecha") else venc_existente
 
-                # 🚀 Actualiza B{idx}:D{idx} de un solo viaje a Google
-                sheet_insumos.update(f"B{idx}:D{idx}", [[nuevo_stock, unidad, venc_final]])
-                    
+                ejecutar_con_reintento(
+                    sheet_insumos.update,
+                    f"B{idx}:D{idx}",
+                    [[nuevo_stock, unidad, venc_final]]
+                )
                 return jsonify({"status": "exito", "mensaje": f"Se sumaron {cantidad} {unidad} a {insumo_nom}"}), 200
 
-        # Si es un insumo nuevo, se agrega la fila en 1 solo request
-        sheet_insumos.append_row([insumo_nom, cantidad, unidad, vencimiento])
-        return jsonify({"status": "exito", "mensaje": f"Insumo {insumo_nom} registrado con {cantidad} {unidad}"}), 200
+        if not encontrado:
+            ejecutar_con_reintento(
+                sheet_insumos.append_row,
+                [insumo_nom, cantidad, unidad, vencimiento]
+            )
+            return jsonify({"status": "exito", "mensaje": f"Insumo {insumo_nom} registrado con {cantidad} {unidad}"}), 200
 
     except Exception as error:
         print(f"❌ Error en sumar_stock_insumo: {error}", flush=True)
-        return jsonify({"status": "error", "mensaje": f"Error de cuota/conexión: {str(error)}"}), 500
-        
-# ==========================================
-# SEGURIDAD Y ACCESO
-# ==========================================
-ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
-ADMIN_PASS = os.environ.get("ADMIN_PASSWORD", "croisscamigera") 
-
-@app.before_request
-def proteger_app():
-    if request.endpoint == 'static':
-        return
-
-    auth = request.authorization
-    if not auth or auth.username != ADMIN_USER or auth.password != ADMIN_PASS:
-        return (
-            'Acceso Restringido - CROISS Control', 
-            401, 
-            {'WWW-Authenticate': 'Basic realm="CROISS Control"'}
-        )
+        return jsonify({"status": "error", "mensaje": f"Saturación temporal: {str(error)}"}), 500
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

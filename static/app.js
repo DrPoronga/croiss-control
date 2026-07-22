@@ -39,13 +39,11 @@ async function cargarBalance() {
         Swal.close();
 
         if(data.status === 'exito') {
-            // 1. DATO CLAVE: CROISSANTS VENDIDOS (MES VS HISTÓRICO)
             const elCroissMes = document.getElementById('bTotalCroissMes');
             const elCroissHist = document.getElementById('bTotalCroissHist');
             if (elCroissMes) elCroissMes.innerText = `${data.total_croissants_mes} un.`;
             if (elCroissHist) elCroissHist.innerText = `${data.total_croissants_historico} un.`;
 
-            // 2. FINANZAS Y DESGLOSE DE GASTOS
             document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
             document.getElementById('bCostos').innerText = `$${data.costos_produccion}`;
             document.getElementById('bGastos').innerText = `$${data.gastos_varios}`;
@@ -57,7 +55,6 @@ async function cargarBalance() {
 
             renderizarGraficoGastosCategoria(data.gastos_por_categoria);
 
-            // 3. PROYECCIÓN / FUTUROLOGÍA FIN DE MES
             const proy = data.proyeccion;
             const txtCroiss = document.getElementById('txtProyeccionCroiss');
             const txtIng = document.getElementById('txtProyeccionIngresos');
@@ -70,7 +67,6 @@ async function cargarBalance() {
                 txtIng.innerText = `Total final del período cerrado`;
             }
 
-            // 4. TOP COMPRADORES (MES VS HISTÓRICO)
             const contTop = document.getElementById('boxTopClientesBalance');
             if (contTop && data.top_clientes) {
                 const topM = data.top_clientes.mes;
@@ -92,7 +88,6 @@ async function cargarBalance() {
                 `;
             }
 
-            // 5. STATS JALEA & SABORES
             document.getElementById('txtPorcentajeJalea').innerText = `${data.stats_jalea.porcentaje}% (${data.stats_jalea.con_jalea} un.)`;
 
             const contRank = document.getElementById('listaRankingSabores');
@@ -121,7 +116,6 @@ async function cargarBalance() {
             renderizarGraficoDias(data.dias_semana);
             renderizarGraficoEvolucionLinea(data.historico_meses);
 
-            // 6. HISTORIAL DE MESES PASADOS
             const contEvolucion = document.getElementById('listaEvolucionMeses');
             if (contEvolucion) {
                 contEvolucion.innerHTML = '';
@@ -152,7 +146,6 @@ async function cargarBalance() {
     }
 }
 
-// GRÁFICO 1: Desglose de Gastos por Categoría
 function renderizarGraficoGastosCategoria(gastosCat) {
     const ctx = document.getElementById('chartGastosCatCanvas');
     if (!ctx) return;
@@ -176,7 +169,6 @@ function renderizarGraficoGastosCategoria(gastosCat) {
     });
 }
 
-// GRÁFICO 2: Línea Temporal de Evolución
 function renderizarGraficoEvolucionLinea(historico) {
     const ctx = document.getElementById('chartEvolucionLineaCanvas');
     if (!ctx) return;
@@ -215,7 +207,6 @@ function renderizarGraficoEvolucionLinea(historico) {
     });
 }
 
-// Garantiza ver la secuencia completa de la animacion
 async function esperarAnimacionMinima(tiempoInicio, minMs = 2200) {
     const transcurrido = Date.now() - tiempoInicio;
     if (transcurrido < minMs) {
@@ -223,13 +214,11 @@ async function esperarAnimacionMinima(tiempoInicio, minMs = 2200) {
     }
 }
 
-// Helper seguro para leer valores de inputs
 function getInputValueSafe(id, defaultVal = '') {
     const el = document.getElementById(id);
     return el ? el.value.trim() : defaultVal;
 }
 
-// LOADER CANVAS
 function mostrarCroissLoader() {
     Swal.fire({
         html: `
@@ -524,7 +513,6 @@ async function cargarStock(forzar = false) {
     }
 }
 
-// MUESTRA EL MENU Y PRECIOS INFORMATIVOS (SIN CONTADOR INDIVIDUAL)
 function renderizarMenuYStock() {
     const select = document.getElementById('vProductoSelect');
     const lista = document.getElementById('listaStock');
@@ -669,7 +657,6 @@ async function cargarAgenda() {
             contenedor.innerHTML = '';
             agendaGlobalData = data.agenda || [];
 
-            // 🔍 Busca dinámicamente el primer día que contenga pedidos por entregar
             const primerDiaConPedidosIdx = agendaGlobalData.findIndex(d => d.pedidos && d.pedidos.length > 0);
 
             agendaGlobalData.forEach((dia, idxDia) => {
@@ -731,8 +718,6 @@ async function cargarAgenda() {
                 
                 const tienePedidos = dia.pedidos && dia.pedidos.length > 0;
                 const idDetalle = `dia-detalle-${idxDia}`;
-                
-                // Solo abre el primer día que realmente tenga pedidos
                 const estaAbierto = (idxDia === primerDiaConPedidosIdx);
 
                 card.innerHTML = `
@@ -775,7 +760,6 @@ function toggleExpandirDia(idDetalle) {
     }
 }
 
-// EDITOR INTERACTIVO DE ITEMS POR PEDIDO
 function parsearDescripcionAPedidos(desc) {
     if(!desc) return [];
     let partes = desc.split(',');
@@ -1191,11 +1175,9 @@ async function eliminarPedido(numFila, clienteNombre) {
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Cancelado', 'Se removio la orden de la agenda.');
-                    
-                    // Actualizaciones en pantalla
                     if (typeof cargarCuentas === 'function') cargarCuentas();
                     if (typeof cargarAgenda === 'function') cargarAgenda();
-                    if (typeof cargarClientes === 'function') cargarClientes(); // <--- Recarga la lista de clientes
+                    if (typeof cargarClientes === 'function') cargarClientes();
                 } else {
                     Swal.fire('Error', data.mensaje, 'error');
                 }
@@ -1235,10 +1217,8 @@ async function notificarEntrega(numFila, nombreCliente) {
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Entregado!', `Notificacion enviada a ${nombreCliente}.`);
-                    
-                    // REFRESCAR VISTAS AL INSTANTE
                     if (typeof cargarCuentas === 'function') cargarCuentas();
-                    if (typeof cargarAgenda === 'function') cargarAgenda(); // Refresca la agenda para borrar el pedido entregado
+                    if (typeof cargarAgenda === 'function') cargarAgenda();
                     if (typeof cargarClientes === 'function') cargarClientes();
                 } else {
                     Swal.fire('Atención', data.mensaje, 'warning');
@@ -1365,85 +1345,6 @@ function renderizarGraficoDias(diasObj) {
 }
 
 // ==========================================
-// RENDERIZAR HISTORIAL DE GASTOS CON BOTÓN ELIMINAR
-// ==========================================
-async function cargarInsumosYGastos() {
-    const tInicio = Date.now();
-    mostrarCroissLoader();
-
-    try {
-        const res = await fetch('/api/gastos_e_insumos');
-        const data = await res.json();
-
-        await esperarAnimacionMinima(tInicio, 1800);
-        Swal.close();
-
-        if (data.status === 'exito') {
-            const contInsumos = document.getElementById('listaInsumosStock');
-            if (contInsumos) {
-                contInsumos.innerHTML = '';
-                if (data.insumos.length === 0) {
-                    contInsumos.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay insumos registrados aún.</p>';
-                } else {
-                    data.insumos.forEach(ins => {
-                        const vencFecha = ins['Vencimiento Proximo'] || ins['Vencimiento Próximo'] || 'Sin fecha';
-                        const div = document.createElement('div');
-                        div.className = 'ios-cliente-row compact';
-                        div.innerHTML = `
-                            <div>
-                                <strong>Insumo: ${ins.Insumo}</strong><br>
-                                <small style="color:var(--text-muted);">Vence: ${vencFecha}</small>
-                            </div>
-                            <div>
-                                <strong style="color:var(--accent); font-size:1rem;">${ins['Stock Actual']} ${ins.Unidad}</strong>
-                            </div>
-                        `;
-                        contInsumos.appendChild(div);
-                    });
-                }
-            }
-
-            const contGastos = document.getElementById('listaGastosHistorico');
-            if (contGastos) {
-                contGastos.innerHTML = '';
-                if (data.gastos.length === 0) {
-                    contGastos.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay gastos cargados.</p>';
-                } else {
-                    data.gastos.forEach(g => {
-                        const desc = g.Descripcion || g.descripcion || 'Gasto';
-                        const cat = g.Categoria || g.categoria || 'Otros';
-                        const fecha = g.Fecha || g.fecha || '';
-                        const monto = g.Monto || g.monto || 0;
-                        const cant = g.Cantidad || g.cantidad || 1;
-                        const unidad = g.Unidad || g.unidad || '';
-                        const numFila = g.fila;
-
-                        const descEscapada = desc.replace(/'/g, "\\'");
-
-                        const div = document.createElement('div');
-                        div.className = 'cuenta-item';
-                        div.innerHTML = `
-                            <div>
-                                <strong>Fecha: ${fecha} - ${desc}</strong> <small style="color:#64748b;">(${cat})</small><br>
-                                <span style="font-size:0.85rem; color:#475569;">Cant: ${cant} ${unidad}</span>
-                            </div>
-                            <div style="text-align:right;">
-                                <strong style="color:#dc2626; font-size:0.95rem;">-$${monto}</strong><br>
-                                ${numFila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarGasto(${numFila}, '${descEscapada}')">Eliminar</button>` : ''}
-                            </div>
-                        `;
-                        contGastos.appendChild(div);
-                    });
-                }
-            }
-        }
-    } catch (err) {
-        Swal.close();
-        console.error("Error cargando inventario:", err);
-    }
-}
-
-// ==========================================
 // FUNCIÓN PARA BORRAR UN GASTO
 // ==========================================
 async function eliminarGasto(numFila, descGasto) {
@@ -1564,7 +1465,6 @@ async function cargarInsumosYGastos() {
                 contEmpaque.innerHTML = htmlEmpaque || '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay insumos de empaque o cajas registrados.</p>';
             }
 
-            // Historial de gastos (Pestaña Gastos)
             const contGastos = document.getElementById('listaGastosHistorico');
             if (contGastos) {
                 contGastos.innerHTML = '';
@@ -1764,10 +1664,8 @@ function verDetalleCliente(clienteObj) {
         historial.forEach(h => {
             const estPago = h.estado_pago || h.estado || 'Pendiente';
             const estEntrega = String(h.estado_entrega || h.entrega || '').trim().toLowerCase();
-
             const colorPago = estPago.toLowerCase() === 'pagado' ? '#16a34a' : '#dc2626';
 
-            // Lógica para renderizar los 3 estados distintos
             let estEntregaBadge = '';
             if (estEntrega.includes('entregad')) {
                 estEntregaBadge = '<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">🚚 Entregado</span>';
@@ -1882,7 +1780,6 @@ function abrirModalEditarCliente() {
                 Swal.fire('Error', 'No se pudo actualizar la información', 'error');
             }
         } else if (result.isDenied) {
-            // Solicitar confirmación de eliminación
             confirmarEliminarCliente(clienteObj.nombre);
         }
     });
@@ -1937,18 +1834,15 @@ function volverASeccionAnterior() {
 function obtenerExtraRelleno(nombreProducto) {
     if (!nombreProducto) return 0;
     
-    // Normaliza el texto: pasa a minúsculas y elimina tildes/diacríticos (ej: "Jamón" -> "jamon")
     const nombre = nombreProducto
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
 
-    // Detección de Jamón y/o Queso (+$50)
     if (nombre.includes('jamon') || nombre.includes('queso')) {
         return 50;
     }
 
-    // Detección de Dulce de Leche / DDL (+$30)
     if (nombre.includes('dulce de leche') || nombre.includes('ddl') || nombre.includes('dulce')) {
         return 30;
     }
@@ -2078,7 +1972,7 @@ function actualizarMedioPagoSegunEstado() {
 }
 
 // ==========================================
-// MODAL PARA CARGAR STOCK CORREGIDO
+// MODAL PARA CARGAR STOCK
 // ==========================================
 function abrirModalSumarStock(tipoCategoria) {
     const esEmpaque = tipoCategoria === 'Empaque';
@@ -2202,23 +2096,33 @@ function abrirModalSumarStock(tipoCategoria) {
     });
 }
 
+// ==========================================
+// AUTENTICACIÓN BIOMÉTRICA (FILTRADO PARA MÓVIL)
+// ==========================================
+function esDispositivoMovil() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           ('ontouchstart' in window && navigator.maxTouchPoints > 1);
+}
 
-// ==========================================
-// AUTENTICACIÓN BIOMÉTRICA (FACEID / TOUCHID)
-// ==========================================
 async function inicializarFaceID() {
     const overlay = document.getElementById('lockScreenOverlay');
     if (!overlay) return;
 
-    // Verificar si el navegador y dispositivo soportan lectura biométrica
-    if (window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) {
-        // Ejecutar solicitud de FaceID automáticamente al abrir
-        setTimeout(() => {
-            autenticarConBiometria();
-        }, 300);
-    } else {
-        // Si el dispositivo no tiene sensor biométrico o no está soportado, desbloquea directamente
-        console.log("Biometría no disponible en este dispositivo.");
+    // 🖥️ Si es PC / Escritorio, ocultar la pantalla de biometría de inmediato
+    if (!esDispositivoMovil()) {
+        overlay.style.display = 'none';
+        return;
+    }
+
+    // 📱 Si es Móvil, verificar biometría
+    try {
+        if (window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) {
+            overlay.style.display = 'flex';
+        } else {
+            overlay.style.display = 'none';
+        }
+    } catch (e) {
+        console.log("Biometría no soportada:", e);
         overlay.style.display = 'none';
     }
 }
@@ -2229,7 +2133,6 @@ async function autenticarConBiometria() {
         const credentialId = localStorage.getItem('croiss_bio_cred_id');
 
         if (!credentialId) {
-            // REGISTRO PRIMERA VEZ (Enlaza el FaceID del iPhone con la web)
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
 
@@ -2257,7 +2160,6 @@ async function autenticarConBiometria() {
                 overlay.style.display = 'none';
             }
         } else {
-            // VERIFICACIÓN HABITUAL (Llama al sensor de FaceID)
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
 
@@ -2293,7 +2195,6 @@ async function autenticarConBiometria() {
 
 // Iniciar al cargar la página
 document.addEventListener('DOMContentLoaded', inicializarFaceID);
-
 
 const formFinalizarPedido = document.getElementById('formFinalizarPedido');
 if (formFinalizarPedido) {

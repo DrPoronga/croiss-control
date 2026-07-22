@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CROISS - Iniciar Sesión</title>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0; padding: 0; font-family: 'Nunito', sans-serif;
+            background-color: #FAF9F8; display: flex; justify-content: center;
+            align-items: center; height: 100vh; color: #2D1E18;
+        }
+        .login-box {
+            background: white; padding: 35px 25px; border-radius: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06); text-align: center;
+            width: 85%; max-width: 340px;
+        }
+        .logo-img {
+            width: 90px; margin-bottom: 10px;
+        }
+        .input-pass {
+            width: 100%; padding: 15px; margin: 20px 0; border: 1px solid #E2D9D3;
+            border-radius: 14px; font-size: 1rem; box-sizing: border-box;
+            font-family: inherit; text-align: center; background: #FAF9F8;
+            outline: none; transition: border 0.3s;
+        }
+        .input-pass:focus {
+            border: 1px solid #C86D28;
+        }
+        .btn-login {
+            background: linear-gradient(135deg, #C86D28, #9A4D15);
+            color: white; border: none; padding: 15px 20px; width: 100%;
+            border-radius: 14px; font-size: 1.05rem; font-weight: 800;
+            cursor: pointer; box-shadow: 0 6px 16px rgba(200, 109, 40, 0.3);
+        }
+        .error-msg {
+            color: #dc2626; font-size: 0.85rem; font-weight: 800; margin-bottom: 10px;
+            background: #fef2f2; padding: 8px; border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <!-- Puedes poner la ruta a tu logo real si quieres -->
+        <h2 style="margin: 0 0 5px 0; font-weight: 800; font-size: 1.8rem;">CROISS</h2>
+        <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 10px; font-weight: 600;">Acceso Restringido</p>
+        
+        {% if error %}
+        <div class="error-msg">{{ error }}</div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <input type="password" name="password" class="input-pass" placeholder="Ingresa tu contraseña" required autofocus>
+            <button type="submit" class="btn-login">Entrar</button>
+        </form>
+    </div>
+</body>
+</html>
