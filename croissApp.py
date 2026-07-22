@@ -14,7 +14,6 @@ from google.oauth2.service_account import Credentials
 # ==========================================
 app = Flask(__name__)
 
-# Configuración de Brevo API por HTTP
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "pedidos@croissuy.com")
 
@@ -29,7 +28,6 @@ SPREADSHEET_ID = "1-HZ19zxOZWJXizFSrhb5m6OKJJWQ_207SuRqdLVNWWE"
 # MOTOR INTELIGENTE DE RECETAS (ESCANDALLO)
 # ==========================================
 def obtener_receta_producto(producto_nombre):
-    """Genera la receta aproximada en Kilos/Litros según el nombre del producto"""
     p_lower = str(producto_nombre).lower()
     receta = {"harina": 0.05, "manteca": 0.025}
     
@@ -42,7 +40,6 @@ def obtener_receta_producto(producto_nombre):
         receta["chocolate"] = 0.03
         
     return receta
-
 
 # ==========================================
 # FUNCIONES AUXILIARES & EMAIL
@@ -58,7 +55,6 @@ def conectar_sheet(nombre_pestaña):
     return sheet.worksheet(nombre_pestaña)
 
 def asegurar_encabezados_ventas(sheet_ventas):
-    """Verifica que existan encabezados en Fila 1"""
     headers_esperados = [
         "ID Venta", "Fecha Pedido", "Fecha Entrega", "Cliente",
         "Producto", "Cantidad", "Monto Total", "Estado",
@@ -83,7 +79,6 @@ def normalizar_fecha(fecha_raw):
     return f_str
 
 def get_clean_records(sheet):
-    """Lee la planilla convirtiendo cada fila en un diccionario limpio"""
     try:
         data = sheet.get_all_values()
         if not data or len(data) < 2:
@@ -111,7 +106,6 @@ def get_clean_records(sheet):
         return []
 
 def get_field_val(record, *possible_keys):
-    """Busca un valor en el registro de forma flexible frente a tildes o mayúsculas"""
     if not record: return ""
     for target in possible_keys:
         target_clean = target.lower().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").strip()
@@ -124,12 +118,10 @@ def get_field_val(record, *possible_keys):
 def enviar_email_async(destinatario, asunto, cuerpo_html):
     def _enviar():
         if not destinatario or "@" not in str(destinatario):
-            print(f"⚠️ [EMAIL] No se envió correo: dirección inválida ('{destinatario}')", flush=True)
             return
 
         api_key = BREVO_API_KEY.strip()
         if not api_key:
-            print("❌ [EMAIL] Error: La variable BREVO_API_KEY no está configurada en Render.", flush=True)
             return
 
         url = "https://api.brevo.com/v3/smtp/email"
@@ -147,110 +139,36 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
         }
 
         try:
-            req = urllib.request.Request(
-                url, 
-                data=json.dumps(payload).encode("utf-8"), 
-                headers=headers, 
-                method="POST"
-            )
+            req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
             with urllib.request.urlopen(req, timeout=10) as response:
-                if response.status in [200, 201]:
-                    print(f"📧 [EMAIL] ¡Correo enviado con éxito a {destinatario} vía Brevo API!", flush=True)
-                else:
-                    print(f"⚠️ [EMAIL] Brevo devolvió estado HTTP: {response.status}", flush=True)
+                pass
         except Exception as e:
-            print(f"❌ [EMAIL] Error enviando correo vía Brevo API a {destinatario}: {e}", flush=True)
+            print(f"❌ Error enviando correo: {e}", flush=True)
 
     threading.Thread(target=_enviar).start()
 
-# --- PLANTILLAS VISUALES DE EMAIL ---
-
+# --- PLANTILLAS DE EMAIL ---
 def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
     badge_pago = "Pagado" if estado_pago.lower() == "pagado" else "Pendiente de Pago"
     return f"""
-    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #FAF9F8; padding: 30px 10px; color: #2D1E18;">
-      <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 24px; padding: 28px; border: 1px solid #EFEAE6; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="color: #C86D28; font-size: 28px; margin: 0; font-weight: 800; letter-spacing: 1.5px;">CROISS</h1>
-          <p style="font-size: 12px; color: #7A6B63; margin-top: 4px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Artesanos del Croissant</p>
-        </div>
-        
-        <h2 style="font-size: 18px; color: #2D1E18; margin-top: 0;">¡Hola, {cliente}! ✨</h2>
-        <p style="font-size: 14px; color: #475569; line-height: 1.5;">Recibimos tu pedido correctamente y ya está programado en nuestra agenda de producción.</p>
-        
-        <div style="background: #FAF0EB; border: 1px solid #F7DFC8; padding: 18px; border-radius: 16px; margin: 20px 0;">
-          <p style="margin: 0 0 10px 0; font-size: 11px; font-weight: 800; color: #C86D28; text-transform: uppercase; letter-spacing: 0.5px;">Resumen del Pedido</p>
-          <p style="margin: 0; font-size: 15px; font-weight: 700; color: #2D1E18;">📦 {items_str}</p>
-          <hr style="border: none; border-top: 1px dashed #EFEAE6; margin: 12px 0;">
-          <p style="margin: 0 0 6px 0; font-size: 13px; color: #64748b;">📅 Fecha de Entrega: <strong style="color: #2D1E18;">{fecha_entrega}</strong></p>
-          <p style="margin: 0 0 6px 0; font-size: 13px; color: #64748b;">💳 Estado del Pago: <strong style="color: #2D1E18;">{badge_pago}</strong></p>
-          <p style="margin: 10px 0 0 0; font-size: 16px; font-weight: 800; color: #C86D28;">Total: ${total}</p>
-        </div>
-        
-        <p style="font-size: 13px; color: #7A6B63; text-align: center; margin-top: 25px;">
-          ¡Muchas gracias por elegirnos! Nos vemos pronto. ❤️
-        </p>
+    <div style="font-family: Arial, sans-serif; padding: 20px; background: #FAF9F8;">
+      <div style="max-width: 480px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 16px;">
+        <h2 style="color: #C86D28;">¡Hola, {cliente}! ✨</h2>
+        <p>Tu pedido está confirmado para el {fecha_entrega}:</p>
+        <p><strong>📦 {items_str}</strong></p>
+        <p>Total: <strong>${total}</strong> ({badge_pago})</p>
       </div>
     </div>
     """
 
 def plantilla_email_pago_recibido(cliente, monto):
-    return f"""
-    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #FAF9F8; padding: 30px 10px; color: #2D1E18;">
-      <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 24px; padding: 28px; border: 1px solid #EFEAE6; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="color: #C86D28; font-size: 28px; margin: 0; font-weight: 800; letter-spacing: 1.5px;">CROISS</h1>
-          <p style="font-size: 12px; color: #7A6B63; margin-top: 4px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Artesanos del Croissant</p>
-        </div>
-        
-        <div style="text-align: center;">
-            <h2 style="font-size: 20px; color: #2D1E18; margin: 10px 0 4px 0;">¡Pago Recibido!</h2>
-            <p style="font-size: 14px; color: #475569;">Hola <strong>{cliente}</strong>, registramos con éxito tu pago.</p>
-        </div>
-        
-        <div style="background: #FAF0EB; border: 1px solid #F7DFC8; padding: 18px; border-radius: 16px; margin: 20px 0; text-align: center;">
-          <small style="font-size: 11px; font-weight: 800; color: #C86D28; text-transform: uppercase;">Monto Acreditado</small><br>
-          <strong style="font-size: 24px; color: #2D1E18; margin-top: 4px; display: block;">${monto}</strong>
-        </div>
-        
-        <p style="font-size: 13px; color: #7A6B63; text-align: center; margin-top: 25px;">
-          ¡Tu pedido ya está al día! Muchas gracias. 🥐
-        </p>
-      </div>
-    </div>
-    """
+    return f"<h2>¡Pago Recibido!</h2><p>Hola {cliente}, registramos tu pago de ${monto}.</p>"
 
 def plantilla_email_entregado(cliente, link_google_review="https://share.google/dTCn5wDuysp01wARR"):
-    return f"""
-    <div style="font-family: 'Helvetica Neue', Arial, sans-serif; background-color: #FAF9F8; padding: 30px 10px; color: #2D1E18;">
-      <div style="max-width: 480px; margin: 0 auto; background: #ffffff; border-radius: 24px; padding: 28px; border: 1px solid #EFEAE6; box-shadow: 0 10px 25px rgba(0,0,0,0.04);">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="color: #C86D28; font-size: 28px; margin: 0; font-weight: 800; letter-spacing: 1.5px;">CROISS</h1>
-          <p style="font-size: 12px; color: #7A6B63; margin-top: 4px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Artesanos del Croissant</p>
-        </div>
-        
-        <div style="text-align: center;">
-            <h2 style="font-size: 20px; color: #2D1E18; margin: 10px 0 4px 0;">¡Pedido Entregado! 🥐✨</h2>
-            <p style="font-size: 14px; color: #475569; line-height: 1.5;">Hola <strong>{cliente}</strong>, tu pedido ha sido entregado. Esperamos que disfrutes cada bocado.</p>
-        </div>
-        
-        <div style="background: #FAF0EB; border: 1px solid #F7DFC8; padding: 20px; border-radius: 16px; margin: 25px 0; text-align: center;">
-          <p style="margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: #2D1E18;">¿Qué te pareció la experiencia?</p>
-          <p style="margin: 0 0 16px 0; font-size: 13px; color: #64748b;">Tu opinión nos ayuda un montón a seguir creciendo. Dejanos tu reseña en Google:</p>
-          <a href="{link_google_review}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #C86D28, #9A4D15); color: #ffffff; text-decoration: none; font-weight: 700; font-size: 13px; padding: 12px 22px; border-radius: 14px; box-shadow: 0 4px 12px rgba(200, 109, 40, 0.25);">
-            ⭐ Dejar reseña en Google
-          </a>
-        </div>
-        
-        <p style="font-size: 13px; color: #7A6B63; text-align: center; margin-top: 25px;">
-          ¡Gracias por ser parte de CROISS! ❤️
-        </p>
-      </div>
-    </div>
-    """
+    return f"<h2>¡Pedido Entregado! 🥐</h2><p>Gracias {cliente}. Podés dejarnos tu reseña en Google: {link_google_review}</p>"
 
 # ==========================================
-# RUTAS DE LA APLICACIÓN (ENDPOINTS)
+# RUTAS DE LA APLICACIÓN
 # ==========================================
 @app.route('/')
 def inicio():
@@ -279,7 +197,7 @@ def obtener_agenda():
                 "total_croissants": 0
             }
         
-        for reg in registros:
+        for idx, reg in enumerate(registros, start=2):
             f_entrega_raw = get_field_val(reg, "Fecha Entrega", "Fecha")
             f_entrega_norm = normalizar_fecha(f_entrega_raw)
 
@@ -287,16 +205,48 @@ def obtener_agenda():
                 cant_str = get_field_val(reg, "Cantidad")
                 cant = int(cant_str) if cant_str.isdigit() else 0
                 dias_agenda[f_entrega_norm]["pedidos"].append({
+                    "fila": idx,
                     "id": get_field_val(reg, "ID Venta", "ID"),
                     "cliente": get_field_val(reg, "Cliente"),
                     "descripcion": get_field_val(reg, "Producto"),
                     "cantidad": cant,
                     "estado": get_field_val(reg, "Estado"),
-                    "direccion": get_field_val(reg, "Dirección", "Direccion")
+                    "direccion": get_field_val(reg, "Dirección", "Direccion"),
+                    "telefono": get_field_val(reg, "Teléfono", "Telefono", "Tel"),
+                    "email": get_field_val(reg, "Email", "Correo")
                 })
                 dias_agenda[f_entrega_norm]["total_croissants"] += cant
                 
         return jsonify({"status": "exito", "agenda": list(dias_agenda.values())}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/editar_pedido', methods=['POST'])
+def editar_pedido():
+    try:
+        datos = request.json or {}
+        num_fila = datos.get("fila")
+        nuevo_producto = datos.get("producto")
+        nueva_cantidad = datos.get("cantidad")
+
+        if not num_fila or nuevo_producto is None:
+            return jsonify({"status": "error", "mensaje": "Faltan datos requeridos"}), 400
+
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+        
+        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
+        col_producto = headers.index("producto") + 1 if "producto" in headers else 5
+        col_cantidad = headers.index("cantidad") + 1 if "cantidad" in headers else 6
+
+        # Actualiza el producto (descripción)
+        sheet_ventas.update_cell(int(num_fila), col_producto, str(nuevo_producto))
+
+        # Actualiza la cantidad total de unidades si fue enviada
+        if nueva_cantidad is not None:
+            sheet_ventas.update_cell(int(num_fila), col_cantidad, int(nueva_cantidad))
+
+        return jsonify({"status": "exito", "mensaje": "Pedido actualizado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
@@ -364,62 +314,41 @@ def marcar_entregado():
         num_fila = datos.get("fila")
 
         if not num_fila:
-            return jsonify({"status": "error", "mensaje": "Número de fila no especificado"}), 400
+            return jsonify({"status": "error", "mensaje": "Fila no especificada"}), 400
 
         sheet_ventas = conectar_sheet("Ventas")
         asegurar_encabezados_ventas(sheet_ventas)
 
         headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
-        col_entrega = 13  # Por defecto Columna M (13)
+        col_entrega = 13
 
         for i, h in enumerate(headers, start=1):
             if "entrega" in h and "fecha" not in h:
                 col_entrega = i
 
         sheet_ventas.update_cell(int(num_fila), col_entrega, "Entregado")
-
-        registros = get_clean_records(sheet_ventas)
-        idx_registro = int(num_fila) - 2
-
-        if 0 <= idx_registro < len(registros):
-            reg = registros[idx_registro]
-            email_cliente = get_field_val(reg, "Email", "Correo")
-            cliente_nombre = get_field_val(reg, "Cliente") or "Cliente"
-
-            print(f"🚚 Marca de Entrega Fila {num_fila} -> Cliente: '{cliente_nombre}' | Email: '{email_cliente}'", flush=True)
-
-            if email_cliente and "@" in email_cliente:
-                link_review = "https://share.google/dTCn5wDuysp01wARR"
-                html = plantilla_email_entregado(cliente_nombre, link_review)
-                enviar_email_async(email_cliente, "✨ ¡Tu pedido de CROISS fue entregado! Dejanos tu reseña", html)
-
-        return jsonify({"status": "exito", "mensaje": "Pedido marcado como entregado con éxito"}), 200
+        return jsonify({"status": "exito", "mensaje": "Pedido entregado con éxito"}), 200
     except Exception as error:
-        print(f"❌ Error en /api/marcar_entregado: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/eliminar_venta', methods=['POST'])
 def eliminar_venta():
-    """Elimina permanentemente una orden/fila de la pestaña Ventas"""
     try:
         datos = request.json or {}
         num_fila = datos.get("fila")
 
         if not num_fila:
-            return jsonify({"status": "error", "mensaje": "Número de fila no especificado"}), 400
+            return jsonify({"status": "error", "mensaje": "Fila no especificada"}), 400
 
         sheet_ventas = conectar_sheet("Ventas")
         sheet_ventas.delete_rows(int(num_fila))
 
-        print(f"🗑️ [PEDIDO ELIMINADO] Se borró la fila {num_fila} de Google Sheets", flush=True)
         return jsonify({"status": "exito", "mensaje": "Pedido eliminado correctamente"}), 200
     except Exception as error:
-        print(f"❌ Error en /api/eliminar_venta: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/cliente/editar', methods=['POST'])
 def editar_cliente():
-    """Actualiza email, teléfono y dirección de un cliente en todas sus órdenes"""
     try:
         datos = request.json or {}
         nombre_cliente = str(datos.get("nombre", "")).strip()
@@ -428,15 +357,14 @@ def editar_cliente():
         nueva_direccion = str(datos.get("direccion", "")).strip()
 
         if not nombre_cliente:
-            return jsonify({"status": "error", "mensaje": "Nombre de cliente no especificado"}), 400
+            return jsonify({"status": "error", "mensaje": "Nombre no especificado"}), 400
 
         sheet_ventas = conectar_sheet("Ventas")
         data = sheet_ventas.get_all_values()
         if not data or len(data) < 2:
-            return jsonify({"status": "exito", "mensaje": "No hay filas para actualizar"}), 200
+            return jsonify({"status": "exito", "mensaje": "No hay filas"}), 200
 
         headers = [str(h).strip().lower() for h in data[0]]
-        
         col_cliente = headers.index("cliente") + 1 if "cliente" in headers else 4
         col_email = headers.index("email") + 1 if "email" in headers else 10
         col_tel = next((i + 1 for i, h in enumerate(headers) if "tel" in h), 11)
@@ -451,10 +379,8 @@ def editar_cliente():
                 sheet_ventas.update_cell(idx, col_dir, nueva_direccion)
                 filas_modificadas += 1
 
-        print(f"✏️ [CLIENTE EDITADO] '{nombre_cliente}' actualizado en {filas_modificadas} fila(s).", flush=True)
-        return jsonify({"status": "exito", "mensaje": f"Cliente actualizado en {filas_modificadas} registro(s)"}), 200
+        return jsonify({"status": "exito", "mensaje": "Cliente actualizado"}), 200
     except Exception as error:
-        print(f"❌ Error en /api/cliente/editar: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/cambiar_estado_pago', methods=['POST'])
@@ -464,36 +390,17 @@ def cambiar_estado_pago():
         num_fila = datos.get("fila")
         nuevo_estado = datos.get("estado", "Pagado")
 
-        if not num_fila:
-            return jsonify({"status": "error", "mensaje": "Número de fila no especificado"}), 400
-
         sheet_ventas = conectar_sheet("Ventas")
         asegurar_encabezados_ventas(sheet_ventas)
 
         headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
         col_estado = 8
-
         for i, h in enumerate(headers, start=1):
             if "estado" in h:
                 col_estado = i
 
         sheet_ventas.update_cell(int(num_fila), col_estado, nuevo_estado)
-
-        if nuevo_estado.lower() == "pagado":
-            registros = get_clean_records(sheet_ventas)
-            idx_registro = int(num_fila) - 2
-
-            if 0 <= idx_registro < len(registros):
-                reg = registros[idx_registro]
-                email_cliente = get_field_val(reg, "Email", "Correo")
-                cliente_nombre = get_field_val(reg, "Cliente") or "Cliente"
-                monto = get_field_val(reg, "Monto Total", "Monto") or "0"
-
-                if email_cliente and "@" in email_cliente:
-                    html = plantilla_email_pago_recibido(cliente_nombre, monto)
-                    enviar_email_async(email_cliente, "✨ ¡Pago Recibido! - CROISS", html)
-
-        return jsonify({"status": "exito", "mensaje": "Estado actualizado correctamente"}), 200
+        return jsonify({"status": "exito", "mensaje": "Estado actualizado"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
@@ -502,7 +409,6 @@ def obtener_o_crear_sheet_insumos():
     creds = Credentials.from_service_account_file(ruta_credenciales, scopes=SCOPES)
     cliente = gspread.authorize(creds)
     doc = cliente.open_by_key(SPREADSHEET_ID)
-
     try:
         return doc.worksheet("Insumos_Stock")
     except Exception:
@@ -513,37 +419,20 @@ def obtener_o_crear_sheet_insumos():
 @app.route('/api/gastos_e_insumos', methods=['GET'])
 def obtener_gastos_e_insumos():
     try:
-        gastos = []
-        try:
-            sheet_gastos = conectar_sheet("Gastos")
-            gastos = get_clean_records(sheet_gastos)
-            gastos.reverse()
-        except Exception as eg:
-            print(f"Aviso leyendo Gastos: {eg}", flush=True)
-
-        insumos = []
-        try:
-            sheet_insumos = obtener_o_crear_sheet_insumos()
-            insumos = get_clean_records(sheet_insumos)
-        except Exception as ei:
-            print(f"Aviso leyendo Insumos: {ei}", flush=True)
-
-        return jsonify({
-            "status": "exito",
-            "insumos": insumos,
-            "gastos": gastos[:15]
-        }), 200
+        sheet_gastos = conectar_sheet("Gastos")
+        gastos = get_clean_records(sheet_gastos)
+        gastos.reverse()
+        sheet_insumos = obtener_o_crear_sheet_insumos()
+        insumos = get_clean_records(sheet_insumos)
+        return jsonify({"status": "exito", "insumos": insumos, "gastos": gastos[:15]}), 200
     except Exception as error:
-        print(f"❌ Error en /api/gastos_e_insumos: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/balance', methods=['GET'])
 def obtener_balance():
     try:
         mes_filtro = request.args.get('mes', '').strip() or datetime.now().strftime("%Y-%m")
-
         sheet_ventas = conectar_sheet("Ventas")
-        asegurar_encabezados_ventas(sheet_ventas)
         sheet_gastos = conectar_sheet("Gastos")
         sheet_stock = conectar_sheet("Productos_Stock")
 
@@ -641,7 +530,6 @@ def obtener_balance():
         }), 200
 
     except Exception as error:
-        print(f"❌ Error en /api/balance: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/stock', methods=['GET'])
@@ -685,7 +573,7 @@ def registrar_venta():
                     stock_actual = int(sheet_stock.cell(fila, 4).value or 0)
                     sheet_stock.update_cell(fila, 4, max(0, stock_actual - cant))
             except Exception as e:
-                print(f"Aviso: No se pudo descontar stock del producto {prod_nombre}: {e}", flush=True)
+                pass
 
         descripcion_final = ", ".join(resumen_productos)
         cliente_nombre = datos.get("cliente", "Consumidor Final")
@@ -718,11 +606,10 @@ def registrar_venta():
                 html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
                 enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
             except Exception as ee:
-                print(f"Aviso al enviar email: {ee}", flush=True)
+                pass
 
         return jsonify({"status": "exito", "mensaje": "Pedido registrado correctamente", "id": nuevo_id}), 200
     except Exception as error:
-        print(f"❌ Error en /api/venta: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/clientes', methods=['GET'])
@@ -812,7 +699,6 @@ def obtener_clientes():
         for c in lista_historico: c["total_gastado"] = round(c["total_gastado"], 2)
 
         lista_mes = list(clientes_mes.values())
-        # Ordena de mayor a menor por cantidad de croissants (y en caso de empate, por dinero gastado)
         lista_mes.sort(key=lambda x: (x["total_croissants"], x["total_gastado"]), reverse=True)
         for c in lista_mes: c["total_gastado"] = round(c["total_gastado"], 2)
 
@@ -835,9 +721,6 @@ def actualizar_stock():
         prod_nombre = str(datos.get("producto", "")).strip()
         nuevo_stock = datos.get("stock")
         nuevo_precio = datos.get("precio")
-
-        if not prod_nombre:
-            return jsonify({"status": "error", "mensaje": "Producto no especificado"}), 400
 
         sheet_stock = conectar_sheet("Productos_Stock")
         headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
@@ -901,14 +784,13 @@ def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croiss
                         if stock_actual > 0:
                             nuevo_stock = max(0.0, stock_actual - cantidad_cajas)
                             sheet_insumos.update_cell(idx, 2, nuevo_stock)
-                            print(f"📦 [DESCUENTO CAJA] {nombre_insumo}: -{cantidad_cajas}", flush=True)
                             break
 
             descontar_caja("6", cajas_6_necesarias)
             descontar_caja("3", cajas_3_necesarias)
 
     except Exception as e:
-        print(f"⚠️ Error descontando insumos/cajas: {e}", flush=True)
+        pass
 
 @app.route('/api/gasto', methods=['POST'])
 def registrar_gasto():
@@ -961,21 +843,20 @@ def registrar_gasto():
                 else:
                     sheet_insumos.append_row([desc, cant, unidad or "un", venc])
             except Exception as e:
-                print(f"⚠️ Error actualizando Insumos_Stock: {e}", flush=True)
+                pass
 
         return jsonify({"status": "exito", "mensaje": "Gasto registrado", "id": nuevo_id}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 # ==========================================
-# SEGURIDAD Y ACCESO (CLAVE DE ENTRADA)
+# SEGURIDAD Y ACCESO
 # ==========================================
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASS = os.environ.get("ADMIN_PASSWORD", "croisscamigera") 
 
 @app.before_request
 def proteger_app():
-    # Permite cargar el logo, CSS y JS sin bloquear la pantalla
     if request.endpoint == 'static':
         return
 
