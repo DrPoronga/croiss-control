@@ -867,3 +867,10 @@ button.btn-submit:active {
     border: 1px solid var(--border-color) !important;
 }
 
+/* EFECTO INSTANTÁNEO PARA MODO HISTORIAS EN INSTAGRAM */
+body.modo-privado .cifra-sensible {
+    filter: blur(6px) !important;
+    user-select: none !important;
+    pointer-events: none !important;
+    transition: filter 0.15s ease-in-out;
+}

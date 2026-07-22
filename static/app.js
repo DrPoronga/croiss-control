@@ -35,7 +35,7 @@ async function cargarBalance() {
         const res = await fetch(url);
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1800);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if(data.status === 'exito') {
@@ -220,6 +220,10 @@ function getInputValueSafe(id, defaultVal = '') {
 }
 
 function mostrarCroissLoader() {
+    if (!croissImagePreload.src || croissImagePreload.src === '') {
+        croissImagePreload.src = '/static/croissant.png';
+    }
+
     Swal.fire({
         html: `
             <div class="croiss-canvas-container">
@@ -293,7 +297,6 @@ function iniciarAnimacionCanvasCroissant() {
                     }
                 }
             }
-
             canvas.className = currentShake;
         }
 
@@ -436,12 +439,16 @@ function cambiarSegmentoCliente(segmento) {
     document.querySelectorAll('#sec-clientes .sub-seccion').forEach(s => s.classList.remove('active'));
 
     if (segmento === 'lista') {
-        document.getElementById('segBtnLista').classList.add('active');
-        document.getElementById('subSecLista').classList.add('active');
+        const btn = document.getElementById('segBtnLista');
+        const sec = document.getElementById('subSecLista');
+        if (btn) btn.classList.add('active');
+        if (sec) sec.classList.add('active');
         datosClientesGlobal.subOrigen = 'lista';
     } else {
-        document.getElementById('segBtnPromo').classList.add('active');
-        document.getElementById('subSecPromo').classList.add('active');
+        const btn = document.getElementById('segBtnPromo');
+        const sec = document.getElementById('subSecPromo');
+        if (btn) btn.classList.add('active');
+        if (sec) sec.classList.add('active');
         datosClientesGlobal.subOrigen = 'promo';
     }
 }
@@ -572,7 +579,7 @@ async function cargarTodoElStock() {
         await cargarStock(true);
         await cargarInsumosYGastos();
 
-        await esperarAnimacionMinima(tInicio, 1500);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
     } catch (err) {
         Swal.close();
@@ -622,7 +629,7 @@ function abrirModalSumarCongelados() {
                     body: JSON.stringify({ cantidad: result.value })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1500);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Produccion Agregada!', `Se sumaron +${result.value} masas al stock congelado.`);
@@ -650,7 +657,7 @@ async function cargarAgenda() {
         const res = await fetch('/api/agenda');
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1800);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if(data.status === 'exito') {
@@ -970,7 +977,7 @@ function abrirEdicionPedido(numFila) {
                     body: JSON.stringify(result.value)
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1500);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if(data.status === 'exito') {
                     mostrarCroissExito('Pedido Actualizado', 'Se guardaron los cambios en Google Sheets.');
@@ -1075,7 +1082,7 @@ async function cargarCuentas() {
         const res = await fetch('/api/cuentas');
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1800);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if (data.status === 'exito') {
@@ -1344,9 +1351,6 @@ function renderizarGraficoDias(diasObj) {
     });
 }
 
-// ==========================================
-// FUNCIÓN PARA BORRAR UN GASTO
-// ==========================================
 async function eliminarGasto(numFila, descGasto) {
     Swal.fire({
         title: `<strong style="color:var(--text-main); font-size:1.2rem;">¿Eliminar este gasto?</strong>`,
@@ -1371,7 +1375,7 @@ async function eliminarGasto(numFila, descGasto) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1800);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Gasto Eliminado', 'Se removió el registro del historial.');
@@ -1388,9 +1392,6 @@ async function eliminarGasto(numFila, descGasto) {
     });
 }
 
-// ==========================================
-// CAMBIO DE SEGMENTOS DENTRO DE STOCK
-// ==========================================
 function cambiarSegmentoStock(segmento) {
     document.getElementById('segBtnStockCongelados').classList.toggle('active', segmento === 'congelados');
     document.getElementById('segBtnStockMateriaPrima').classList.toggle('active', segmento === 'materiaprima');
@@ -1405,9 +1406,6 @@ function cambiarSegmentoStock(segmento) {
     }
 }
 
-// ==========================================
-// CARGAR Y CLASIFICAR INSUMOS (MATERIA PRIMA VS EMPAQUE)
-// ==========================================
 async function cargarInsumosYGastos() {
     const tInicio = Date.now();
     mostrarCroissLoader();
@@ -1416,7 +1414,7 @@ async function cargarInsumosYGastos() {
         const res = await fetch('/api/gastos_e_insumos');
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1500);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if (data.status === 'exito') {
@@ -1505,23 +1503,41 @@ async function cargarInsumosYGastos() {
 }
 
 function filtrarDirectorioClientes() {
-    const textoBuscado = document.getElementById('inputBuscarCliente').value.toLowerCase().trim();
+    const el = document.getElementById('inputBuscarCliente');
+    if (!el) return;
+    const textoBuscado = el.value.toLowerCase().trim();
     const listaFiltrada = datosClientesGlobal.todos.filter(c => 
-        c.nombre.toLowerCase().includes(textoBuscado)
+        c.nombre && c.nombre.toLowerCase().includes(textoBuscado)
     );
     renderizarListaDirectorio(listaFiltrada);
 }
 
+// ==========================================
+// MODO PRIVACIDAD INSTANTÁNEO (TOGGLE CSS PURO)
+// ==========================================
+function toggleModoPrivacidad() {
+    const estaPrivado = document.body.classList.toggle('modo-privado');
+    const txtBtn = document.getElementById('txtModoPrivado');
+    if (txtBtn) {
+        txtBtn.innerText = estaPrivado ? "Mostrar Cifras" : "Ocultar para Historia";
+    }
+}
+
+// ==========================================
+// CARGAR CLIENTES Y PODIO TOP 3 (SAFE NULL CHECK)
+// ==========================================
 async function cargarClientes() {
     const tInicio = Date.now();
     mostrarCroissLoader();
 
     try {
-        const mesVal = document.getElementById('cMesFilter').value || hoy.substring(0, 7);
+        const elMes = document.getElementById('cMesFilter');
+        const mesVal = elMes ? elMes.value : hoy.substring(0, 7);
+
         const res = await fetch(`/api/clientes?mes=${mesVal}`);
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1800);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if (data.status === 'exito') {
@@ -1532,51 +1548,104 @@ async function cargarClientes() {
 
             const bannerNombre = document.getElementById('topNombre');
             const bannerDetalle = document.getElementById('topDetalle');
+
             if (data.top_cliente_mes) {
-                bannerNombre.innerText = data.top_cliente_mes.nombre;
-                bannerDetalle.innerText = `Lidera con ${data.top_cliente_mes.total_croissants} croissants comprados`;
+                if (bannerNombre) bannerNombre.innerText = data.top_cliente_mes.nombre;
+                if (bannerDetalle) bannerDetalle.innerHTML = `Lidera el mes con <span class="cifra-sensible" style="font-weight:800;">${data.top_cliente_mes.total_croissants} croissants</span> comprados`;
             } else {
-                bannerNombre.innerText = 'Sin Compradores';
-                bannerDetalle.innerText = 'Aún no se registraron ventas en este mes.';
+                if (bannerNombre) bannerNombre.innerText = 'Sin Compradores';
+                if (bannerDetalle) bannerDetalle.innerText = 'Aún no se registraron ventas en este mes.';
             }
 
-            const contRanking = document.getElementById('listaClientesRanking');
-            if (contRanking) {
-                contRanking.innerHTML = '';
-                if (!data.ranking_mes || data.ranking_mes.length === 0) {
-                    contRanking.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas en el período seleccionado.</p>';
-                } else {
-                    data.ranking_mes.forEach((c, idx) => {
-                        const div = document.createElement('div');
-                        div.className = 'ios-cliente-row compact';
-                        div.style.cursor = 'pointer';
-                        div.onclick = (e) => {
-                            e.preventDefault();
-                            verDetalleCliente(c);
-                        };
-                        div.innerHTML = `
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span class="cliente-rank-pos" style="font-weight: 800; color: var(--accent);">#${idx + 1}</span>
-                                <div>
-                                    <strong>${c.nombre || 'Cliente'}</strong>
-                                </div>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <strong style="color:var(--accent); font-size:0.95rem; background: var(--accent-light); padding: 4px 10px; border-radius: 12px;">
-                                    ${c.total_croissants || 0} un.
-                                </strong>
-                                <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
-                            </div>
-                        `;
-                        contRanking.appendChild(div);
-                    });
-                }
-            }
+            renderizarRankingMes(data.ranking_mes);
         }
     } catch (err) {
         Swal.close();
         console.error("Error al cargar clientes:", err);
     }
+}
+
+function renderizarRankingMes(rankingLista) {
+    const contRanking = document.getElementById('listaClientesRanking');
+    if (!contRanking) return;
+
+    contRanking.innerHTML = '';
+    if (!rankingLista || rankingLista.length === 0) {
+        contRanking.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas en el período seleccionado.</p>';
+        return;
+    }
+
+    const medallas = ['🥇', '🥈', '🥉'];
+    const top3 = rankingLista.slice(0, 3);
+
+    top3.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = 'ios-cliente-row compact';
+        div.style.cursor = 'pointer';
+        div.onclick = (e) => {
+            e.preventDefault();
+            verDetalleCliente(c);
+        };
+
+        const iconoRank = medallas[idx] || `#${idx + 1}`;
+
+        div.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.2rem;">${iconoRank}</span>
+                <div>
+                    <strong>${c.nombre || 'Cliente'}</strong>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <strong class="cifra-sensible" style="color:var(--accent); font-size:0.9rem; background: var(--accent-light); padding: 4px 10px; border-radius: 12px;">
+                    ${c.total_croissants || 0} croiss.
+                </strong>
+                <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
+            </div>
+        `;
+        contRanking.appendChild(div);
+    });
+
+    if (rankingLista.length > 3) {
+        const btnVerMas = document.createElement('button');
+        btnVerMas.type = 'button';
+        btnVerMas.className = 'btn-jalea-chip';
+        btnVerMas.style.cssText = 'width: 100%; margin-top: 10px; padding: 8px; text-align: center;';
+        btnVerMas.innerText = `Ver ranking completo (${rankingLista.length} clientes)`;
+        btnVerMas.onclick = () => renderizarRankingCompleto(rankingLista);
+        contRanking.appendChild(btnVerMas);
+    }
+}
+
+function renderizarRankingCompleto(rankingLista) {
+    const contRanking = document.getElementById('listaClientesRanking');
+    if (!contRanking) return;
+
+    contRanking.innerHTML = '';
+    rankingLista.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = 'ios-cliente-row compact';
+        div.style.cursor = 'pointer';
+        div.onclick = (e) => {
+            e.preventDefault();
+            verDetalleCliente(c);
+        };
+        div.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-weight: 800; color: var(--accent);">#${idx + 1}</span>
+                <div>
+                    <strong>${c.nombre || 'Cliente'}</strong>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <strong class="cifra-sensible" style="color:var(--accent); font-size:0.9rem;">
+                    ${c.total_croissants || 0} croiss.
+                </strong>
+                <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
+            </div>
+        `;
+        contRanking.appendChild(div);
+    });
 }
 
 function renderizarListaDirectorio(lista) {
@@ -1971,9 +2040,6 @@ function actualizarMedioPagoSegunEstado() {
     }
 }
 
-// ==========================================
-// MODAL PARA CARGAR STOCK
-// ==========================================
 function abrirModalSumarStock(tipoCategoria) {
     const esEmpaque = tipoCategoria === 'Empaque';
 
@@ -2074,7 +2140,7 @@ function abrirModalSumarStock(tipoCategoria) {
                 const data = await res.json();
 
                 if (typeof esperarAnimacionMinima === 'function') {
-                    await esperarAnimacionMinima(tInicio, 1500);
+                    await esperarAnimacionMinima(tInicio, 2200);
                 }
                 Swal.close();
 
@@ -2097,7 +2163,7 @@ function abrirModalSumarStock(tipoCategoria) {
 }
 
 // ==========================================
-// AUTENTICACIÓN BIOMÉTRICA (FILTRADO PARA MÓVIL)
+// AUTENTICACIÓN BIOMÉTRICA (SOLO MÓVIL)
 // ==========================================
 function esDispositivoMovil() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -2193,7 +2259,7 @@ async function autenticarConBiometria() {
     }
 }
 
-// Iniciar al cargar la página
+// Event Listeners y Formularios
 document.addEventListener('DOMContentLoaded', inicializarFaceID);
 
 const formFinalizarPedido = document.getElementById('formFinalizarPedido');

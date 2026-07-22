@@ -69,7 +69,6 @@ def verificar_autenticacion():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Permite login por formulario HTML o por JSON
         if request.is_json:
             datos = request.json or {}
             pwd = datos.get("password", "")
@@ -634,7 +633,7 @@ def obtener_balance():
     except Exception as error:
         print(f"❌ Error en /api/balance: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 # ==========================================
 # RUTAS DE LA APLICACIÓN
 # ==========================================
@@ -723,7 +722,7 @@ def obtener_agenda():
         return jsonify({"status": "exito", "agenda": list(dias_agenda.values())}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 @app.route('/api/editar_pedido', methods=['POST'])
 def editar_pedido():
     try:
@@ -1171,14 +1170,13 @@ def obtener_clientes():
         sheet_crm = obtener_o_crear_sheet_clientes()
         crm_records = get_clean_records(sheet_crm)
         
-        # 1. Procesar directorio maestro CRM (Lectura pura en memoria)
+        # 1. Procesar directorio maestro CRM (Lectura pura en memoria RAM)
         for c in crm_records:
             nom = get_field_val(c, "Nombre", "Cliente", "Nombre Cliente").strip()
             email = get_field_val(c, "Email", "Correo").strip()
             tel = get_field_val(c, "Telefono", "Teléfono", "Tel").strip()
             direccion = get_field_val(c, "Direccion", "Dirección").strip()
 
-            # Normalizar en memoria si están invertidos
             if "@" in nom and "@" not in email:
                 nom, email = email, nom
 
