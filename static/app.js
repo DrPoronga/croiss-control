@@ -993,8 +993,11 @@ async function eliminarPedido(numFila, clienteNombre) {
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Cancelado', 'Se removio la orden de la agenda.');
-                    cargarCuentas();
+                    
+                    // Actualizaciones en pantalla
+                    if (typeof cargarCuentas === 'function') cargarCuentas();
                     if (typeof cargarAgenda === 'function') cargarAgenda();
+                    if (typeof cargarClientes === 'function') cargarClientes(); // <--- Recarga la lista de clientes
                 } else {
                     Swal.fire('Error', data.mensaje, 'error');
                 }
@@ -1035,6 +1038,7 @@ async function notificarEntrega(numFila, nombreCliente) {
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Entregado!', `Notificacion enviada a ${nombreCliente}.`);
                     cargarCuentas();
+                    if (typeof cargarClientes === 'function') cargarClientes(); // Recarga la información de Clientes
                 } else {
                     Swal.fire('Atencion', data.mensaje, 'warning');
                 }
@@ -1332,6 +1336,14 @@ async function cargarInsumosYGastos() {
     }
 }
 
+function filtrarDirectorioClientes() {
+    const textoBuscado = document.getElementById('inputBuscarCliente').value.toLowerCase().trim();
+    const listaFiltrada = datosClientesGlobal.todos.filter(c => 
+        c.nombre.toLowerCase().includes(textoBuscado)
+    );
+    renderizarListaDirectorio(listaFiltrada);
+}
+
 async function cargarClientes() {
     const tInicio = Date.now();
     mostrarCroissLoader();
@@ -1345,8 +1357,8 @@ async function cargarClientes() {
         Swal.close();
 
         if (data.status === 'exito') {
-            datosClientesGlobal.todos = data.clientes_todos;
-            datosClientesGlobal.ranking = data.ranking_mes;
+            datosClientesGlobal.todos = data.clientes_todos || [];
+            datosClientesGlobal.ranking = data.ranking_mes || [];
 
             renderizarListaDirectorio(datosClientesGlobal.todos);
 
@@ -1357,34 +1369,40 @@ async function cargarClientes() {
                 bannerDetalle.innerText = `Lidera con ${data.top_cliente_mes.total_croissants} croissants comprados`;
             } else {
                 bannerNombre.innerText = 'Sin Compradores';
-                bannerDetalle.innerText = 'Aun no se registraron ventas en este mes.';
+                bannerDetalle.innerText = 'Aún no se registraron ventas en este mes.';
             }
 
             const contRanking = document.getElementById('listaClientesRanking');
-            contRanking.innerHTML = '';
-            if (data.ranking_mes.length === 0) {
-                contRanking.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas en el periodo seleccionado.</p>';
-            } else {
-                data.ranking_mes.forEach((c, idx) => {
-                    const div = document.createElement('div');
-                    div.className = 'ios-cliente-row compact';
-                    div.onclick = () => verDetalleCliente(c);
-                    div.innerHTML = `
-                        <div style="display:flex; align-items:center; gap:8px;">
-                            <span class="cliente-rank-pos" style="font-weight: 800; color: var(--accent);">#${idx + 1}</span>
-                            <div>
-                                <strong>${c.nombre}</strong>
+            if (contRanking) {
+                contRanking.innerHTML = '';
+                if (!data.ranking_mes || data.ranking_mes.length === 0) {
+                    contRanking.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas en el período seleccionado.</p>';
+                } else {
+                    data.ranking_mes.forEach((c, idx) => {
+                        const div = document.createElement('div');
+                        div.className = 'ios-cliente-row compact';
+                        div.style.cursor = 'pointer';
+                        div.onclick = (e) => {
+                            e.preventDefault();
+                            verDetalleCliente(c);
+                        };
+                        div.innerHTML = `
+                            <div style="display:flex; align-items:center; gap:8px;">
+                                <span class="cliente-rank-pos" style="font-weight: 800; color: var(--accent);">#${idx + 1}</span>
+                                <div>
+                                    <strong>${c.nombre || 'Cliente'}</strong>
+                                </div>
                             </div>
-                        </div>
-                        <div style="display:flex; align-items:center; gap:6px;">
-                            <strong style="color:var(--accent); font-size:0.95rem; background: var(--accent-light); padding: 4px 10px; border-radius: 12px;">
-                                ${c.total_croissants} un.
-                            </strong>
-                            <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
-                        </div>
-                    `;
-                    contRanking.appendChild(div);
-                });
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <strong style="color:var(--accent); font-size:0.95rem; background: var(--accent-light); padding: 4px 10px; border-radius: 12px;">
+                                    ${c.total_croissants || 0} un.
+                                </strong>
+                                <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
+                            </div>
+                        `;
+                        contRanking.appendChild(div);
+                    });
+                }
             }
         }
     } catch (err) {
@@ -1397,12 +1415,12 @@ function renderizarListaDirectorio(lista) {
     const contDirectorio = document.getElementById('listaClientesDirectorio');
     const labelCant = document.getElementById('cantClientesLabel');
     
-    if (labelCant) labelCant.innerText = `Directorio General (${lista.length} clientes)`;
-    if(!contDirectorio) return;
+    if (labelCant) labelCant.innerText = `Directorio General (${lista ? lista.length : 0} clientes)`;
+    if (!contDirectorio) return;
 
     contDirectorio.innerHTML = '';
 
-    if (lista.length === 0) {
+    if (!lista || lista.length === 0) {
         contDirectorio.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:20px 0;">No se encontraron clientes.</p>';
         return;
     }
@@ -1410,14 +1428,18 @@ function renderizarListaDirectorio(lista) {
     lista.forEach(c => {
         const div = document.createElement('div');
         div.className = 'ios-cliente-row compact';
-        div.onclick = () => verDetalleCliente(c);
+        div.style.cursor = 'pointer';
+        div.onclick = (e) => {
+            e.preventDefault();
+            verDetalleCliente(c);
+        };
         div.innerHTML = `
             <div>
-                <strong>${c.nombre}</strong><br>
-                <small style="color:var(--text-muted);">${c.total_pedidos} pedido(s) - ${c.total_croissants} croiss.</small>
+                <strong>${c.nombre || 'Sin nombre'}</strong><br>
+                <small style="color:var(--text-muted);">${c.total_pedidos || 0} pedido(s) - ${c.total_croissants || 0} croiss.</small>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-                <strong style="color:var(--text-main); font-size:0.9rem;">$${c.total_gastado}</strong>
+                <strong style="color:var(--text-main); font-size:0.9rem;">$${c.total_gastado || 0}</strong>
                 <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
             </div>
         `;
@@ -1425,21 +1447,21 @@ function renderizarListaDirectorio(lista) {
     });
 }
 
-function filtrarDirectorioClientes() {
-    const textoBuscado = document.getElementById('inputBuscarCliente').value.toLowerCase().trim();
-    const listaFiltrada = datosClientesGlobal.todos.filter(c => 
-        c.nombre.toLowerCase().includes(textoBuscado)
-    );
-    renderizarListaDirectorio(listaFiltrada);
-}
-
 function verDetalleCliente(clienteObj) {
+    if (!clienteObj) return;
     clienteDetalleActual = clienteObj;
-    document.querySelectorAll('#sec-clientes .sub-seccion').forEach(s => s.classList.remove('active'));
-    document.getElementById('subSecDetalle').classList.add('active');
 
-    document.getElementById('detClienteNombre').innerText = clienteObj.nombre;
-    document.getElementById('detClienteStats').innerText = `Historico: $${clienteObj.total_gastado} gastados en ${clienteObj.total_croissants} croissants (${clienteObj.total_pedidos} pedidos)`;
+    document.querySelectorAll('#sec-clientes .sub-seccion').forEach(s => s.classList.remove('active'));
+    const secDetalle = document.getElementById('subSecDetalle');
+    if (secDetalle) secDetalle.classList.add('active');
+
+    const elNom = document.getElementById('detClienteNombre');
+    if (elNom) elNom.innerText = clienteObj.nombre || 'Cliente';
+
+    const elStats = document.getElementById('detClienteStats');
+    if (elStats) {
+        elStats.innerText = `Histórico: $${clienteObj.total_gastado || 0} gastados en ${clienteObj.total_croissants || 0} croissants (${clienteObj.total_pedidos || 0} pedidos)`;
+    }
 
     const contContacto = document.getElementById('detClienteContacto');
     if (contContacto) {
@@ -1447,10 +1469,8 @@ function verDetalleCliente(clienteObj) {
         if (clienteObj.telefono) datosStr.push(`Tel: ${clienteObj.telefono}`);
         if (clienteObj.email) datosStr.push(`Email: ${clienteObj.email}`);
         
-        let mapsBtn = clienteObj.direccion ? `
-            <br><span style="color:var(--text-main); font-weight:600;">Dir: ${clienteObj.direccion}</span>
-            <button type="button" class="btn-jalea-chip" style="margin-left:6px; font-size:0.7rem; padding: 2px 8px;" onclick="abrirGoogleMaps('${encodeURIComponent(clienteObj.direccion)}')">Abrir Maps</button>
-        ` : '';
+        let dirTexto = clienteObj.direccion ? `<br><span style="color:var(--text-main); font-weight:600;">Dir: ${clienteObj.direccion}</span>` : '';
+        let mapsBtn = clienteObj.direccion ? ` <button type="button" class="btn-jalea-chip" style="margin-left:6px; font-size:0.7rem; padding: 2px 8px;" onclick="abrirGoogleMaps('${encodeURIComponent(clienteObj.direccion)}')">Abrir Maps</button>` : '';
 
         const btnEditar = `
             <div style="margin-top:10px;">
@@ -1460,28 +1480,55 @@ function verDetalleCliente(clienteObj) {
             </div>
         `;
 
-        contContacto.innerHTML = (datosStr.join(' | ') || 'Sin datos de contacto') + mapsBtn + btnEditar;
+        contContacto.innerHTML = (datosStr.join(' | ') || 'Sin datos de contacto') + dirTexto + mapsBtn + btnEditar;
     }
 
     const contHist = document.getElementById('detClienteHistorial');
-    contHist.innerHTML = '';
+    if (contHist) {
+        contHist.innerHTML = '';
+        const historial = Array.isArray(clienteObj.historial) ? clienteObj.historial : [];
 
-    clienteObj.historial.forEach(h => {
-        const div = document.createElement('div');
-        div.className = 'historial-compra-card';
-        div.innerHTML = `
-            <div>
-                <strong>Fecha: ${h.fecha}</strong> <small style="color:#64748b;">(${h.estado})</small><br>
-                <span style="font-size:0.85rem; color:#334155;">${h.producto}</span>
-            </div>
-            <div style="text-align:right;">
-                <strong style="color:var(--text-main);">$${h.monto}</strong><br>
-                <small style="color:var(--accent);">${h.cantidad} un.</small><br>
-                ${h.fila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarPedido(${h.fila}, '${clienteObj.nombre}')">Eliminar</button>` : ''}
-            </div>
-        `;
-        contHist.appendChild(div);
-    });
+        if (historial.length === 0) {
+            contHist.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">Este cliente no tiene pedidos registrados en el historial.</p>';
+            return;
+        }
+
+        historial.forEach(h => {
+            const estPago = h.estado_pago || h.estado || 'Pendiente';
+            const estEntrega = String(h.estado_entrega || h.entrega || '').trim().toLowerCase();
+
+            const colorPago = estPago.toLowerCase() === 'pagado' ? '#16a34a' : '#dc2626';
+
+            // Lógica para renderizar los 3 estados distintos
+            let estEntregaBadge = '';
+            if (estEntrega.includes('entregad')) {
+                estEntregaBadge = '<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">🚚 Entregado</span>';
+            } else if (estEntrega.includes('pendien')) {
+                estEntregaBadge = '<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">⏳ Por Entregar</span>';
+            } else {
+                estEntregaBadge = '<span style="background:#f1f5f9; color:#64748b; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">⚠️ Sin Estado</span>';
+            }
+
+            const nombreEscapado = (clienteObj.nombre || '').replace(/'/g, "\\'");
+
+            const div = document.createElement('div');
+            div.className = 'historial-compra-card';
+            div.innerHTML = `
+                <div>
+                    <strong>Fecha: ${h.fecha || 'Sin fecha'}</strong> 
+                    <small style="color:${colorPago}; font-weight:700; margin-left:4px;">[${estPago}]</small> 
+                    ${estEntregaBadge}<br>
+                    <span style="font-size:0.85rem; color:#334155; margin-top:4px; display:inline-block;">${h.producto || '-'}</span>
+                </div>
+                <div style="text-align:right;">
+                    <strong style="color:var(--text-main); font-size:0.95rem;">$${h.monto || 0}</strong><br>
+                    <small style="color:var(--accent); font-weight:700;">${h.cantidad || 0} un.</small><br>
+                    ${h.fila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarPedido(${h.fila}, '${nombreEscapado}')">Eliminar</button>` : ''}
+                </div>
+            `;
+            contHist.appendChild(div);
+        });
+    }
 }
 
 function abrirModalEditarCliente() {
@@ -1489,39 +1536,53 @@ function abrirModalEditarCliente() {
     const clienteObj = clienteDetalleActual;
 
     Swal.fire({
-        title: `Editar a ${clienteObj.nombre}`,
+        title: `Editar Cliente`,
         customClass: {
             popup: 'croiss-swal-popup',
             title: 'croiss-swal-title',
             confirmButton: 'croiss-swal-confirm',
-            cancelButton: 'croiss-swal-cancel'
+            cancelButton: 'croiss-swal-cancel',
+            denyButton: 'croiss-btn-danger'
         },
         buttonsStyling: false,
         html: `
             <div style="text-align: left; margin-top: 14px;">
-                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
-                    Telefono
+                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">
+                    Nombre del Cliente
+                </label>
+                <input type="text" id="editNombreInput" class="croiss-swal-input" value="${clienteObj.nombre || ''}" placeholder="Ej: María Pérez">
+
+                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">
+                    Teléfono
                 </label>
                 <input type="text" id="editTelInput" class="croiss-swal-input" value="${clienteObj.telefono || ''}" placeholder="099 123 456">
 
-                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
+                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">
                     Email
                 </label>
                 <input type="email" id="editEmailInput" class="croiss-swal-input" value="${clienteObj.email || ''}" placeholder="correo@gmail.com">
 
-                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">
-                    Direccion
+                <label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 2px;">
+                    Dirección
                 </label>
                 <input type="text" id="editDirInput" class="croiss-swal-input" value="${clienteObj.direccion || ''}" placeholder="Av. Brasil 2450 Apt 302" style="margin-bottom:0 !important;">
             </div>
         `,
         showCancelButton: true,
+        showDenyButton: true,
         confirmButtonText: 'Guardar Cambios',
+        denyButtonText: '🗑️ Eliminar Cliente',
         cancelButtonText: 'Cancelar',
         focusConfirm: false,
         preConfirm: () => {
+            const nomNuevo = document.getElementById('editNombreInput').value.trim();
+            if (!nomNuevo) {
+                Swal.showValidationMessage('El nombre del cliente no puede estar vacío.');
+                return false;
+            }
             return {
-                nombre: clienteObj.nombre,
+                nombre_original: clienteObj.nombre,
+                nombre: nomNuevo,
                 telefono: document.getElementById('editTelInput').value.trim(),
                 email: document.getElementById('editEmailInput').value.trim(),
                 direccion: document.getElementById('editDirInput').value.trim()
@@ -1542,7 +1603,7 @@ function abrirModalEditarCliente() {
                 await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
-                    mostrarCroissExito('Cliente Actualizado', 'Datos guardados en la planilla.');
+                    mostrarCroissExito('Cliente Actualizado', 'Todos los datos se guardaron correctamente.');
                     cargarClientes();
                     volverASeccionAnterior();
                 } else {
@@ -1550,7 +1611,52 @@ function abrirModalEditarCliente() {
                 }
             } catch (err) {
                 console.error("Error al editar cliente:", err);
-                Swal.fire('Error', 'No se pudo actualizar la informacion', 'error');
+                Swal.fire('Error', 'No se pudo actualizar la información', 'error');
+            }
+        } else if (result.isDenied) {
+            // Solicitar confirmación de eliminación
+            confirmarEliminarCliente(clienteObj.nombre);
+        }
+    });
+}
+
+async function confirmarEliminarCliente(nombreCliente) {
+    Swal.fire({
+        title: `<strong style="color:var(--text-main); font-size:1.2rem;">¿Eliminar cliente?</strong>`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted); font-weight:600; margin-top:4px; line-height:1.4;">Se removerá a <strong style="color:var(--text-main);">${nombreCliente}</strong> de tu lista de contactos/CRM.</p>`,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
+        customClass: {
+            popup: 'croiss-swal-popup',
+            confirmButton: 'croiss-btn-danger',
+            cancelButton: 'croiss-swal-cancel'
+        }
+    }).then(async (resConf) => {
+        if (resConf.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+
+            try {
+                const res = await fetch('/api/cliente/eliminar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ nombre: nombreCliente })
+                });
+                const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Cliente Eliminado', `${nombreCliente} fue removido de tus contactos.`);
+                    cargarClientes();
+                    volverASeccionAnterior();
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                console.error("Error eliminando cliente:", err);
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
             }
         }
     });
@@ -1561,12 +1667,27 @@ function volverASeccionAnterior() {
 }
 
 function obtenerExtraRelleno(nombreProducto) {
-    const nombre = nombreProducto.toLowerCase();
-    if (nombre.includes('jamon')) return 50;
-    if (nombre.includes('dulce de leche') || nombre.includes('ddl')) return 30;
+    if (!nombreProducto) return 0;
+    
+    // Normaliza el texto: pasa a minúsculas y elimina tildes/diacríticos (ej: "Jamón" -> "jamon")
+    const nombre = nombreProducto
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "");
+
+    // Detección de Jamón y/o Queso (+$50)
+    if (nombre.includes('jamon') || nombre.includes('queso')) {
+        return 50;
+    }
+
+    // Detección de Dulce de Leche / DDL (+$30)
+    if (nombre.includes('dulce de leche') || nombre.includes('ddl') || nombre.includes('dulce')) {
+        return 30;
+    }
+
     return 0;
 }
-
+	
 function calcularPrecioBase(totalCroissants) {
     if (totalCroissants >= 6) return 100;
     if (totalCroissants >= 3) return 110;
@@ -1674,6 +1795,18 @@ function renderizarCarrito() {
     });
 
     totalEl.innerText = totalGeneral;
+}
+
+function actualizarMedioPagoSegunEstado() {
+    const estadoEl = document.getElementById('vEstado');
+    const medioEl = document.getElementById('vMedio');
+    if (!estadoEl || !medioEl) return;
+
+    if (estadoEl.value === 'Pendiente') {
+        medioEl.value = '-';
+    } else if (estadoEl.value === 'Pagado' && medioEl.value === '-') {
+        medioEl.value = 'Efectivo';
+    }
 }
 
 const formFinalizarPedido = document.getElementById('formFinalizarPedido');

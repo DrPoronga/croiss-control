@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Croiss Control</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+	<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
@@ -127,22 +127,23 @@
                             </div>
 
                             <div class="row">
-                                <div class="form-group">
-                                    <label>Estado</label>
-                                    <select id="vEstado">
-                                        <option value="Pagado">Pagado</option>
-                                        <option value="Pendiente">Pendiente</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label>Medio de Pago</label>
-                                    <select id="vMedio">
-                                        <option value="Efectivo">Efectivo</option>
-                                        <option value="Transferencia">Transferencia</option>
-                                        <option value="Tarjeta">Tarjeta</option>
-                                    </select>
-                                </div>
-                            </div>
+								<div class="form-group">
+									<label>Estado</label>
+									<select id="vEstado" onchange="actualizarMedioPagoSegunEstado()">
+										<option value="Pendiente" selected>Pendiente</option>
+										<option value="Pagado">Pagado</option>
+									</select>
+								</div>
+								<div class="form-group">
+									<label>Medio de Pago</label>
+									<select id="vMedio">
+										<option value="-" selected>- / Por Definir</option>
+										<option value="Efectivo">Efectivo</option>
+										<option value="Transferencia">Transferencia</option>
+										<option value="Tarjeta">Tarjeta</option>
+									</select>
+								</div>
+							</div>
 
                             <button type="submit" class="btn-submit">Confirmar Pedido</button>
                         </form>
