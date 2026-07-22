@@ -109,7 +109,7 @@ def get_clean_records(sheet):
 def get_field_val(record, *possible_keys):
     if not record: return ""
     
-    # 1. Búsqueda exacta (normalizada)
+    # Búsqueda exacta normalizada
     for target in possible_keys:
         target_clean = target.lower().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").strip()
         for k, val in record.items():
@@ -117,7 +117,7 @@ def get_field_val(record, *possible_keys):
             if k_clean == target_clean and val:
                 return str(val).strip()
 
-    # 2. Búsqueda flexible / tolerancia (para columnas de entrega)
+    # Búsqueda flexible (para variaciones en el encabezado 'Entrega')
     for target in possible_keys:
         target_clean = target.lower().replace("á","a").replace("é","e").replace("í","i").replace("ó","o").replace("ú","u").strip()
         if "entrega" in target_clean:
@@ -127,7 +127,7 @@ def get_field_val(record, *possible_keys):
                     return str(val).strip()
 
     return ""
-
+    
 def enviar_email_async(destinatario, asunto, cuerpo_html):
     def _enviar():
         if not destinatario or "@" not in str(destinatario):
@@ -246,16 +246,23 @@ def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croiss
         if not registros:
             return
 
+        # Acumulador en memoria para evitar actualizar celda por celda
+        modificaciones = {} # row_idx -> nuevo_stock
+
         receta = obtener_receta_producto(producto_nombre)
         for ing_clave, cant_unit in receta.items():
             cant_total_a_descontar = cant_unit * cantidad_vendida
             for idx, ins_row in enumerate(registros, start=2):
                 nombre_insumo = get_field_val(ins_row, "Insumo").lower()
                 if ing_clave in nombre_insumo:
-                    raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
-                    stock_actual = float(raw_st) if raw_st else 0.0
+                    if idx in modificaciones:
+                        stock_actual = modificaciones[idx]
+                    else:
+                        raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
+                        stock_actual = float(raw_st) if raw_st else 0.0
+                    
                     nuevo_stock = max(0.0, round(stock_actual - cant_total_a_descontar, 3))
-                    sheet_insumos.update_cell(idx, 2, nuevo_stock)
+                    modificaciones[idx] = nuevo_stock
                     break
 
         if total_croissants_pedido > 0:
@@ -268,19 +275,27 @@ def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croiss
                 for idx, ins_row in enumerate(registros, start=2):
                     nombre_insumo = get_field_val(ins_row, "Insumo").lower()
                     if "caja" in nombre_insumo and tipo_capacidad in nombre_insumo:
-                        raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
-                        stock_actual = float(raw_st) if raw_st else 0.0
+                        if idx in modificaciones:
+                            stock_actual = modificaciones[idx]
+                        else:
+                            raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
+                            stock_actual = float(raw_st) if raw_st else 0.0
+                        
                         if stock_actual > 0:
-                            nuevo_stock = max(0.0, stock_actual - cantidad_cajas)
-                            sheet_insumos.update_cell(idx, 2, nuevo_stock)
+                            nuevo_stock = max(0.0, round(stock_actual - cantidad_cajas, 3))
+                            modificaciones[idx] = nuevo_stock
                             break
 
             descontar_caja("6", cajas_6_necesarias)
             descontar_caja("3", cajas_3_necesarias)
 
-    except Exception as e:
-        pass
+        # Se envían únicamente los totales consolidados
+        for row_idx, n_stock in modificaciones.items():
+            sheet_insumos.update_cell(row_idx, 2, n_stock)
 
+    except Exception as e:
+        print(f"Aviso descontando insumos: {e}", flush=True)
+        
 # ==========================================
 # RUTAS DE LA APLICACIÓN
 # ==========================================
@@ -567,7 +582,6 @@ def editar_cliente():
         if not nombre_original:
             return jsonify({"status": "error", "mensaje": "Nombre original no especificado"}), 400
 
-        # 1. Actualizar en pestaña Ventas
         sheet_ventas = conectar_sheet("Ventas")
         data = sheet_ventas.get_all_values()
         if data and len(data) >= 2:
@@ -577,11 +591,9 @@ def editar_cliente():
             for idx, row in enumerate(data[1:], start=2):
                 val_cli = row[col_cliente - 1] if col_cliente - 1 < len(row) else ""
                 if val_cli.strip().lower() == nombre_original.lower():
-                    # Mantiene intactas las demás columnas y actualiza solo el bloque de contacto
                     sheet_ventas.update(f"D{idx}", [[nuevo_nombre]])
                     sheet_ventas.update(f"J{idx}:L{idx}", [[nuevo_email, nuevo_telefono, nueva_direccion]])
 
-        # 2. Actualizar en pestaña Clientes (CRM Maestro) en 1 sola llamada
         try:
             sincronizar_cliente(nuevo_nombre, nuevo_email, nuevo_telefono, nueva_direccion)
         except Exception as e:
@@ -968,15 +980,13 @@ def sincronizar_cliente(nombre, email, telefono, direccion):
             val_nom = get_field_val(reg, "Nombre", "Cliente", "Nombre Cliente")
 
             if val_nom and val_nom.lower() == nombre.lower():
-                # Actualiza toda la fila de una sola vez en 1 sola petición
+                # Actualiza la fila completa A:D en 1 sola petición a la API
                 sheet.update(f"A{idx}:D{idx}", [[nombre, email, telefono, direccion]])
                 return
         
-        # Si no existe, se agrega al final
         sheet.append_row([nombre, email, telefono, direccion])
     except Exception as e:
-        print(f"Aviso sincronizando cliente: {e}", flush=True)
-        
+        print(f"Aviso sincronizando cliente: {e}", flush=True)     
 
 @app.route('/api/clientes', methods=['GET'])
 def obtener_clientes():
@@ -1037,7 +1047,6 @@ def obtener_clientes():
             cant = int(raw_cant) if raw_cant.isdigit() else 0
             key_norm = cliente_nombre.lower()
 
-            # Extracción del estado de pago y entrega (sin enmascarar celdas vacías)
             estado_pago = get_field_val(v, "Estado") or "Pendiente"
             raw_entrega = get_field_val(v, "Entrega", "Estado Entrega", "Estado de Entrega")
             estado_entrega = raw_entrega if raw_entrega else "Sin Registrar"
