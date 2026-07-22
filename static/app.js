@@ -21,6 +21,217 @@ let croissAnimFrameId = null;
 let agendaGlobalData = [];
 let clienteDetalleActual = null;
 let itemsEdicionTemp = [];
+let chartGastosCatInstance = null;
+let chartEvolucionLineaInstance = null;
+
+async function cargarBalance() {
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
+    try {
+        const mesVal = document.getElementById('bMesFilter').value || hoy.substring(0, 7);
+        let url = `/api/balance?mes=${mesVal}`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        await esperarAnimacionMinima(tInicio, 1800);
+        Swal.close();
+
+        if(data.status === 'exito') {
+            // 1. FINANZAS Y DESGLOSE DE GASTOS
+            document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
+            document.getElementById('bCostos').innerText = `$${data.costos_produccion}`;
+            document.getElementById('bGastos').innerText = `$${data.gastos_varios}`;
+            document.getElementById('bTicketPromedio').innerText = `$${data.ticket_promedio}`;
+
+            const gananciaEl = document.getElementById('bGanancia');
+            gananciaEl.innerText = `$${data.ganancia_neta}`;
+            gananciaEl.style.color = data.ganancia_neta < 0 ? "#ef4444" : "#16a34a";
+
+            // Renderizar Gráfico de Gastos por Categoría
+            renderizarGraficoGastosCategoria(data.gastos_por_categoria);
+
+            // 2. ANÁLISIS DE SABORES (Más vendido vs Más rentable)
+            if (data.analisis_sabores) {
+                const mVendido = data.analisis_sabores.mas_vendido;
+                const mRentable = data.analisis_sabores.mas_rentable;
+
+                const contSaborCompara = document.getElementById('boxComparativoSabores');
+                if (contSaborCompara) {
+                    contSaborCompara.innerHTML = `
+                        <div style="display:flex; gap:10px; margin-bottom:14px;">
+                            <div style="flex:1; background:#FFF7ED; border:1px solid #FFEDD5; border-radius:12px; padding:12px;">
+                                <small style="color:#C86D28; font-weight:800; text-transform:uppercase; font-size:0.68rem;">🔥 MÁS VENDIDO</small>
+                                <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${mVendido ? mVendido.sabor : 'N/A'}</div>
+                                <small style="color:#64748b;">${mVendido ? mVendido.cantidad : 0} un. vendidas</small>
+                            </div>
+                            <div style="flex:1; background:#F0FDF4; border:1px solid #DCFCE7; border-radius:12px; padding:12px;">
+                                <small style="color:#16A34A; font-weight:800; text-transform:uppercase; font-size:0.68rem;">💎 MÁS RENTABLE</small>
+                                <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${mRentable ? mRentable.sabor : 'N/A'}</div>
+                                <small style="color:#16A34A; font-weight:700;">+$${mRentable ? mRentable.ganancia : 0} margen</small>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // Stat Jalea y Ranking de Sabores
+            document.getElementById('txtPorcentajeJalea').innerText = `${data.stats_jalea.porcentaje}% (${data.stats_jalea.con_jalea} un.)`;
+
+            const contRank = document.getElementById('listaRankingSabores');
+            if (contRank) {
+                contRank.innerHTML = '';
+                if (!data.ranking_sabores || data.ranking_sabores.length === 0) {
+                    contRank.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas registradas en este mes.</p>';
+                } else {
+                    data.ranking_sabores.forEach(r => {
+                        const div = document.createElement('div');
+                        div.className = 'ios-cliente-row compact';
+                        div.style.cursor = 'default';
+                        div.innerHTML = `
+                            <div>
+                                <strong>🥐 ${r.sabor}</strong><br>
+                                <small style="color:var(--text-muted);">${r.porcentaje}% del total | Margen: +$${r.ganancia}</small>
+                            </div>
+                            <strong style="color:var(--accent); font-size:0.95rem;">${r.cantidad} un.</strong>
+                        `;
+                        contRank.appendChild(div);
+                    });
+                }
+            }
+
+            renderizarGraficoSabores(data.ranking_sabores);
+            renderizarGraficoDias(data.dias_semana);
+
+            // 3. EVOLUCIÓN HISTÓRICA & TASA DE RECOMPRA (FIDELIZACIÓN)
+            if (data.fidelizacion) {
+                const fid = data.fidelizacion;
+                const contFid = document.getElementById('boxFidelizacionCliente');
+                if (contFid) {
+                    let htmlClientesTop = '';
+                    if (fid.top_recurrentes && fid.top_recurrentes.length > 0) {
+                        htmlClientesTop = fid.top_recurrentes.map(c => `
+                            <div style="display:flex; justify-content:space-between; font-size:0.82rem; padding:4px 0; border-bottom:1px dashed #E2D9D3;">
+                                <span><strong>${c.nombre}</strong> (${c.pedidos_mes} pedidos este mes)</span>
+                                <strong style="color:var(--accent);">$${c.monto_mes}</strong>
+                            </div>
+                        `).join('');
+                    }
+
+                    contFid.innerHTML = `
+                        <div class="card" style="margin-bottom:14px; border:1px solid var(--border-color);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <div>
+                                    <strong style="font-size:0.95rem; color:var(--text-main);">Tasa de Recompra (Fidelización)</strong><br>
+                                    <small style="color:var(--text-muted);">${fid.clientes_recurrentes} habituales de ${fid.clientes_unicos} compradores únicos</small>
+                                </div>
+                                <span style="font-size:1.4rem; font-weight:800; color:var(--accent); background:var(--accent-light); padding:4px 12px; border-radius:12px;">
+                                    ${fid.tasa_recompra}%
+                                </span>
+                            </div>
+                            ${htmlClientesTop ? `<div style="margin-top:10px;">${htmlClientesTop}</div>` : ''}
+                        </div>
+                    `;
+                }
+            }
+
+            // Gráfico de Líneas Temporal para Evolución Historica
+            renderizarGraficoEvolucionLinea(data.historico_meses);
+
+            // Lista detallada de meses pasados
+            const contEvolucion = document.getElementById('listaEvolucionMeses');
+            if (contEvolucion) {
+                contEvolucion.innerHTML = '';
+                data.historico_meses.forEach(m => {
+                    const esPositivo = m.ganancia_neta >= 0;
+                    const colorGanancia = esPositivo ? '#16a34a' : '#dc2626';
+
+                    const div = document.createElement('div');
+                    div.className = 'ios-cliente-row compact';
+                    div.style.cursor = 'default';
+                    div.innerHTML = `
+                        <div>
+                            <strong>Fecha: ${m.mes_key}</strong> <small style="color:var(--text-muted);">(${m.pedidos} pedidos)</small><br>
+                            <small style="color:#64748b;">Ingresos: $${m.ingresos} | Egresos: $${m.gastos_totales}</small>
+                        </div>
+                        <div style="text-align:right;">
+                            <strong style="color:${colorGanancia}; font-size:0.95rem;">$${m.ganancia_neta}</strong><br>
+                            <small style="color:var(--text-muted); font-size:0.7rem;">Ganancia Neta</small>
+                        </div>
+                    `;
+                    contEvolucion.appendChild(div);
+                });
+            }
+        }
+    } catch(err) {
+        Swal.close();
+        console.error("Error al cargar balance:", err);
+    }
+}
+
+// GRÁFICO 1: Desglose de Gastos por Categoría
+function renderizarGraficoGastosCategoria(gastosCat) {
+    const ctx = document.getElementById('chartGastosCatCanvas');
+    if (!ctx) return;
+
+    if (chartGastosCatInstance) chartGastosCatInstance.destroy();
+    if (!gastosCat || gastosCat.length === 0) return;
+
+    chartGastosCatInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: gastosCat.map(g => g.categoria),
+            datasets: [{
+                data: gastosCat.map(g => g.monto),
+                backgroundColor: ['#DC2626', '#EA580C', '#D97706', '#0284C7', '#64748B']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+        }
+    });
+}
+
+// GRÁFICO 2: Línea Temporal de Evolución
+function renderizarGraficoEvolucionLinea(historico) {
+    const ctx = document.getElementById('chartEvolucionLineaCanvas');
+    if (!ctx) return;
+
+    if (chartEvolucionLineaInstance) chartEvolucionLineaInstance.destroy();
+    if (!historico || historico.length === 0) return;
+
+    chartEvolucionLineaInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: historico.map(h => h.mes_key),
+            datasets: [
+                {
+                    label: 'Ingresos ($)',
+                    data: historico.map(h => h.ingresos),
+                    borderColor: '#16A34A',
+                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: 'Ganancia Neta ($)',
+                    data: historico.map(h => h.ganancia_neta),
+                    borderColor: '#C86D28',
+                    backgroundColor: 'transparent',
+                    borderDash: [5, 5],
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
 
 // Garantiza ver la secuencia completa de la animacion
 async function esperarAnimacionMinima(tiempoInicio, minMs = 2200) {
@@ -458,7 +669,6 @@ function abrirModalSumarCongelados() {
     });
 }
 
-// AGENDA EXPANDIBLE, EDICION Y PDF
 async function cargarAgenda() {
     const contenedor = document.getElementById('listaAgenda');
     if(!contenedor) return;
@@ -477,7 +687,10 @@ async function cargarAgenda() {
             contenedor.innerHTML = '';
             agendaGlobalData = data.agenda || [];
 
-            data.agenda.forEach((dia, idxDia) => {
+            // 🔍 Busca dinámicamente el primer día que contenga pedidos por entregar
+            const primerDiaConPedidosIdx = agendaGlobalData.findIndex(d => d.pedidos && d.pedidos.length > 0);
+
+            agendaGlobalData.forEach((dia, idxDia) => {
                 const total = dia.total_croissants;
                 const limite = 35;
                 const porcentaje = Math.min(100, Math.round((total / limite) * 100));
@@ -488,7 +701,7 @@ async function cargarAgenda() {
 
                 let htmlPedidos = '';
                 if(!dia.pedidos || dia.pedidos.length === 0) {
-                    htmlPedidos = '<p style="font-size:0.85rem; color:#94a3b8; font-style:italic; padding:8px 0;">Sin pedidos para este dia.</p>';
+                    htmlPedidos = '<p style="font-size:0.85rem; color:#94a3b8; font-style:italic; padding:8px 0;">Sin pedidos pendientes para este día.</p>';
                 } else {
                     dia.pedidos.forEach(p => {
                         const esPagado = (p.estado || '').toLowerCase() === 'pagado';
@@ -536,12 +749,15 @@ async function cargarAgenda() {
                 
                 const tienePedidos = dia.pedidos && dia.pedidos.length > 0;
                 const idDetalle = `dia-detalle-${idxDia}`;
+                
+                // Solo abre el primer día que realmente tenga pedidos
+                const estaAbierto = (idxDia === primerDiaConPedidosIdx);
 
                 card.innerHTML = `
                     <div class="agenda-header" style="display:flex; justify-content:space-between; align-items:center;">
                         <div style="cursor:pointer; flex:1;" onclick="toggleExpandirDia('${idDetalle}')">
                             <span class="agenda-titulo">
-                                <span id="arrow-${idDetalle}" style="display:inline-block; transition:transform 0.2s;">></span> ${dia.nombre_dia}
+                                <span id="arrow-${idDetalle}" style="display:inline-block; transition:transform 0.2s; transform: ${estaAbierto ? 'rotate(90deg)' : 'rotate(0deg)'};">></span> ${dia.nombre_dia}
                             </span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
@@ -553,7 +769,7 @@ async function cargarAgenda() {
                         <div class="progress-bar-fill ${claseBadge}" style="width: ${porcentaje}%"></div>
                     </div>
                     
-                    <div id="${idDetalle}" style="display:${idxDia === 0 ? 'block' : 'none'}; margin-top: 14px;">
+                    <div id="${idDetalle}" style="display:${estaAbierto ? 'block' : 'none'}; margin-top: 14px;">
                         ${htmlPedidos}
                     </div>
                 `;
@@ -1037,10 +1253,13 @@ async function notificarEntrega(numFila, nombreCliente) {
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Entregado!', `Notificacion enviada a ${nombreCliente}.`);
-                    cargarCuentas();
-                    if (typeof cargarClientes === 'function') cargarClientes(); // Recarga la información de Clientes
+                    
+                    // REFRESCAR VISTAS AL INSTANTE
+                    if (typeof cargarCuentas === 'function') cargarCuentas();
+                    if (typeof cargarAgenda === 'function') cargarAgenda(); // Refresca la agenda para borrar el pedido entregado
+                    if (typeof cargarClientes === 'function') cargarClientes();
                 } else {
-                    Swal.fire('Atencion', data.mensaje, 'warning');
+                    Swal.fire('Atención', data.mensaje, 'warning');
                 }
             } catch (err) {
                 console.error("Error al notificar entrega:", err);
@@ -1104,109 +1323,6 @@ function cambiarSegmentoBalance(segmento) {
     document.getElementById('subSecEvolucion').classList.toggle('active', segmento === 'evolucion');
 
     cargarBalance();
-}
-
-async function cargarBalance() {
-    const tInicio = Date.now();
-    mostrarCroissLoader();
-
-    try {
-        const mesVal = document.getElementById('bMesFilter').value || hoy.substring(0, 7);
-        let url = `/api/balance?mes=${mesVal}`;
-
-        const res = await fetch(url);
-        const data = await res.json();
-
-        await esperarAnimacionMinima(tInicio, 1800);
-        Swal.close();
-
-        if(data.status === 'exito') {
-            // 1. Pestaña Finanzas
-            document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
-            document.getElementById('bCostos').innerText = `$${data.costos_produccion}`;
-            document.getElementById('bGastos').innerText = `$${data.gastos_varios}`;
-            document.getElementById('bTicketPromedio').innerText = `$${data.ticket_promedio}`;
-
-            const gananciaEl = document.getElementById('bGanancia');
-            gananciaEl.innerText = `$${data.ganancia_neta}`;
-            gananciaEl.style.color = data.ganancia_neta < 0 ? "#ef4444" : "#16a34a";
-
-            // 2. Futurología y Proyección
-            const proy = data.proyeccion;
-            const txtCroiss = document.getElementById('txtProyeccionCroiss');
-            const txtIng = document.getElementById('txtProyeccionIngresos');
-
-            if (proy.es_mes_actual) {
-                txtCroiss.innerText = `~${proy.croissants_estimados} Croissants`;
-                txtIng.innerText = `Ingresos estimados: $${proy.ingresos_estimados} al cierre del mes`;
-            } else {
-                txtCroiss.innerText = `${data.total_croissants} Croissants Vendidos`;
-                txtIng.innerText = `Total final del período cerrado`;
-            }
-
-            // Stat Jalea
-            document.getElementById('txtPorcentajeJalea').innerText = `${data.stats_jalea.porcentaje}% (${data.stats_jalea.con_jalea} un.)`;
-
-            // Ranking de Sabores
-            const contRank = document.getElementById('listaRankingSabores');
-            contRank.innerHTML = '';
-            if (!data.ranking_sabores || data.ranking_sabores.length === 0) {
-                contRank.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas registradas en este mes.</p>';
-            } else {
-                data.ranking_sabores.forEach(r => {
-                    const div = document.createElement('div');
-                    div.className = 'ios-cliente-row compact';
-                    div.style.cursor = 'default';
-                    div.innerHTML = `
-                        <div>
-                            <strong>🥐 ${r.sabor}</strong><br>
-                            <small style="color:var(--text-muted);">${r.porcentaje}% del total de ventas</small>
-                        </div>
-                        <strong style="color:var(--accent); font-size:0.95rem;">${r.cantidad} un.</strong>
-                    `;
-                    contRank.appendChild(div);
-                });
-            }
-
-            // Gráfico Donut - Sabores
-            renderizarGraficoSabores(data.ranking_sabores);
-
-            // Gráfico Barras - Días de la semana
-            renderizarGraficoDias(data.dias_semana);
-
-            // 3. Pestaña Evolución
-            const contEvolucion = document.getElementById('listaEvolucionMeses');
-            if (contEvolucion) {
-                contEvolucion.innerHTML = '';
-                if (data.historico_meses.length === 0) {
-                    contEvolucion.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay registros históricos.</p>';
-                } else {
-                    data.historico_meses.forEach(m => {
-                        const esPositivo = m.ganancia_neta >= 0;
-                        const colorGanancia = esPositivo ? '#16a34a' : '#dc2626';
-
-                        const div = document.createElement('div');
-                        div.className = 'ios-cliente-row compact';
-                        div.style.cursor = 'default';
-                        div.innerHTML = `
-                            <div>
-                                <strong>Fecha: ${m.mes_key}</strong> <small style="color:var(--text-muted);">(${m.pedidos} pedidos)</small><br>
-                                <small style="color:#64748b;">Ingresos: $${m.ingresos} | Egresos: $${m.gastos_totales}</small>
-                            </div>
-                            <div style="text-align:right;">
-                                <strong style="color:${colorGanancia}; font-size:0.95rem;">$${m.ganancia_neta}</strong><br>
-                                <small style="color:var(--text-muted); font-size:0.7rem;">Ganancia Neta</small>
-                            </div>
-                        `;
-                        contEvolucion.appendChild(div);
-                    });
-                }
-            }
-        }
-    } catch(err) {
-        Swal.close();
-        console.error("Error al cargar balance:", err);
-    }
 }
 
 function renderizarGraficoSabores(ranking) {

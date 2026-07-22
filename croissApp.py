@@ -359,6 +359,11 @@ def obtener_agenda():
             }
         
         for idx, reg in enumerate(registros, start=2):
+            # 1. FILTRO DINÁMICO: Si el pedido ya fue entregado, se omite de la agenda de trabajo
+            estado_entrega = get_field_val(reg, "Entrega", "Estado Entrega", "Estado de Entrega")
+            if estado_entrega and "entregad" in estado_entrega.lower():
+                continue
+
             f_entrega_raw = get_field_val(reg, "Fecha Entrega", "Fecha")
             f_entrega_norm = normalizar_fecha(f_entrega_raw)
 
@@ -381,7 +386,7 @@ def obtener_agenda():
         return jsonify({"status": "exito", "agenda": list(dias_agenda.values())}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/editar_pedido', methods=['POST'])
 def editar_pedido():
     try:
@@ -672,14 +677,17 @@ def obtener_balance():
         gastos = get_clean_records(sheet_gastos)
         stock = get_clean_records(sheet_stock)
 
+        # Mapa de costos y precios por producto
         costos_map = {}
+        precios_map = {}
         for s in stock:
-            prod_name = get_field_val(s, "Nombre", "Producto").lower()
+            prod_name = get_field_val(s, "Nombre", "Producto", "Croissant").lower()
             raw_costo = get_field_val(s, "Costo Producción", "Costo Produccion", "Costo").replace("$", "").replace(",", ".").strip()
-            try:
-                costos_map[prod_name] = float(raw_costo)
-            except ValueError:
-                costos_map[prod_name] = 0.0
+            raw_precio = get_field_val(s, "Precio Venta", "Precio").replace("$", "").replace(",", ".").strip()
+            try: costos_map[prod_name] = float(raw_costo)
+            except ValueError: costos_map[prod_name] = 0.0
+            try: precios_map[prod_name] = float(raw_precio)
+            except ValueError: precios_map[prod_name] = 120.0
 
         ingresos_mes = 0.0
         costos_prod_mes = 0.0
@@ -693,6 +701,9 @@ def obtener_balance():
         nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
 
         historico_dict = {}
+        
+        # Estructura para Fidelización y Recompra
+        clientes_historia = {} # cliente_key -> { nombre, primer_mes, total_pedidos, pedidos_mes, gastado_mes }
 
         for v in ventas:
             f_norm = normalizar_fecha(get_field_val(v, "Fecha Pedido", "Fecha"))
@@ -703,10 +714,8 @@ def obtener_balance():
                 historico_dict[key_mes] = {"ingresos": 0.0, "costos": 0.0, "gastos": 0.0, "pedidos": 0}
 
             raw_monto = get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip()
-            try:
-                monto = float(raw_monto)
-            except ValueError:
-                monto = 0.0
+            try: monto = float(raw_monto)
+            except ValueError: monto = 0.0
 
             raw_cant = get_field_val(v, "Cantidad")
             cant = int(raw_cant) if raw_cant.isdigit() else 0
@@ -718,6 +727,24 @@ def obtener_balance():
             historico_dict[key_mes]["ingresos"] += monto
             historico_dict[key_mes]["costos"] += costo_total_item
             historico_dict[key_mes]["pedidos"] += 1
+
+            # Rastrear historial del cliente para Fidelización
+            cli_nombre = get_field_val(v, "Cliente").strip()
+            if cli_nombre and cli_nombre.lower() != "consumidor final":
+                c_key = cli_nombre.lower()
+                if c_key not in clientes_historia:
+                    clientes_historia[c_key] = {
+                        "nombre": cli_nombre,
+                        "primer_mes": key_mes,
+                        "total_pedidos": 0,
+                        "pedidos_mes": 0,
+                        "monto_mes": 0.0
+                    }
+                clientes_historia[c_key]["total_pedidos"] += 1
+                
+                if f_norm.startswith(mes_filtro):
+                    clientes_historia[c_key]["pedidos_mes"] += 1
+                    clientes_historia[c_key]["monto_mes"] += monto
 
             if f_norm.startswith(mes_filtro):
                 ingresos_mes += monto
@@ -750,13 +777,22 @@ def obtener_balance():
                             c_item = 1
                             sabor_item = sin_jalea_str
 
-                        sabores_dict[sabor_item] = sabores_dict.get(sabor_item, 0) + c_item
-                        if tiene_jalea:
-                            con_jalea_count += c_item
-                        else:
-                            sin_jalea_count += c_item
+                        # Análisis de rentabilidad por sabor
+                        c_unit = costos_map.get(sabor_item.lower(), 0.0)
+                        p_unit = precios_map.get(sabor_item.lower(), 120.0)
+                        ganancia_item = (p_unit - c_unit) * c_item
 
+                        if sabor_item not in sabores_dict:
+                            sabores_dict[sabor_item] = {"cantidad": 0, "ganancia": 0.0}
+                        sabores_dict[sabor_item]["cantidad"] += c_item
+                        sabores_dict[sabor_item]["ganancia"] += ganancia_item
+
+                        if tiene_jalea: con_jalea_count += c_item
+                        else: sin_jalea_count += c_item
+
+        # Procesar Gastos por Categoría
         gastos_mes = 0.0
+        gastos_cat_dict = {}
         for g in gastos:
             f_norm = normalizar_fecha(get_field_val(g, "Fecha"))
             if not f_norm or len(f_norm) < 7: continue
@@ -766,44 +802,52 @@ def obtener_balance():
                 historico_dict[key_mes] = {"ingresos": 0.0, "costos": 0.0, "gastos": 0.0, "pedidos": 0}
 
             raw_monto_g = get_field_val(g, "Monto").replace("$", "").replace(",", ".").strip()
-            try:
-                monto_g = float(raw_monto_g)
-            except ValueError:
-                monto_g = 0.0
+            try: monto_g = float(raw_monto_g)
+            except ValueError: monto_g = 0.0
 
             historico_dict[key_mes]["gastos"] += monto_g
 
             if f_norm.startswith(mes_filtro):
                 gastos_mes += monto_g
+                cat_nombre = get_field_val(g, "Categoria", "Categoría") or "Otros"
+                gastos_cat_dict[cat_nombre] = gastos_cat_dict.get(cat_nombre, 0.0) + monto_g
+
+        gastos_por_categoria = []
+        for cat_k, cat_v in sorted(gastos_cat_dict.items(), key=lambda x: x[1], reverse=True):
+            pct_g = round((cat_v / gastos_mes * 100), 1) if gastos_mes > 0 else 0
+            gastos_por_categoria.append({"categoria": cat_k, "monto": round(cat_v, 2), "porcentaje": pct_g})
+
+        # Cálculo de Métricas de Fidelización del mes
+        clientes_compraron_mes = [c for c in clientes_historia.values() if c["pedidos_mes"] > 0]
+        total_unicos_mes = len(clientes_compraron_mes)
+        
+        recurrentes_mes = [c for c in clientes_compraron_mes if c["total_pedidos"] > 1 or c["primer_mes"] < mes_filtro]
+        nuevos_mes = [c for c in clientes_compraron_mes if c["primer_mes"] == mes_filtro and c["total_pedidos"] == 1]
+
+        tasa_recompra = round((len(recurrentes_mes) / total_unicos_mes * 100), 1) if total_unicos_mes > 0 else 0.0
+
+        recurrentes_mes.sort(key=lambda x: x["pedidos_mes"], reverse=True)
 
         ganancia_neta_mes = ingresos_mes - (costos_prod_mes + gastos_mes)
         ticket_promedio = round(ingresos_mes / pedidos_count_mes, 2) if pedidos_count_mes > 0 else 0.0
 
-        mes_actual_str = datetime.now().strftime("%Y-%m")
-        es_mes_actual = (mes_filtro == mes_actual_str)
-        
-        proy_croiss = total_croiss_mes
-        proy_ingresos = ingresos_mes
-
-        if es_mes_actual:
-            hoy_dia = datetime.now().day
-            year_val, month_val = map(int, mes_filtro.split("-"))
-            dias_totales = calendar.monthrange(year_val, month_val)[1]
-            if hoy_dia > 0:
-                pacing_croiss = total_croiss_mes / hoy_dia
-                pacing_ingresos = ingresos_mes / hoy_dia
-                proy_croiss = int(round(pacing_croiss * dias_totales))
-                proy_ingresos = round(pacing_ingresos * dias_totales, 2)
-
+        # Identificar Sabor Más Vendido vs Más Rentable
         ranking_sabores = []
-        for sab, cant_s in sorted(sabores_dict.items(), key=lambda x: x[1], reverse=True):
-            pct = round((cant_s / total_croiss_mes * 100), 1) if total_croiss_mes > 0 else 0
-            ranking_sabores.append({"sabor": sab, "cantidad": cant_s, "porcentaje": pct})
+        for sab, vals in sabores_dict.items():
+            pct = round((vals["cantidad"] / total_croiss_mes * 100), 1) if total_croiss_mes > 0 else 0
+            ranking_sabores.append({
+                "sabor": sab,
+                "cantidad": vals["cantidad"],
+                "ganancia": round(vals["ganancia"], 2),
+                "porcentaje": pct
+            })
 
-        pct_jalea = round((con_jalea_count / (con_jalea_count + sin_jalea_count) * 100), 1) if (con_jalea_count + sin_jalea_count) > 0 else 0
+        sabor_mas_vendido = max(ranking_sabores, key=lambda x: x["cantidad"]) if ranking_sabores else None
+        sabor_mas_rentable = max(ranking_sabores, key=lambda x: x["ganancia"]) if ranking_sabores else None
 
+        # Histórico cronológico para el Gráfico de Líneas
         lista_historica = []
-        for m_key, vals in sorted(historico_dict.items(), reverse=True):
+        for m_key, vals in sorted(historico_dict.items()):
             g_neta = vals["ingresos"] - (vals["costos"] + vals["gastos"])
             lista_historica.append({
                 "mes_key": m_key,
@@ -819,18 +863,25 @@ def obtener_balance():
             "ingresos": round(ingresos_mes, 2),
             "costos_produccion": round(costos_prod_mes, 2),
             "gastos_varios": round(gastos_mes, 2),
+            "gastos_por_categoria": gastos_por_categoria,
             "ganancia_neta": round(ganancia_neta_mes, 2),
             "ticket_promedio": ticket_promedio,
             "total_croissants": total_croiss_mes,
-            "proyeccion": {
-                "es_mes_actual": es_mes_actual,
-                "croissants_estimados": proy_croiss,
-                "ingresos_estimados": proy_ingresos
+            "analisis_sabores": {
+                "mas_vendido": sabor_mas_vendido,
+                "mas_rentable": sabor_mas_rentable
+            },
+            "fidelizacion": {
+                "tasa_recompra": tasa_recompra,
+                "clientes_unicos": total_unicos_mes,
+                "clientes_recurrentes": len(recurrentes_mes),
+                "clientes_nuevos": len(nuevos_mes),
+                "top_recurrentes": recurrentes_mes[:5]
             },
             "stats_jalea": {
                 "con_jalea": con_jalea_count,
                 "sin_jalea": sin_jalea_count,
-                "porcentaje": pct_jalea
+                "porcentaje": round((con_jalea_count / (con_jalea_count + sin_jalea_count) * 100), 1) if (con_jalea_count + sin_jalea_count) > 0 else 0
             },
             "ranking_sabores": ranking_sabores,
             "dias_semana": dias_semana_count,
@@ -840,7 +891,7 @@ def obtener_balance():
     except Exception as error:
         print(f"❌ Error en /api/balance: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/stock', methods=['GET'])
 def obtener_stock():
     try:

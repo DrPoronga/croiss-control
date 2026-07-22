@@ -348,11 +348,21 @@
 							<small style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Ticket Promedio por Pedido</small><br>
 							<strong id="bTicketPromedio" style="font-size: 1.2rem; color: var(--accent);">$0</strong>
 						</div>
+
+						<!-- NUEVO: DESGLOSE DE GASTOS POR CATEGORÍA -->
+						<div class="card" style="margin-top: 15px; border: 1px solid var(--border-color); box-shadow: none;">
+							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
+								📉 Desglose de Gastos por Categoría
+							</h4>
+							<div style="max-width: 200px; margin: 0 auto;">
+								<canvas id="chartGastosCatCanvas"></canvas>
+							</div>
+						</div>
 					</div>
 
 					<!-- SUBSECCIÓN 2: ANALÍTICA Y PROYECCIONES -->
 					<div id="subSecSabores" class="sub-seccion">
-						<!-- TARJETA DE FUTUROLOGÍA / PROYECIÓN -->
+						<!-- TARJETA DE FUTUROLOGÍA / PROYECCIÓN -->
 						<div id="boxProyeccion" style="background: linear-gradient(135deg, #2D1E18, #422D24); color: white; padding: 18px; border-radius: 18px; margin-bottom: 16px; text-align: center;">
 							<small style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(200, 109, 40, 0.3); color: #FCEFE6; padding: 4px 10px; border-radius: 10px; display: inline-block; margin-bottom: 6px;">
 								🔮 Proyección Fin de Mes
@@ -360,6 +370,9 @@
 							<h3 id="txtProyeccionCroiss" style="font-size: 1.5rem; margin: 4px 0;">Estimando...</h3>
 							<p id="txtProyeccionIngresos" style="font-size: 0.85rem; color: #E2D9D3; margin: 0;"></p>
 						</div>
+
+						<!-- NUEVO: COMPARATIVO SABOR MÁS VENDIDO VS MÁS RENTABLE -->
+						<div id="boxComparativoSabores"></div>
 
 						<!-- CHIP DE DEMANDA DE JALEA -->
 						<div id="boxJaleaStat" style="background: #FAF0EB; border: 1px solid #F7DFC8; padding: 10px 14px; border-radius: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
@@ -383,8 +396,21 @@
 						</div>
 					</div>
 
-					<!-- SUBSECCIÓN 3: EVOLUCIÓN HISTÓRICA -->
+					<!-- SUBSECCIÓN 3: EVOLUCIÓN HISTÓRICA Y FIDELIZACIÓN -->
 					<div id="subSecEvolucion" class="sub-seccion">
+						<!-- NUEVO: TASA DE RECOMPRA Y FIDELIZACIÓN -->
+						<div id="boxFidelizacionCliente"></div>
+
+						<!-- NUEVO: GRÁFICO DE LÍNEAS DE EVOLUCIÓN HISTÓRICA -->
+						<div class="card" style="margin-bottom: 16px; border: 1px solid var(--border-color); box-shadow: none;">
+							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
+								📈 Curva de Evolución Histórica
+							</h4>
+							<div style="margin-bottom: 10px;">
+								<canvas id="chartEvolucionLineaCanvas" style="max-height: 220px;"></canvas>
+							</div>
+						</div>
+
 						<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 12px; text-transform: uppercase;">
 							Ganancias Históricas por Mes
 						</h4>
@@ -394,7 +420,8 @@
 					</div>
 				</div>
 			</div>
-                <!-- SECCIÓN: CLIENTES -->
+               
+			   <!-- SECCIÓN: CLIENTES -->
                 <div id="sec-clientes" class="section">
                     <div class="card ios-card">
                         <div class="ios-segmented-control">
