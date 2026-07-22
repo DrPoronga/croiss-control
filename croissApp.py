@@ -1171,21 +1171,20 @@ def obtener_clientes():
         sheet_crm = obtener_o_crear_sheet_clientes()
         crm_records = get_clean_records(sheet_crm)
         
-        for idx, c in enumerate(crm_records, start=2):
+        # 1. Procesar directorio maestro CRM (Lectura pura en memoria)
+        for c in crm_records:
             nom = get_field_val(c, "Nombre", "Cliente", "Nombre Cliente").strip()
             email = get_field_val(c, "Email", "Correo").strip()
             tel = get_field_val(c, "Telefono", "Teléfono", "Tel").strip()
             direccion = get_field_val(c, "Direccion", "Dirección").strip()
 
+            # Normalizar en memoria si están invertidos
             if "@" in nom and "@" not in email:
                 nom, email = email, nom
-                try:
-                    ejecutar_con_reintento(sheet_crm.update_cell, idx, 1, nom)
-                    ejecutar_con_reintento(sheet_crm.update_cell, idx, 2, email)
-                except Exception:
-                    pass
 
-            if not nom or nom.lower() == "consumidor final": continue
+            if not nom or nom.lower() == "consumidor final": 
+                continue
+                
             key_norm = nom.lower()
 
             clientes_historico[key_norm] = {
@@ -1199,13 +1198,15 @@ def obtener_clientes():
                 "historial": []
             }
 
+        # 2. Cruzar con historial de Ventas
         sheet_ventas = conectar_sheet("Ventas")
         asegurar_encabezados_ventas(sheet_ventas)
         ventas = get_clean_records(sheet_ventas)
 
         for idx, v in enumerate(ventas, start=2):
             cliente_nombre = get_field_val(v, "Cliente").strip() or "Consumidor Final"
-            if not cliente_nombre or cliente_nombre.lower() == "consumidor final": continue
+            if not cliente_nombre or cliente_nombre.lower() == "consumidor final": 
+                continue
 
             email_c = get_field_val(v, "Email", "Correo").strip()
             tel_c = get_field_val(v, "Teléfono", "Telefono", "Tel").strip()
@@ -1287,7 +1288,8 @@ def obtener_clientes():
 
         lista_mes = list(clientes_mes.values())
         lista_mes.sort(key=lambda x: (x["total_croissants"], x["total_gastado"]), reverse=True)
-        for c in lista_mes: c["total_gastado"] = round(c["total_gastado"], 2)
+        for c in lista_mes: 
+            c["total_gastado"] = round(c["total_gastado"], 2)
 
         top_cliente_mes = lista_mes[0] if lista_mes else None
 
@@ -1298,7 +1300,9 @@ def obtener_clientes():
             "ranking_mes": lista_mes,
             "top_cliente_mes": top_cliente_mes
         }), 200
+
     except Exception as error:
+        print(f"❌ Error en /api/clientes: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 @app.route('/api/gasto', methods=['POST'])
