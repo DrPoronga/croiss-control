@@ -567,42 +567,23 @@ def editar_cliente():
         if not nombre_original:
             return jsonify({"status": "error", "mensaje": "Nombre original no especificado"}), 400
 
-        # 1. Actualizar en pestaña Ventas (Nombre, Email, Teléfono y Dirección)
+        # 1. Actualizar en pestaña Ventas
         sheet_ventas = conectar_sheet("Ventas")
         data = sheet_ventas.get_all_values()
         if data and len(data) >= 2:
             headers = [str(h).strip().lower() for h in data[0]]
             col_cliente = headers.index("cliente") + 1 if "cliente" in headers else 4
-            col_email = headers.index("email") + 1 if "email" in headers else 10
-            col_tel = next((i + 1 for i, h in enumerate(headers) if "tel" in h), 11)
-            col_dir = next((i + 1 for i, h in enumerate(headers) if "direc" in h), 12)
-
+            
             for idx, row in enumerate(data[1:], start=2):
                 val_cli = row[col_cliente - 1] if col_cliente - 1 < len(row) else ""
                 if val_cli.strip().lower() == nombre_original.lower():
-                    sheet_ventas.update_cell(idx, col_cliente, nuevo_nombre)
-                    sheet_ventas.update_cell(idx, col_email, nuevo_email)
-                    sheet_ventas.update_cell(idx, col_tel, nuevo_telefono)
-                    sheet_ventas.update_cell(idx, col_dir, nueva_direccion)
+                    # Mantiene intactas las demás columnas y actualiza solo el bloque de contacto
+                    sheet_ventas.update(f"D{idx}", [[nuevo_nombre]])
+                    sheet_ventas.update(f"J{idx}:L{idx}", [[nuevo_email, nuevo_telefono, nueva_direccion]])
 
-        # 2. Actualizar en pestaña Clientes (CRM Maestro)
+        # 2. Actualizar en pestaña Clientes (CRM Maestro) en 1 sola llamada
         try:
-            sheet_crm = obtener_o_crear_sheet_clientes()
-            registros_crm = get_clean_records(sheet_crm)
-            encontrado = False
-
-            for idx, reg in enumerate(registros_crm, start=2):
-                val_nom = get_field_val(reg, "Nombre", "Cliente", "Nombre Cliente")
-                if val_nom and val_nom.lower() == nombre_original.lower():
-                    sheet_crm.update_cell(idx, 1, nuevo_nombre)
-                    sheet_crm.update_cell(idx, 2, nuevo_email)
-                    sheet_crm.update_cell(idx, 3, nuevo_telefono)
-                    sheet_crm.update_cell(idx, 4, nueva_direccion)
-                    encontrado = True
-                    break
-
-            if not encontrado and nuevo_nombre and nuevo_nombre.lower() != "consumidor final":
-                sheet_crm.append_row([nuevo_nombre, nuevo_email, nuevo_telefono, nueva_direccion])
+            sincronizar_cliente(nuevo_nombre, nuevo_email, nuevo_telefono, nueva_direccion)
         except Exception as e:
             print(f"Aviso actualizando cliente en CRM: {e}", flush=True)
 
@@ -985,23 +966,17 @@ def sincronizar_cliente(nombre, email, telefono, direccion):
         
         for idx, reg in enumerate(registros, start=2):
             val_nom = get_field_val(reg, "Nombre", "Cliente", "Nombre Cliente")
-            val_email = get_field_val(reg, "Email", "Correo")
-
-            # Si en la planilla ya estaban invertidos, los corrige físicamente en Google Sheets
-            if "@" in str(val_nom) and "@" not in str(val_email):
-                sheet.update_cell(idx, 1, val_email)
-                sheet.update_cell(idx, 2, val_nom)
-                val_nom = val_email
 
             if val_nom and val_nom.lower() == nombre.lower():
-                if email: sheet.update_cell(idx, 2, email)
-                if telefono: sheet.update_cell(idx, 3, telefono)
-                if direccion: sheet.update_cell(idx, 4, direccion)
+                # Actualiza toda la fila de una sola vez en 1 sola petición
+                sheet.update(f"A{idx}:D{idx}", [[nombre, email, telefono, direccion]])
                 return
         
+        # Si no existe, se agrega al final
         sheet.append_row([nombre, email, telefono, direccion])
     except Exception as e:
         print(f"Aviso sincronizando cliente: {e}", flush=True)
+        
 
 @app.route('/api/clientes', methods=['GET'])
 def obtener_clientes():
