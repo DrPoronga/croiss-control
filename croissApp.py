@@ -239,62 +239,349 @@ def obtener_o_crear_sheet_insumos():
         ws.append_row(["Insumo", "Stock Actual", "Unidad", "Vencimiento Proximo"])
         return ws
 
+# ==========================================
+# CÁLCULO ESTÁNDAR DE COSTO POR SABOR Y EMPAQUE
+# ==========================================
+def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
+    if total_croissants <= 0:
+        return {"costo_base": 0.0, "costo_empaque": 0.0, "costo_total": 0.0, "cajas_6": 0, "cajas_3": 0, "papel": 0}
+    
+    costo_croissants = 0.0
+    
+    # Parsing de la descripción del pedido para detectar rellenos extras
+    if desc_producto:
+        partes = str(desc_producto).split(",")
+        croissants_procesados = 0
+        
+        for item in partes:
+            item_clean = item.strip()
+            if not item_clean: continue
+            
+            sin_jalea_str = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
+            m = re.match(r"^(\d+)x\s+(.+)", sin_jalea_str, re.IGNORECASE)
+            
+            if m:
+                c_item = int(m.group(1))
+                sabor_item = m.group(2).strip().lower()
+            else:
+                c_item = 1
+                sabor_item = sin_jalea_str.lower()
+            
+            # Costo base de masa + electricidad
+            c_unit = 24.10
+            
+            # Adicional por Jamón y Queso (+$25.75)
+            if "jamon" in sabor_item or "jamón" in sabor_item or "queso" in sabor_item:
+                c_unit += 25.75
+            # Adicional por Dulce de Leche (60g * $0.28 = +$16.80)
+            elif "dulce" in sabor_item or "ddl" in sabor_item:
+                c_unit += 16.80
+            
+            costo_croissants += (c_unit * c_item)
+            croissants_procesados += c_item
+            
+        # Resguardo si hubo unidades no parseadas en el texto
+        if croissants_procesados < total_croissants:
+            faltantes = total_croissants - croissants_procesados
+            costo_croissants += (faltantes * 24.10)
+    else:
+        costo_croissants = total_croissants * 24.10
+
+    # Cálculo dinámico de empaque (Cajas + Papel manteca)
+    cajas_6 = total_croissants // 6
+    sobrante = total_croissants % 6
+    cajas_3 = 0
+    
+    if 1 <= sobrante <= 3:
+        cajas_3 = 1
+    elif sobrante >= 4:
+        cajas_6 += 1
+        
+    papel = cajas_6 + cajas_3
+    costo_empaque = (cajas_6 * 36.0) + (cajas_3 * 27.0)
+    
+    return {
+        "costo_base": round(costo_croissants, 2),
+        "costo_empaque": round(costo_empaque, 2),
+        "costo_total": round(costo_croissants + costo_empaque, 2),
+        "cajas_6": cajas_6,
+        "cajas_3": cajas_3,
+        "papel": papel
+    }
+
+# ==========================================
+# DESCUENTO AUTOMÁTICO DE EMPAQUE EN STOCK
+# ==========================================
 def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croissants_pedido=0):
     try:
+        if total_croissants_pedido <= 0:
+            total_croissants_pedido = cantidad_vendida
+
+        calculo = calcular_costo_y_empaque_pedido(producto_nombre, total_croissants_pedido)
+        
+        cajas_6_usadas = calculo["cajas_6"]
+        cajas_3_usadas = calculo["cajas_3"]
+        papel_usado = calculo["papel"]
+
         sheet_insumos = obtener_o_crear_sheet_insumos()
         registros = get_clean_records(sheet_insumos)
         if not registros:
             return
 
-        # Acumulador en memoria para evitar actualizar celda por celda
-        modificaciones = {} # row_idx -> nuevo_stock
+        modificaciones = {}
 
-        receta = obtener_receta_producto(producto_nombre)
-        for ing_clave, cant_unit in receta.items():
-            cant_total_a_descontar = cant_unit * cantidad_vendida
+        def aplicar_descuento_insumo(palabra_clave, cantidad_a_restar):
+            if cantidad_a_restar <= 0: return
             for idx, ins_row in enumerate(registros, start=2):
                 nombre_insumo = get_field_val(ins_row, "Insumo").lower()
-                if ing_clave in nombre_insumo:
+                if palabra_clave in nombre_insumo:
                     if idx in modificaciones:
                         stock_actual = modificaciones[idx]
                     else:
                         raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
                         stock_actual = float(raw_st) if raw_st else 0.0
                     
-                    nuevo_stock = max(0.0, round(stock_actual - cant_total_a_descontar, 3))
+                    nuevo_stock = max(0.0, round(stock_actual - cantidad_a_restar, 2))
                     modificaciones[idx] = nuevo_stock
                     break
 
-        if total_croissants_pedido > 0:
-            cajas_6_necesarias = total_croissants_pedido // 6
-            resto = total_croissants_pedido % 6
-            cajas_3_necesarias = (resto + 2) // 3
+        aplicar_descuento_insumo("6", cajas_6_usadas)
+        aplicar_descuento_insumo("3", cajas_3_usadas)
+        aplicar_descuento_insumo("papel", papel_usado)
 
-            def descontar_caja(tipo_capacidad, cantidad_cajas):
-                if cantidad_cajas <= 0: return
-                for idx, ins_row in enumerate(registros, start=2):
-                    nombre_insumo = get_field_val(ins_row, "Insumo").lower()
-                    if "caja" in nombre_insumo and tipo_capacidad in nombre_insumo:
-                        if idx in modificaciones:
-                            stock_actual = modificaciones[idx]
-                        else:
-                            raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
-                            stock_actual = float(raw_st) if raw_st else 0.0
-                        
-                        if stock_actual > 0:
-                            nuevo_stock = max(0.0, round(stock_actual - cantidad_cajas, 3))
-                            modificaciones[idx] = nuevo_stock
-                            break
-
-            descontar_caja("6", cajas_6_necesarias)
-            descontar_caja("3", cajas_3_necesarias)
-
-        # Se envían únicamente los totales consolidados
         for row_idx, n_stock in modificaciones.items():
             sheet_insumos.update_cell(row_idx, 2, n_stock)
 
     except Exception as e:
-        print(f"Aviso descontando insumos: {e}", flush=True)
+        print(f"Aviso descontando empaque/stock: {e}", flush=True)
+
+@app.route('/api/balance', methods=['GET'])
+def obtener_balance():
+    try:
+        mes_filtro = request.args.get('mes', '').strip() or datetime.now().strftime("%Y-%m")
+
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+        sheet_gastos = conectar_sheet("Gastos")
+
+        ventas = get_clean_records(sheet_ventas)
+        gastos = get_clean_records(sheet_gastos)
+
+        ingresos_mes = 0.0
+        costos_prod_mes = 0.0
+        pedidos_count_mes = 0
+        total_croiss_mes = 0
+        
+        # Métricas Históricas Totales (Toda la vida del negocio)
+        total_croiss_historico = 0
+        total_pedidos_historico = 0
+        total_ingresos_historico = 0.0
+
+        con_jalea_count = 0
+        sin_jalea_count = 0
+        sabores_dict = {}
+        dias_semana_count = {"LUNES": 0, "MARTES": 0, "MIÉRCOLES": 0, "JUEVES": 0, "VIERNES": 0, "SÁBADO": 0, "DOMINGO": 0}
+        nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
+
+        historico_dict = {}
+        clientes_mes_dict = {}
+        clientes_historico_dict = {}
+
+        for v in ventas:
+            f_norm = normalizar_fecha(get_field_val(v, "Fecha Pedido", "Fecha"))
+            if not f_norm or len(f_norm) < 7: continue
+
+            key_mes = f_norm[:7]
+            if key_mes not in historico_dict:
+                historico_dict[key_mes] = {"ingresos": 0.0, "costos": 0.0, "gastos": 0.0, "pedidos": 0, "croissants": 0}
+
+            raw_monto = get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip()
+            try: monto = float(raw_monto)
+            except ValueError: monto = 0.0
+
+            raw_cant = get_field_val(v, "Cantidad")
+            cant = int(raw_cant) if raw_cant.isdigit() else 0
+
+            desc_prod = get_field_val(v, "Producto")
+
+            # Cálculo de costo de producción + empaque automático por pedido
+            datos_costo = calcular_costo_y_empaque_pedido(desc_prod, cant)
+            costo_pedido = datos_costo["costo_total"]
+
+            # Acumuladores Históricos
+            total_croiss_historico += cant
+            total_pedidos_historico += 1
+            total_ingresos_historico += monto
+
+            historico_dict[key_mes]["ingresos"] += monto
+            historico_dict[key_mes]["costos"] += costo_pedido
+            historico_dict[key_mes]["pedidos"] += 1
+            historico_dict[key_mes]["croissants"] += cant
+
+            # Rastrear compras por cliente (Mes e Histórico)
+            cli_nombre = get_field_val(v, "Cliente").strip()
+            if cli_nombre and cli_nombre.lower() != "consumidor final":
+                c_key = cli_nombre.lower()
+                
+                # Ranking Histórico
+                if c_key not in clientes_historico_dict:
+                    clientes_historico_dict[c_key] = {"nombre": cli_nombre, "croissants": 0, "gastado": 0.0, "pedidos": 0}
+                clientes_historico_dict[c_key]["croissants"] += cant
+                clientes_historico_dict[c_key]["gastado"] += monto
+                clientes_historico_dict[c_key]["pedidos"] += 1
+
+                # Ranking Mes Filtrado
+                if f_norm.startswith(mes_filtro):
+                    if c_key not in clientes_mes_dict:
+                        clientes_mes_dict[c_key] = {"nombre": cli_nombre, "croissants": 0, "gastado": 0.0, "pedidos": 0}
+                    clientes_mes_dict[c_key]["croissants"] += cant
+                    clientes_mes_dict[c_key]["gastado"] += monto
+                    clientes_mes_dict[c_key]["pedidos"] += 1
+
+            if f_norm.startswith(mes_filtro):
+                ingresos_mes += monto
+                costos_prod_mes += costo_pedido
+                pedidos_count_mes += 1
+                total_croiss_mes += cant
+
+                try:
+                    dt_v = datetime.strptime(f_norm, "%Y-%m-%d")
+                    dia_nombre = nombres_dias[dt_v.weekday()]
+                    dias_semana_count[dia_nombre] += cant
+                except Exception:
+                    pass
+
+                if desc_prod:
+                    partes = desc_prod.split(",")
+                    for item in partes:
+                        item_clean = item.strip()
+                        if not item_clean: continue
+                        
+                        tiene_jalea = "(con jalea)" in item_clean.lower()
+                        sin_jalea_str = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
+                        
+                        m = re.match(r"^(\d+)x\s+(.+)", sin_jalea_str, re.IGNORECASE)
+                        if m:
+                            c_item = int(m.group(1))
+                            sabor_item = m.group(2).strip()
+                        else:
+                            c_item = 1
+                            sabor_item = sin_jalea_str
+
+                        if sabor_item not in sabores_dict:
+                            sabores_dict[sabor_item] = {"cantidad": 0}
+                        sabores_dict[sabor_item]["cantidad"] += c_item
+
+                        if tiene_jalea: con_jalea_count += c_item
+                        else: sin_jalea_count += c_item
+
+        # Gastos Fijos (Excluye compras de insumos/embalaje)
+        gastos_mes = 0.0
+        gastos_cat_dict = {}
+        CATEGORIAS_IGNORAR = ["materia prima", "embalaje", "insumo", "insumos", "caja", "cajas"]
+
+        for g in gastos:
+            f_norm = normalizar_fecha(get_field_val(g, "Fecha"))
+            if not f_norm or len(f_norm) < 7: continue
+
+            cat_nombre = get_field_val(g, "Categoria", "Categoría") or "Otros"
+            cat_clean = cat_nombre.lower().strip()
+
+            if any(cat_ign in cat_clean for cat_ign in CATEGORIAS_IGNORAR):
+                continue
+
+            key_mes = f_norm[:7]
+            if key_mes not in historico_dict:
+                historico_dict[key_mes] = {"ingresos": 0.0, "costos": 0.0, "gastos": 0.0, "pedidos": 0, "croissants": 0}
+
+            raw_monto_g = get_field_val(g, "Monto").replace("$", "").replace(",", ".").strip()
+            try: monto_g = float(raw_monto_g)
+            except ValueError: monto_g = 0.0
+
+            historico_dict[key_mes]["gastos"] += monto_g
+
+            if f_norm.startswith(mes_filtro):
+                gastos_mes += monto_g
+                gastos_cat_dict[cat_nombre] = gastos_cat_dict.get(cat_nombre, 0.0) + monto_g
+
+        gastos_por_categoria = []
+        for cat_k, cat_v in sorted(gastos_cat_dict.items(), key=lambda x: x[1], reverse=True):
+            pct_g = round((cat_v / gastos_mes * 100), 1) if gastos_mes > 0 else 0
+            gastos_por_categoria.append({"categoria": cat_k, "monto": round(cat_v, 2), "porcentaje": pct_g})
+
+        ganancia_neta_mes = ingresos_mes - (costos_prod_mes + gastos_mes)
+        ticket_promedio = round(ingresos_mes / pedidos_count_mes, 2) if pedidos_count_mes > 0 else 0.0
+
+        # Cálculo de Proyección / Futurología
+        mes_actual_str = datetime.now().strftime("%Y-%m")
+        es_mes_actual = (mes_filtro == mes_actual_str)
+        proy_croiss = total_croiss_mes
+        proy_ingresos = ingresos_mes
+
+        if es_mes_actual:
+            hoy_dia = datetime.now().day
+            year_val, month_val = map(int, mes_filtro.split("-"))
+            dias_totales = calendar.monthrange(year_val, month_val)[1]
+            if hoy_dia > 0:
+                pacing_croiss = total_croiss_mes / hoy_dia
+                pacing_ingresos = ingresos_mes / hoy_dia
+                proy_croiss = int(round(pacing_croiss * dias_totales))
+                proy_ingresos = round(pacing_ingresos * dias_totales, 2)
+
+        # Clientes Top (Mes e Histórico)
+        top_mes = max(clientes_mes_dict.values(), key=lambda x: x["croissants"]) if clientes_mes_dict else None
+        top_historico = max(clientes_historico_dict.values(), key=lambda x: x["croissants"]) if clientes_historico_dict else None
+
+        ranking_sabores = []
+        for sab, vals in sabores_dict.items():
+            pct = round((vals["cantidad"] / total_croiss_mes * 100), 1) if total_croiss_mes > 0 else 0
+            ranking_sabores.append({"sabor": sab, "cantidad": vals["cantidad"], "porcentaje": pct})
+
+        lista_historica = []
+        for m_key, vals in sorted(historico_dict.items()):
+            g_neta = vals["ingresos"] - (vals["costos"] + vals["gastos"])
+            lista_historica.append({
+                "mes_key": m_key,
+                "ingresos": round(vals["ingresos"], 2),
+                "gastos_totales": round(vals["costos"] + vals["gastos"], 2),
+                "ganancia_neta": round(g_neta, 2),
+                "pedidos": vals["pedidos"],
+                "croissants": vals["croissants"]
+            })
+
+        return jsonify({
+            "status": "exito",
+            "mes_filtrado": mes_filtro,
+            "ingresos": round(ingresos_mes, 2),
+            "costos_produccion": round(costos_prod_mes, 2),
+            "gastos_varios": round(gastos_mes, 2),
+            "gastos_por_categoria": gastos_por_categoria,
+            "ganancia_neta": round(ganancia_neta_mes, 2),
+            "ticket_promedio": ticket_promedio,
+            "total_croissants_mes": total_croiss_mes,
+            "total_croissants_historico": total_croiss_historico,
+            "proyeccion": {
+                "es_mes_actual": es_mes_actual,
+                "croissants_estimados": proy_croiss,
+                "ingresos_estimados": proy_ingresos
+            },
+            "top_clientes": {
+                "mes": top_mes,
+                "historico": top_historico
+            },
+            "stats_jalea": {
+                "con_jalea": con_jalea_count,
+                "sin_jalea": sin_jalea_count,
+                "porcentaje": round((con_jalea_count / (con_jalea_count + sin_jalea_count) * 100), 1) if (con_jalea_count + sin_jalea_count) > 0 else 0
+            },
+            "ranking_sabores": ranking_sabores,
+            "dias_semana": dias_semana_count,
+            "historico_meses": lista_historica
+        }), 200
+
+    except Exception as error:
+        print(f"❌ Error en /api/balance: {error}", flush=True)
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 # ==========================================
 # RUTAS DE LA APLICACIÓN
@@ -651,245 +938,43 @@ def cambiar_estado_pago():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+# ==========================================
+# 1. OBTENER GASTOS E INSUMOS (CON NÚMERO DE FILA)
+# ==========================================
 @app.route('/api/gastos_e_insumos', methods=['GET'])
 def obtener_gastos_e_insumos():
     try:
         sheet_gastos = conectar_sheet("Gastos")
         gastos = get_clean_records(sheet_gastos)
+        
+        # Asignamos el número de fila real en la planilla antes de invertir
+        for idx, g in enumerate(gastos, start=2):
+            g["fila"] = idx
+
         gastos.reverse()
         sheet_insumos = obtener_o_crear_sheet_insumos()
         insumos = get_clean_records(sheet_insumos)
-        return jsonify({"status": "exito", "insumos": insumos, "gastos": gastos[:15]}), 200
+        return jsonify({"status": "exito", "insumos": insumos, "gastos": gastos[:25]}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-@app.route('/api/balance', methods=['GET'])
-def obtener_balance():
+# ==========================================
+# 2. RUTA PARA ELIMINAR UN GASTO
+# ==========================================
+@app.route('/api/eliminar_gasto', methods=['POST'])
+def eliminar_gasto():
     try:
-        mes_filtro = request.args.get('mes', '').strip() or datetime.now().strftime("%Y-%m")
+        datos = request.json or {}
+        num_fila = datos.get("fila")
 
-        sheet_ventas = conectar_sheet("Ventas")
-        asegurar_encabezados_ventas(sheet_ventas)
+        if not num_fila:
+            return jsonify({"status": "error", "mensaje": "Fila no especificada"}), 400
+
         sheet_gastos = conectar_sheet("Gastos")
-        sheet_stock = conectar_sheet("Productos_Stock")
+        sheet_gastos.delete_rows(int(num_fila))
 
-        ventas = get_clean_records(sheet_ventas)
-        gastos = get_clean_records(sheet_gastos)
-        stock = get_clean_records(sheet_stock)
-
-        # Mapa de costos y precios por producto
-        costos_map = {}
-        precios_map = {}
-        for s in stock:
-            prod_name = get_field_val(s, "Nombre", "Producto", "Croissant").lower()
-            raw_costo = get_field_val(s, "Costo Producción", "Costo Produccion", "Costo").replace("$", "").replace(",", ".").strip()
-            raw_precio = get_field_val(s, "Precio Venta", "Precio").replace("$", "").replace(",", ".").strip()
-            try: costos_map[prod_name] = float(raw_costo)
-            except ValueError: costos_map[prod_name] = 0.0
-            try: precios_map[prod_name] = float(raw_precio)
-            except ValueError: precios_map[prod_name] = 120.0
-
-        ingresos_mes = 0.0
-        costos_prod_mes = 0.0
-        pedidos_count_mes = 0
-        total_croiss_mes = 0
-        
-        con_jalea_count = 0
-        sin_jalea_count = 0
-        sabores_dict = {}
-        dias_semana_count = {"LUNES": 0, "MARTES": 0, "MIÉRCOLES": 0, "JUEVES": 0, "VIERNES": 0, "SÁBADO": 0, "DOMINGO": 0}
-        nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
-
-        historico_dict = {}
-        
-        # Estructura para Fidelización y Recompra
-        clientes_historia = {} # cliente_key -> { nombre, primer_mes, total_pedidos, pedidos_mes, gastado_mes }
-
-        for v in ventas:
-            f_norm = normalizar_fecha(get_field_val(v, "Fecha Pedido", "Fecha"))
-            if not f_norm or len(f_norm) < 7: continue
-
-            key_mes = f_norm[:7]
-            if key_mes not in historico_dict:
-                historico_dict[key_mes] = {"ingresos": 0.0, "costos": 0.0, "gastos": 0.0, "pedidos": 0}
-
-            raw_monto = get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip()
-            try: monto = float(raw_monto)
-            except ValueError: monto = 0.0
-
-            raw_cant = get_field_val(v, "Cantidad")
-            cant = int(raw_cant) if raw_cant.isdigit() else 0
-
-            prod_name = get_field_val(v, "Producto").lower()
-            costo_unit = costos_map.get(prod_name, 0.0)
-            costo_total_item = costo_unit * cant
-
-            historico_dict[key_mes]["ingresos"] += monto
-            historico_dict[key_mes]["costos"] += costo_total_item
-            historico_dict[key_mes]["pedidos"] += 1
-
-            # Rastrear historial del cliente para Fidelización
-            cli_nombre = get_field_val(v, "Cliente").strip()
-            if cli_nombre and cli_nombre.lower() != "consumidor final":
-                c_key = cli_nombre.lower()
-                if c_key not in clientes_historia:
-                    clientes_historia[c_key] = {
-                        "nombre": cli_nombre,
-                        "primer_mes": key_mes,
-                        "total_pedidos": 0,
-                        "pedidos_mes": 0,
-                        "monto_mes": 0.0
-                    }
-                clientes_historia[c_key]["total_pedidos"] += 1
-                
-                if f_norm.startswith(mes_filtro):
-                    clientes_historia[c_key]["pedidos_mes"] += 1
-                    clientes_historia[c_key]["monto_mes"] += monto
-
-            if f_norm.startswith(mes_filtro):
-                ingresos_mes += monto
-                costos_prod_mes += costo_total_item
-                pedidos_count_mes += 1
-                total_croiss_mes += cant
-
-                try:
-                    dt_v = datetime.strptime(f_norm, "%Y-%m-%d")
-                    dia_nombre = nombres_dias[dt_v.weekday()]
-                    dias_semana_count[dia_nombre] += cant
-                except Exception:
-                    pass
-
-                desc_prod = get_field_val(v, "Producto")
-                if desc_prod:
-                    partes = desc_prod.split(",")
-                    for item in partes:
-                        item_clean = item.strip()
-                        if not item_clean: continue
-                        
-                        tiene_jalea = "(con jalea)" in item_clean.lower()
-                        sin_jalea_str = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
-                        
-                        m = re.match(r"^(\d+)x\s+(.+)", sin_jalea_str, re.IGNORECASE)
-                        if m:
-                            c_item = int(m.group(1))
-                            sabor_item = m.group(2).strip()
-                        else:
-                            c_item = 1
-                            sabor_item = sin_jalea_str
-
-                        # Análisis de rentabilidad por sabor
-                        c_unit = costos_map.get(sabor_item.lower(), 0.0)
-                        p_unit = precios_map.get(sabor_item.lower(), 120.0)
-                        ganancia_item = (p_unit - c_unit) * c_item
-
-                        if sabor_item not in sabores_dict:
-                            sabores_dict[sabor_item] = {"cantidad": 0, "ganancia": 0.0}
-                        sabores_dict[sabor_item]["cantidad"] += c_item
-                        sabores_dict[sabor_item]["ganancia"] += ganancia_item
-
-                        if tiene_jalea: con_jalea_count += c_item
-                        else: sin_jalea_count += c_item
-
-        # Procesar Gastos por Categoría
-        gastos_mes = 0.0
-        gastos_cat_dict = {}
-        for g in gastos:
-            f_norm = normalizar_fecha(get_field_val(g, "Fecha"))
-            if not f_norm or len(f_norm) < 7: continue
-
-            key_mes = f_norm[:7]
-            if key_mes not in historico_dict:
-                historico_dict[key_mes] = {"ingresos": 0.0, "costos": 0.0, "gastos": 0.0, "pedidos": 0}
-
-            raw_monto_g = get_field_val(g, "Monto").replace("$", "").replace(",", ".").strip()
-            try: monto_g = float(raw_monto_g)
-            except ValueError: monto_g = 0.0
-
-            historico_dict[key_mes]["gastos"] += monto_g
-
-            if f_norm.startswith(mes_filtro):
-                gastos_mes += monto_g
-                cat_nombre = get_field_val(g, "Categoria", "Categoría") or "Otros"
-                gastos_cat_dict[cat_nombre] = gastos_cat_dict.get(cat_nombre, 0.0) + monto_g
-
-        gastos_por_categoria = []
-        for cat_k, cat_v in sorted(gastos_cat_dict.items(), key=lambda x: x[1], reverse=True):
-            pct_g = round((cat_v / gastos_mes * 100), 1) if gastos_mes > 0 else 0
-            gastos_por_categoria.append({"categoria": cat_k, "monto": round(cat_v, 2), "porcentaje": pct_g})
-
-        # Cálculo de Métricas de Fidelización del mes
-        clientes_compraron_mes = [c for c in clientes_historia.values() if c["pedidos_mes"] > 0]
-        total_unicos_mes = len(clientes_compraron_mes)
-        
-        recurrentes_mes = [c for c in clientes_compraron_mes if c["total_pedidos"] > 1 or c["primer_mes"] < mes_filtro]
-        nuevos_mes = [c for c in clientes_compraron_mes if c["primer_mes"] == mes_filtro and c["total_pedidos"] == 1]
-
-        tasa_recompra = round((len(recurrentes_mes) / total_unicos_mes * 100), 1) if total_unicos_mes > 0 else 0.0
-
-        recurrentes_mes.sort(key=lambda x: x["pedidos_mes"], reverse=True)
-
-        ganancia_neta_mes = ingresos_mes - (costos_prod_mes + gastos_mes)
-        ticket_promedio = round(ingresos_mes / pedidos_count_mes, 2) if pedidos_count_mes > 0 else 0.0
-
-        # Identificar Sabor Más Vendido vs Más Rentable
-        ranking_sabores = []
-        for sab, vals in sabores_dict.items():
-            pct = round((vals["cantidad"] / total_croiss_mes * 100), 1) if total_croiss_mes > 0 else 0
-            ranking_sabores.append({
-                "sabor": sab,
-                "cantidad": vals["cantidad"],
-                "ganancia": round(vals["ganancia"], 2),
-                "porcentaje": pct
-            })
-
-        sabor_mas_vendido = max(ranking_sabores, key=lambda x: x["cantidad"]) if ranking_sabores else None
-        sabor_mas_rentable = max(ranking_sabores, key=lambda x: x["ganancia"]) if ranking_sabores else None
-
-        # Histórico cronológico para el Gráfico de Líneas
-        lista_historica = []
-        for m_key, vals in sorted(historico_dict.items()):
-            g_neta = vals["ingresos"] - (vals["costos"] + vals["gastos"])
-            lista_historica.append({
-                "mes_key": m_key,
-                "ingresos": round(vals["ingresos"], 2),
-                "gastos_totales": round(vals["costos"] + vals["gastos"], 2),
-                "ganancia_neta": round(g_neta, 2),
-                "pedidos": vals["pedidos"]
-            })
-
-        return jsonify({
-            "status": "exito",
-            "mes_filtrado": mes_filtro,
-            "ingresos": round(ingresos_mes, 2),
-            "costos_produccion": round(costos_prod_mes, 2),
-            "gastos_varios": round(gastos_mes, 2),
-            "gastos_por_categoria": gastos_por_categoria,
-            "ganancia_neta": round(ganancia_neta_mes, 2),
-            "ticket_promedio": ticket_promedio,
-            "total_croissants": total_croiss_mes,
-            "analisis_sabores": {
-                "mas_vendido": sabor_mas_vendido,
-                "mas_rentable": sabor_mas_rentable
-            },
-            "fidelizacion": {
-                "tasa_recompra": tasa_recompra,
-                "clientes_unicos": total_unicos_mes,
-                "clientes_recurrentes": len(recurrentes_mes),
-                "clientes_nuevos": len(nuevos_mes),
-                "top_recurrentes": recurrentes_mes[:5]
-            },
-            "stats_jalea": {
-                "con_jalea": con_jalea_count,
-                "sin_jalea": sin_jalea_count,
-                "porcentaje": round((con_jalea_count / (con_jalea_count + sin_jalea_count) * 100), 1) if (con_jalea_count + sin_jalea_count) > 0 else 0
-            },
-            "ranking_sabores": ranking_sabores,
-            "dias_semana": dias_semana_count,
-            "historico_meses": lista_historica
-        }), 200
-
+        return jsonify({"status": "exito", "mensaje": "Gasto eliminado correctamente"}), 200
     except Exception as error:
-        print(f"❌ Error en /api/balance: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 @app.route('/api/stock', methods=['GET'])
@@ -1235,6 +1320,48 @@ def registrar_gasto():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+# ==========================================
+# RUTA PARA SUMAR STOCK DIRECTO (OPTIMIZADA)
+# ==========================================
+@app.route('/api/stock/sumar_insumo', methods=['POST'])
+def sumar_stock_insumo():
+    try:
+        datos = request.json or {}
+        insumo_nom = str(datos.get("insumo", "")).strip()
+        cantidad = float(datos.get("cantidad", 0))
+        unidad = str(datos.get("unidad", "un")).strip()
+        vencimiento = str(datos.get("vencimiento", "")).strip() or "Sin fecha"
+
+        if not insumo_nom or cantidad <= 0:
+            return jsonify({"status": "error", "mensaje": "Ingresa un insumo y cantidad válida."}), 400
+
+        sheet_insumos = obtener_o_crear_sheet_insumos()
+        registros = get_clean_records(sheet_insumos)
+
+        # Buscar si el insumo ya existe para actualizar B:D en 1 SOLA PETICIÓN
+        for idx, reg in enumerate(registros, start=2):
+            val_ins = get_field_val(reg, "Insumo", "Nombre")
+            if val_ins and val_ins.lower() == insumo_nom.lower():
+                raw_st = get_field_val(reg, "Stock Actual").replace(",", ".").strip()
+                stock_actual = float(raw_st) if raw_st else 0.0
+                nuevo_stock = round(stock_actual + cantidad, 2)
+                
+                venc_existente = get_field_val(reg, "Vencimiento Proximo", "Vencimiento Próximo") or "Sin fecha"
+                venc_final = vencimiento if (vencimiento and vencimiento != "Sin fecha") else venc_existente
+
+                # 🚀 Actualiza B{idx}:D{idx} de un solo viaje a Google
+                sheet_insumos.update(f"B{idx}:D{idx}", [[nuevo_stock, unidad, venc_final]])
+                    
+                return jsonify({"status": "exito", "mensaje": f"Se sumaron {cantidad} {unidad} a {insumo_nom}"}), 200
+
+        # Si es un insumo nuevo, se agrega la fila en 1 solo request
+        sheet_insumos.append_row([insumo_nom, cantidad, unidad, vencimiento])
+        return jsonify({"status": "exito", "mensaje": f"Insumo {insumo_nom} registrado con {cantidad} {unidad}"}), 200
+
+    except Exception as error:
+        print(f"❌ Error en sumar_stock_insumo: {error}", flush=True)
+        return jsonify({"status": "error", "mensaje": f"Error de cuota/conexión: {str(error)}"}), 500
+        
 # ==========================================
 # SEGURIDAD Y ACCESO
 # ==========================================

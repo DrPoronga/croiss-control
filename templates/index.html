@@ -186,33 +186,121 @@
                 </div>
 				
 				<!-- SECCIÓN: CONTROL UNIFICADO DE STOCK Y PRODUCCIÓN -->
-			<div id="sec-stock" class="section">
-				<div class="card ios-card">
-					<!-- BANNER DE MASAS CONGELADAS -->
-					<div style="background: linear-gradient(135deg, #C86D28, #9A4D15); color: white; padding: 22px 18px; border-radius: 20px; text-align: center; box-shadow: 0 8px 20px rgba(200, 109, 40, 0.25); margin-bottom: 20px;">
-						<small style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 12px; display: inline-block; margin-bottom: 6px;">
-							🥐 Masas / Croissants Congelados
-						</small>
-						<h2 id="cantCroissCongelados" style="font-size: 2.2rem; font-weight: 800; margin: 4px 0;">Cargando...</h2>
-						<p style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 12px;">Disponibles para horneado</p>
-						<button type="button" class="btn-jalea-chip active" style="background: #FFFFFF; color: var(--accent); font-weight: 800; padding: 8px 16px; font-size: 0.82rem; border: none;" onclick="abrirModalSumarCongelados()">
-							➕ Agregar Producción (Masas)
-						</button>
-					</div>
+				<div id="sec-stock" class="section">
+					<div class="card ios-card">
+						<!-- CONTROL SEGMENTADO DE STOCK -->
+						<div class="ios-segmented-control" style="margin-bottom: 20px;">
+							<button id="segBtnStockCongelados" class="seg-btn active" onclick="cambiarSegmentoStock('congelados')">🥐 Congelados & Menú</button>
+							<button id="segBtnStockMateriaPrima" class="seg-btn" onclick="cambiarSegmentoStock('materiaprima')">🥖 Materia Prima</button>
+							<button id="segBtnStockEmpaque" class="seg-btn" onclick="cambiarSegmentoStock('empaque')">📦 Cajas & Empaque</button>
+						</div>
 
-					<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
-						📋 Menú y Precios
-					</h4>
-					<div id="listaStock" style="margin-bottom: 20px;">Cargando productos...</div>
+						<!-- SUBSECCIÓN 1: MASAS CONGELADAS Y MENÚ -->
+						<div id="subSecStockCongelados" class="sub-seccion active">
+							<div style="background: linear-gradient(135deg, #C86D28, #9A4D15); color: white; padding: 22px 18px; border-radius: 20px; text-align: center; box-shadow: 0 8px 20px rgba(200, 109, 40, 0.25); margin-bottom: 20px;">
+								<small style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 12px; display: inline-block; margin-bottom: 6px;">
+									🥐 Masas / Croissants Congelados
+								</small>
+								<h2 id="cantCroissCongelados" style="font-size: 2.2rem; font-weight: 800; margin: 4px 0;">Cargando...</h2>
+								<p style="font-size: 0.8rem; opacity: 0.9; margin-bottom: 12px;">Disponibles para horneado</p>
+								<button type="button" class="btn-jalea-chip active" style="background: #FFFFFF; color: var(--accent); font-weight: 800; padding: 8px 16px; font-size: 0.82rem; border: none;" onclick="abrirModalSumarCongelados()">
+									➕ Agregar Producción (Masas)
+								</button>
+							</div>
 
-					<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase; border-top: 2px dashed var(--border-color); padding-top: 15px;">
-						🥖 Materia Prima e Insumos
-					</h4>
-					<div id="listaInsumosStock" class="ios-list-container">
-						Cargando insumos...
+							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
+								📋 Menú y Precios
+							</h4>
+							<div id="listaStock" style="margin-bottom: 20px;">Cargando productos...</div>
+						</div>
+
+						<!-- SUBSECCIÓN 2: MATERIA PRIMA -->
+						<div id="subSecStockMateriaPrima" class="sub-seccion">
+							<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+								<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin:0; text-transform: uppercase;">
+									🥖 Ingredientes y Rellenos
+								</h4>
+								<button type="button" class="btn-jalea-chip active" onclick="abrirModalSumarStock('Materia Prima')">
+									➕ Cargar Stock
+								</button>
+							</div>
+							<div id="listaMateriaPrimaStock" class="ios-list-container">
+								Cargando materia prima...
+							</div>
+						</div>
+
+						<!-- SUBSECCIÓN 3: CAJAS Y EMPAQUE -->
+						<div id="subSecStockEmpaque" class="sub-seccion">
+							<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+								<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin:0; text-transform: uppercase;">
+									📦 Cajas, Papel Manteca y Film
+								</h4>
+								<button type="button" class="btn-jalea-chip active" onclick="abrirModalSumarStock('Empaque')">
+									➕ Cargar Stock
+								</button>
+							</div>
+							<div id="listaEmpaqueStock" class="ios-list-container">
+								Cargando insumos de empaque...
+							</div>
+						</div>
 					</div>
 				</div>
-			</div>
+
+				<!-- SECCIÓN: REGISTRAR GASTO FINANCIERO (SOLO EXTRAORDINARIOS) -->
+				<div id="sec-gastos" class="section">
+					<div class="card ios-card">
+						<div class="ios-segmented-control">
+							<button id="segBtnNuevoGasto" class="seg-btn active" onclick="cambiarSegmentoGasto('nuevo')">💸 Registrar Gasto Extra</button>
+							<button id="segBtnHistorialGasto" class="seg-btn" onclick="cambiarSegmentoGasto('historial')">📜 Histórico de Gastos</button>
+						</div>
+
+						<!-- SUB-SECCIÓN 1: FORMULARIO DE GASTO FINANCIERO -->
+						<div id="subSecNuevoGasto" class="sub-seccion active">
+							<form id="formGasto">
+								<div class="row">
+									<div class="form-group">
+										<label>Fecha</label>
+										<input type="date" id="gFecha" required>
+									</div>
+									<div class="form-group">
+										<label>Categoría del Egreso</label>
+										<select id="gCategoria">
+											<option value="Servicios">Servicios (Luz, Agua, Gas, Internet)</option>
+											<option value="Alquiler / Local">Alquiler / Local</option>
+											<option value="Reparaciones">Reparaciones / Mantenimiento</option>
+											<option value="Publicidad">Publicidad / Redes Sociales</option>
+											<option value="Impuestos">Impuestos / Tasas</option>
+											<option value="Inoportuno / Varios">Imprevisto / Varios</option>
+										</select>
+									</div>
+								</div>
+
+								<div class="form-group">
+									<label>Detalle / Descripción del Gasto</label>
+									<input type="text" id="gDescripcion" placeholder="Ej: Arreglo de horno, Factura de luz..." required>
+								</div>
+
+								<div class="form-group" style="margin-top: 12px;">
+									<label>Monto Pagado ($)</label>
+									<input type="number" id="gMonto" placeholder="0" required step="0.5">
+								</div>
+
+								<button type="submit" class="btn-submit">Registrar Gasto Financiero</button>
+							</form>
+						</div>
+
+						<!-- SUB-SECCIÓN 2: HISTORIAL COMPLETO DE GASTOS -->
+						<div id="subSecHistorialGasto" class="sub-seccion">
+							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
+								📜 Últimos Gastos Extraordinarios
+							</h4>
+							<div id="listaGastosHistorico" class="ios-list-container">
+								Cargando historial de gastos...
+							</div>
+						</div>
+					</div>
+				</div>
+
 
 			<!-- SECCIÓN: REGISTRAR GASTO E HISTORIAL FINANCIERO -->
 			<div id="sec-gastos" class="section">
@@ -323,6 +411,18 @@
 						</div>
 					</div>
 
+					<!-- TARJETA DESTACADA: TOTAL CROISSANTS VENDIDOS (MES VS HISTÓRICO) -->
+					<div style="display:flex; gap:10px; margin-bottom:15px;">
+						<div style="flex:1; background: linear-gradient(135deg, #C86D28, #9A4D15); color:white; padding:14px 12px; border-radius:16px; text-align:center;">
+							<small style="font-size:0.68rem; font-weight:800; text-transform:uppercase; background:rgba(255,255,255,0.2); padding:2px 8px; border-radius:8px;">Croissants Mes</small>
+							<h3 id="bTotalCroissMes" style="font-size:1.5rem; font-weight:800; margin:4px 0 0 0;">0 un.</h3>
+						</div>
+						<div style="flex:1; background: linear-gradient(135deg, #2D1E18, #422D24); color:white; padding:14px 12px; border-radius:16px; text-align:center;">
+							<small style="font-size:0.68rem; font-weight:800; text-transform:uppercase; background:rgba(200,109,40,0.3); color:#FCEFE6; padding:2px 8px; border-radius:8px;">Total Histórico</small>
+							<h3 id="bTotalCroissHist" style="font-size:1.5rem; font-weight:800; margin:4px 0 0 0;">0 un.</h3>
+						</div>
+					</div>
+
 					<!-- SUBSECCIÓN 1: RESUMEN FINANCIERO -->
 					<div id="subSecBalance" class="sub-seccion active">
 						<div class="balance-grid">
@@ -349,7 +449,7 @@
 							<strong id="bTicketPromedio" style="font-size: 1.2rem; color: var(--accent);">$0</strong>
 						</div>
 
-						<!-- NUEVO: DESGLOSE DE GASTOS POR CATEGORÍA -->
+						<!-- DESGLOSE DE GASTOS POR CATEGORÍA -->
 						<div class="card" style="margin-top: 15px; border: 1px solid var(--border-color); box-shadow: none;">
 							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
 								📉 Desglose de Gastos por Categoría
@@ -371,8 +471,8 @@
 							<p id="txtProyeccionIngresos" style="font-size: 0.85rem; color: #E2D9D3; margin: 0;"></p>
 						</div>
 
-						<!-- NUEVO: COMPARATIVO SABOR MÁS VENDIDO VS MÁS RENTABLE -->
-						<div id="boxComparativoSabores"></div>
+						<!-- TOP COMPRADORES (MES VS HISTÓRICO) -->
+						<div id="boxTopClientesBalance"></div>
 
 						<!-- CHIP DE DEMANDA DE JALEA -->
 						<div id="boxJaleaStat" style="background: #FAF0EB; border: 1px solid #F7DFC8; padding: 10px 14px; border-radius: 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
@@ -396,12 +496,8 @@
 						</div>
 					</div>
 
-					<!-- SUBSECCIÓN 3: EVOLUCIÓN HISTÓRICA Y FIDELIZACIÓN -->
+					<!-- SUBSECCIÓN 3: EVOLUCIÓN HISTÓRICA -->
 					<div id="subSecEvolucion" class="sub-seccion">
-						<!-- NUEVO: TASA DE RECOMPRA Y FIDELIZACIÓN -->
-						<div id="boxFidelizacionCliente"></div>
-
-						<!-- NUEVO: GRÁFICO DE LÍNEAS DE EVOLUCIÓN HISTÓRICA -->
 						<div class="card" style="margin-bottom: 16px; border: 1px solid var(--border-color); box-shadow: none;">
 							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">
 								📈 Curva de Evolución Histórica

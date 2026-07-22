@@ -39,7 +39,13 @@ async function cargarBalance() {
         Swal.close();
 
         if(data.status === 'exito') {
-            // 1. FINANZAS Y DESGLOSE DE GASTOS
+            // 1. DATO CLAVE: CROISSANTS VENDIDOS (MES VS HISTÓRICO)
+            const elCroissMes = document.getElementById('bTotalCroissMes');
+            const elCroissHist = document.getElementById('bTotalCroissHist');
+            if (elCroissMes) elCroissMes.innerText = `${data.total_croissants_mes} un.`;
+            if (elCroissHist) elCroissHist.innerText = `${data.total_croissants_historico} un.`;
+
+            // 2. FINANZAS Y DESGLOSE DE GASTOS
             document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
             document.getElementById('bCostos').innerText = `$${data.costos_produccion}`;
             document.getElementById('bGastos').innerText = `$${data.gastos_varios}`;
@@ -49,34 +55,44 @@ async function cargarBalance() {
             gananciaEl.innerText = `$${data.ganancia_neta}`;
             gananciaEl.style.color = data.ganancia_neta < 0 ? "#ef4444" : "#16a34a";
 
-            // Renderizar Gráfico de Gastos por Categoría
             renderizarGraficoGastosCategoria(data.gastos_por_categoria);
 
-            // 2. ANÁLISIS DE SABORES (Más vendido vs Más rentable)
-            if (data.analisis_sabores) {
-                const mVendido = data.analisis_sabores.mas_vendido;
-                const mRentable = data.analisis_sabores.mas_rentable;
+            // 3. PROYECCIÓN / FUTUROLOGÍA FIN DE MES
+            const proy = data.proyeccion;
+            const txtCroiss = document.getElementById('txtProyeccionCroiss');
+            const txtIng = document.getElementById('txtProyeccionIngresos');
 
-                const contSaborCompara = document.getElementById('boxComparativoSabores');
-                if (contSaborCompara) {
-                    contSaborCompara.innerHTML = `
-                        <div style="display:flex; gap:10px; margin-bottom:14px;">
-                            <div style="flex:1; background:#FFF7ED; border:1px solid #FFEDD5; border-radius:12px; padding:12px;">
-                                <small style="color:#C86D28; font-weight:800; text-transform:uppercase; font-size:0.68rem;">🔥 MÁS VENDIDO</small>
-                                <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${mVendido ? mVendido.sabor : 'N/A'}</div>
-                                <small style="color:#64748b;">${mVendido ? mVendido.cantidad : 0} un. vendidas</small>
-                            </div>
-                            <div style="flex:1; background:#F0FDF4; border:1px solid #DCFCE7; border-radius:12px; padding:12px;">
-                                <small style="color:#16A34A; font-weight:800; text-transform:uppercase; font-size:0.68rem;">💎 MÁS RENTABLE</small>
-                                <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${mRentable ? mRentable.sabor : 'N/A'}</div>
-                                <small style="color:#16A34A; font-weight:700;">+$${mRentable ? mRentable.ganancia : 0} margen</small>
-                            </div>
-                        </div>
-                    `;
-                }
+            if (proy && proy.es_mes_actual) {
+                txtCroiss.innerText = `~${proy.croissants_estimados} Croissants`;
+                txtIng.innerText = `Ingresos estimados: $${proy.ingresos_estimados} al cierre del mes`;
+            } else {
+                txtCroiss.innerText = `${data.total_croissants_mes} Croissants Vendidos`;
+                txtIng.innerText = `Total final del período cerrado`;
             }
 
-            // Stat Jalea y Ranking de Sabores
+            // 4. TOP COMPRADORES (MES VS HISTÓRICO)
+            const contTop = document.getElementById('boxTopClientesBalance');
+            if (contTop && data.top_clientes) {
+                const topM = data.top_clientes.mes;
+                const topH = data.top_clientes.historico;
+
+                contTop.innerHTML = `
+                    <div style="display:flex; gap:10px; margin-bottom:16px;">
+                        <div style="flex:1; background:#FAF0EB; border:1px solid #F7DFC8; border-radius:14px; padding:12px;">
+                            <small style="color:var(--accent); font-weight:800; text-transform:uppercase; font-size:0.68rem;">👑 LÍDER DEL MES</small>
+                            <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${topM ? topM.nombre : 'Sin ventas'}</div>
+                            <small style="color:#64748b;">${topM ? topM.croissants : 0} croiss. ($${topM ? topM.gastado : 0})</small>
+                        </div>
+                        <div style="flex:1; background:#F0FDF4; border:1px solid #DCFCE7; border-radius:14px; padding:12px;">
+                            <small style="color:#16A34A; font-weight:800; text-transform:uppercase; font-size:0.68rem;">🏆 LÍDER HISTÓRICO</small>
+                            <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${topH ? topH.nombre : 'Sin ventas'}</div>
+                            <small style="color:#16A34A; font-weight:700;">${topH ? topH.croissants : 0} croiss. ($${topH ? topH.gastado : 0})</small>
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 5. STATS JALEA & SABORES
             document.getElementById('txtPorcentajeJalea').innerText = `${data.stats_jalea.porcentaje}% (${data.stats_jalea.con_jalea} un.)`;
 
             const contRank = document.getElementById('listaRankingSabores');
@@ -92,7 +108,7 @@ async function cargarBalance() {
                         div.innerHTML = `
                             <div>
                                 <strong>🥐 ${r.sabor}</strong><br>
-                                <small style="color:var(--text-muted);">${r.porcentaje}% del total | Margen: +$${r.ganancia}</small>
+                                <small style="color:var(--text-muted);">${r.porcentaje}% del total de ventas</small>
                             </div>
                             <strong style="color:var(--accent); font-size:0.95rem;">${r.cantidad} un.</strong>
                         `;
@@ -103,43 +119,9 @@ async function cargarBalance() {
 
             renderizarGraficoSabores(data.ranking_sabores);
             renderizarGraficoDias(data.dias_semana);
-
-            // 3. EVOLUCIÓN HISTÓRICA & TASA DE RECOMPRA (FIDELIZACIÓN)
-            if (data.fidelizacion) {
-                const fid = data.fidelizacion;
-                const contFid = document.getElementById('boxFidelizacionCliente');
-                if (contFid) {
-                    let htmlClientesTop = '';
-                    if (fid.top_recurrentes && fid.top_recurrentes.length > 0) {
-                        htmlClientesTop = fid.top_recurrentes.map(c => `
-                            <div style="display:flex; justify-content:space-between; font-size:0.82rem; padding:4px 0; border-bottom:1px dashed #E2D9D3;">
-                                <span><strong>${c.nombre}</strong> (${c.pedidos_mes} pedidos este mes)</span>
-                                <strong style="color:var(--accent);">$${c.monto_mes}</strong>
-                            </div>
-                        `).join('');
-                    }
-
-                    contFid.innerHTML = `
-                        <div class="card" style="margin-bottom:14px; border:1px solid var(--border-color);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <div>
-                                    <strong style="font-size:0.95rem; color:var(--text-main);">Tasa de Recompra (Fidelización)</strong><br>
-                                    <small style="color:var(--text-muted);">${fid.clientes_recurrentes} habituales de ${fid.clientes_unicos} compradores únicos</small>
-                                </div>
-                                <span style="font-size:1.4rem; font-weight:800; color:var(--accent); background:var(--accent-light); padding:4px 12px; border-radius:12px;">
-                                    ${fid.tasa_recompra}%
-                                </span>
-                            </div>
-                            ${htmlClientesTop ? `<div style="margin-top:10px;">${htmlClientesTop}</div>` : ''}
-                        </div>
-                    `;
-                }
-            }
-
-            // Gráfico de Líneas Temporal para Evolución Historica
             renderizarGraficoEvolucionLinea(data.historico_meses);
 
-            // Lista detallada de meses pasados
+            // 6. HISTORIAL DE MESES PASADOS
             const contEvolucion = document.getElementById('listaEvolucionMeses');
             if (contEvolucion) {
                 contEvolucion.innerHTML = '';
@@ -152,7 +134,7 @@ async function cargarBalance() {
                     div.style.cursor = 'default';
                     div.innerHTML = `
                         <div>
-                            <strong>Fecha: ${m.mes_key}</strong> <small style="color:var(--text-muted);">(${m.pedidos} pedidos)</small><br>
+                            <strong>Fecha: ${m.mes_key}</strong> <small style="color:var(--text-muted);">(${m.croissants} croiss. / ${m.pedidos} pedidos)</small><br>
                             <small style="color:#64748b;">Ingresos: $${m.ingresos} | Egresos: $${m.gastos_totales}</small>
                         </div>
                         <div style="text-align:right;">
@@ -1382,6 +1364,9 @@ function renderizarGraficoDias(diasObj) {
     });
 }
 
+// ==========================================
+// RENDERIZAR HISTORIAL DE GASTOS CON BOTÓN ELIMINAR
+// ==========================================
 async function cargarInsumosYGastos() {
     const tInicio = Date.now();
     mostrarCroissLoader();
@@ -1398,10 +1383,10 @@ async function cargarInsumosYGastos() {
             if (contInsumos) {
                 contInsumos.innerHTML = '';
                 if (data.insumos.length === 0) {
-                    contInsumos.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay insumos registrados aun.</p>';
+                    contInsumos.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay insumos registrados aún.</p>';
                 } else {
                     data.insumos.forEach(ins => {
-                        const vencFecha = ins['Vencimiento Proximo'] || ins['Vencimiento Proximo'] || 'Sin fecha';
+                        const vencFecha = ins['Vencimiento Proximo'] || ins['Vencimiento Próximo'] || 'Sin fecha';
                         const div = document.createElement('div');
                         div.className = 'ios-cliente-row compact';
                         div.innerHTML = `
@@ -1431,6 +1416,9 @@ async function cargarInsumosYGastos() {
                         const monto = g.Monto || g.monto || 0;
                         const cant = g.Cantidad || g.cantidad || 1;
                         const unidad = g.Unidad || g.unidad || '';
+                        const numFila = g.fila;
+
+                        const descEscapada = desc.replace(/'/g, "\\'");
 
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
@@ -1439,7 +1427,171 @@ async function cargarInsumosYGastos() {
                                 <strong>Fecha: ${fecha} - ${desc}</strong> <small style="color:#64748b;">(${cat})</small><br>
                                 <span style="font-size:0.85rem; color:#475569;">Cant: ${cant} ${unidad}</span>
                             </div>
-                            <strong style="color:#dc2626; font-size:0.95rem;">-$${monto}</strong>
+                            <div style="text-align:right;">
+                                <strong style="color:#dc2626; font-size:0.95rem;">-$${monto}</strong><br>
+                                ${numFila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarGasto(${numFila}, '${descEscapada}')">Eliminar</button>` : ''}
+                            </div>
+                        `;
+                        contGastos.appendChild(div);
+                    });
+                }
+            }
+        }
+    } catch (err) {
+        Swal.close();
+        console.error("Error cargando inventario:", err);
+    }
+}
+
+// ==========================================
+// FUNCIÓN PARA BORRAR UN GASTO
+// ==========================================
+async function eliminarGasto(numFila, descGasto) {
+    Swal.fire({
+        title: `<strong style="color:var(--text-main); font-size:1.2rem;">¿Eliminar este gasto?</strong>`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted); font-weight:600; margin-top:4px; line-height:1.4;">Se removerá <strong style="color:var(--text-main);">${descGasto}</strong> de la planilla de gastos.</p>`,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
+        customClass: {
+            popup: 'croiss-swal-popup',
+            confirmButton: 'croiss-btn-danger',
+            cancelButton: 'croiss-swal-cancel'
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const res = await fetch('/api/eliminar_gasto', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ fila: numFila })
+                });
+                const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 1800);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Gasto Eliminado', 'Se removió el registro del historial.');
+                    cargarInsumosYGastos();
+                    if (typeof cargarBalance === 'function') cargarBalance();
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                console.error("Error al eliminar gasto:", err);
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+            }
+        }
+    });
+}
+
+// ==========================================
+// CAMBIO DE SEGMENTOS DENTRO DE STOCK
+// ==========================================
+function cambiarSegmentoStock(segmento) {
+    document.getElementById('segBtnStockCongelados').classList.toggle('active', segmento === 'congelados');
+    document.getElementById('segBtnStockMateriaPrima').classList.toggle('active', segmento === 'materiaprima');
+    document.getElementById('segBtnStockEmpaque').classList.toggle('active', segmento === 'empaque');
+
+    document.getElementById('subSecStockCongelados').classList.toggle('active', segmento === 'congelados');
+    document.getElementById('subSecStockMateriaPrima').classList.toggle('active', segmento === 'materiaprima');
+    document.getElementById('subSecStockEmpaque').classList.toggle('active', segmento === 'empaque');
+
+    if (segmento === 'materiaprima' || segmento === 'empaque') {
+        cargarInsumosYGastos();
+    }
+}
+
+// ==========================================
+// CARGAR Y CLASIFICAR INSUMOS (MATERIA PRIMA VS EMPAQUE)
+// ==========================================
+async function cargarInsumosYGastos() {
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
+    try {
+        const res = await fetch('/api/gastos_e_insumos');
+        const data = await res.json();
+
+        await esperarAnimacionMinima(tInicio, 1500);
+        Swal.close();
+
+        if (data.status === 'exito') {
+            const contMateriaPrima = document.getElementById('listaMateriaPrimaStock');
+            const contEmpaque = document.getElementById('listaEmpaqueStock');
+
+            const PalabrasEmpaque = ["caja", "papel", "film", "bolsa", "embalaje", "etiqueta", "cinta", "cajas"];
+
+            let htmlMateriaPrima = '';
+            let htmlEmpaque = '';
+
+            if (data.insumos && data.insumos.length > 0) {
+                data.insumos.forEach(ins => {
+                    const nombreInsumo = ins.Insumo || 'Insumo';
+                    const stockVal = ins['Stock Actual'] !== undefined ? ins['Stock Actual'] : 0;
+                    const unidadVal = ins.Unidad || '';
+                    const vencFecha = ins['Vencimiento Proximo'] || ins['Vencimiento Próximo'] || 'Sin fecha';
+
+                    const esEmpaque = PalabrasEmpaque.some(p => nombreInsumo.toLowerCase().includes(p));
+
+                    const itemHtml = `
+                        <div class="ios-cliente-row compact" style="margin-bottom: 8px;">
+                            <div>
+                                <strong>${nombreInsumo}</strong><br>
+                                <small style="color:var(--text-muted);">${vencFecha !== 'Sin fecha' ? 'Vence: ' + vencFecha : 'Control de Stock'}</small>
+                            </div>
+                            <div style="text-align: right;">
+                                <strong style="color:var(--accent); font-size:1.05rem;">${stockVal} ${unidadVal}</strong>
+                            </div>
+                        </div>
+                    `;
+
+                    if (esEmpaque) {
+                        htmlEmpaque += itemHtml;
+                    } else {
+                        htmlMateriaPrima += itemHtml;
+                    }
+                });
+            }
+
+            if (contMateriaPrima) {
+                contMateriaPrima.innerHTML = htmlMateriaPrima || '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay materias primas registradas aún.</p>';
+            }
+
+            if (contEmpaque) {
+                contEmpaque.innerHTML = htmlEmpaque || '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay insumos de empaque o cajas registrados.</p>';
+            }
+
+            // Historial de gastos (Pestaña Gastos)
+            const contGastos = document.getElementById('listaGastosHistorico');
+            if (contGastos) {
+                contGastos.innerHTML = '';
+                if (!data.gastos || data.gastos.length === 0) {
+                    contGastos.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay gastos cargados.</p>';
+                } else {
+                    data.gastos.forEach(g => {
+                        const desc = g.Descripcion || g.descripcion || 'Gasto';
+                        const cat = g.Categoria || g.categoria || 'Otros';
+                        const fecha = g.Fecha || g.fecha || '';
+                        const monto = g.Monto || g.monto || 0;
+                        const cant = g.Cantidad || g.cantidad || 1;
+                        const unidad = g.Unidad || g.unidad || '';
+                        const numFila = g.fila;
+                        const descEscapada = desc.replace(/'/g, "\\'");
+
+                        const div = document.createElement('div');
+                        div.className = 'cuenta-item';
+                        div.innerHTML = `
+                            <div>
+                                <strong>Fecha: ${fecha} - ${desc}</strong> <small style="color:#64748b;">(${cat})</small><br>
+                                <span style="font-size:0.85rem; color:#475569;">Cant: ${cant} ${unidad}</span>
+                            </div>
+                            <div style="text-align:right;">
+                                <strong style="color:#dc2626; font-size:0.95rem;">-$${monto}</strong><br>
+                                ${numFila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarGasto(${numFila}, '${descEscapada}')">Eliminar</button>` : ''}
+                            </div>
                         `;
                         contGastos.appendChild(div);
                     });
@@ -1923,6 +2075,131 @@ function actualizarMedioPagoSegunEstado() {
     } else if (estadoEl.value === 'Pagado' && medioEl.value === '-') {
         medioEl.value = 'Efectivo';
     }
+}
+
+// ==========================================
+// MODAL PARA CARGAR STOCK CORREGIDO
+// ==========================================
+function abrirModalSumarStock(tipoCategoria) {
+    const esEmpaque = tipoCategoria === 'Empaque';
+
+    const opcionesEmpaque = `
+        <option value="Caja 6 Croiss (Ventana)">Caja 6 Croiss (Ventana)</option>
+        <option value="Caja 6 Croiss (Ciega)">Caja 6 Croiss (Ciega)</option>
+        <option value="Caja 3 Croiss (Ventana)">Caja 3 Croiss (Ventana)</option>
+        <option value="Caja 3 Croiss (Ciega)">Caja 3 Croiss (Ciega)</option>
+        <option value="Papel Manteca">Papel Manteca</option>
+        <option value="Rollo Film">Rollo Film</option>
+        <option value="Bolsas">Bolsas</option>
+    `;
+
+    const opcionesMateriaPrima = `
+        <option value="Harina 000">Harina 000</option>
+        <option value="Manteca">Manteca</option>
+        <option value="Dulce de Leche">Dulce de Leche</option>
+        <option value="Jamón">Jamón</option>
+        <option value="Queso">Queso</option>
+        <option value="Azúcar">Azúcar</option>
+        <option value="Huevos">Huevos</option>
+        <option value="Levadura">Levadura</option>
+        <option value="Leche">Leche</option>
+        <option value="Esencia de Vainilla">Esencia de Vainilla</option>
+        <option value="Sal">Sal</option>
+    `;
+
+    Swal.fire({
+        title: `<strong style="color:var(--text-main); font-size:1.1rem;">Cargar Stock (${esEmpaque ? 'Empaque' : 'Materia Prima'})</strong>`,
+        html: `
+            <div style="text-align:left; font-size:0.85rem; color:#334155;">
+                <label style="font-weight:700; display:block; margin-bottom:4px;">Seleccionar o Escribir Insumo:</label>
+                <select id="swalInsumoSelect" class="swal2-input" style="margin:0 0 10px 0; width:100%; font-size:0.88rem;" onchange="if(this.value==='OTRO'){document.getElementById('swalInsumoOtro').style.display='block';}else{document.getElementById('swalInsumoOtro').style.display='none';}">
+                    ${esEmpaque ? opcionesEmpaque : opcionesMateriaPrima}
+                    <option value="OTRO">+ Otro Insumo (Escribir personalizado)</option>
+                </select>
+                <input type="text" id="swalInsumoOtro" class="swal2-input" placeholder="Nombre del nuevo insumo..." style="display:none; margin:0 0 10px 0; width:100%; font-size:0.88rem;">
+
+                <div style="display:flex; gap:10px;">
+                    <div style="flex:1;">
+                        <label style="font-weight:700; display:block; margin-bottom:4px;">Cantidad a Sumar:</label>
+                        <input type="number" id="swalCantidad" class="swal2-input" placeholder="Ej: 50" step="0.1" value="1" style="margin:0; width:100%; font-size:0.88rem;">
+                    </div>
+                    <div style="flex:1;">
+                        <label style="font-weight:700; display:block; margin-bottom:4px;">Unidad:</label>
+                        <select id="swalUnidad" class="swal2-input" style="margin:0; width:100%; font-size:0.88rem;">
+                            <option value="${esEmpaque ? 'un' : 'kg'}">${esEmpaque ? 'un (Unidades)' : 'kg (Kilos)'}</option>
+                            <option value="gr">gr (Gramos)</option>
+                            <option value="ml">ml (Mililitros)</option>
+                            <option value="un">un (Unidades)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label style="font-weight:700; display:block; margin:10px 0 4px 0;">Vencimiento (Opcional):</label>
+                <input type="date" id="swalVencimiento" class="swal2-input" style="margin:0; width:100%; font-size:0.88rem;">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Sumar al Stock',
+        cancelButtonText: 'Cancelar',
+        buttonsStyling: false,
+        customClass: {
+            popup: 'croiss-swal-popup',
+            confirmButton: 'croiss-swal-confirm',
+            cancelButton: 'croiss-swal-cancel'
+        },
+        preConfirm: () => {
+            const selVal = document.getElementById('swalInsumoSelect').value;
+            const elOtro = document.getElementById('swalInsumoOtro');
+            const otroVal = elOtro ? elOtro.value.trim() : '';
+            const nomFinal = selVal === 'OTRO' ? otroVal : selVal;
+            const cantVal = parseFloat(document.getElementById('swalCantidad').value);
+            const unidadVal = document.getElementById('swalUnidad').value;
+            const vencVal = document.getElementById('swalVencimiento').value;
+
+            if (!nomFinal) {
+                Swal.showValidationMessage('Debes ingresar el nombre del insumo');
+                return false;
+            }
+            if (isNaN(cantVal) || cantVal <= 0) {
+                Swal.showValidationMessage('Ingresa una cantidad mayor a 0');
+                return false;
+            }
+
+            return { insumo: nomFinal, cantidad: cantVal, unidad: unidadVal, vencimiento: vencVal };
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const tInicio = Date.now();
+            if (typeof mostrarCroissLoader === 'function') mostrarCroissLoader();
+            try {
+                const res = await fetch('/api/stock/sumar_insumo', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(result.value)
+                });
+                const data = await res.json();
+
+                if (typeof esperarAnimacionMinima === 'function') {
+                    await esperarAnimacionMinima(tInicio, 1500);
+                }
+                Swal.close();
+
+                if (data.status === 'exito') {
+                    if (typeof mostrarCroissExito === 'function') {
+                        mostrarCroissExito('Stock Actualizado', data.mensaje);
+                    } else {
+                        Swal.fire('Éxito', data.mensaje, 'success');
+                    }
+                    if (typeof cargarInsumosYGastos === 'function') cargarInsumosYGastos();
+                } else {
+                    Swal.fire('Atención', data.mensaje, 'warning');
+                }
+            } catch (err) {
+                console.error("Error sumando stock:", err);
+                Swal.fire('Error', 'No se pudo guardar el stock', 'error');
+            }
+        }
+    });
 }
 
 const formFinalizarPedido = document.getElementById('formFinalizarPedido');
