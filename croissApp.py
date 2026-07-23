@@ -371,7 +371,7 @@ def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False
     return alertas
 
 # ==========================================
-# RUTAS PRINCIPALES DE LA API
+# RUTAS DE VISTA Y API CONGELADOS
 # ==========================================
 @app.route('/')
 def inicio():
@@ -435,6 +435,9 @@ def fijar_stock_congelados():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+# ==========================================
+# RUTAS DE VENTAS Y AGENDA
+# ==========================================
 @app.route('/api/venta', methods=['POST'])
 def registrar_venta():
     try:
@@ -462,7 +465,7 @@ def registrar_venta():
         if total_unidades > st_actual_cong:
             return jsonify({
                 "status": "error",
-                "mensaje": f"Stock insuficiente. Tienes {st_actual_cong} croissants congelados disponibes e intentas vender {total_unidades}."
+                "mensaje": f"Stock insuficiente. Tienes {st_actual_cong} croissants congelados disponibles e intentas vender {total_unidades}."
             }), 400
 
         registros = get_clean_records(sheet_ventas)
@@ -612,7 +615,7 @@ def eliminar_venta():
                     val_clean = str(raw_st).replace(",", ".").strip()
                     st_actual_cong = int(float(val_clean)) if val_clean.replace(".", "", 1).isdigit() else 0
                     ejecutar_con_reintento(sheet_stock.update_cell, f_cong, col_stock, st_actual_cong + cant_recuperar)
-            except Exception as ec: pass
+            except Exception: pass
 
             modificar_stock_empaque(desc_prod, cant_recuperar, es_devolucion=True)
 
@@ -627,6 +630,164 @@ def eliminar_venta():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+# ==========================================
+# RUTAS DE CLIENTES Y CRM
+# ==========================================
+@app.route('/api/clientes', methods=['GET'])
+def obtener_clientes():
+    try:
+        mes_filtro = request.args.get('mes', '').strip() or datetime.now().strftime("%Y-%m")
+        clientes_historico, clientes_mes = {}, {}
+
+        sheet_crm = obtener_o_crear_sheet_clientes()
+        crm_records = get_clean_records(sheet_crm)
+        
+        for c in crm_records:
+            id_cli = get_field_val(c, "ID Cliente", "ID", "Id Cliente", "Id").strip()
+            nom = get_field_val(c, "Nombre", "Cliente", "Nombre Cliente").strip()
+            email = get_field_val(c, "Email", "Correo").strip()
+            tel = get_field_val(c, "Telefono", "Teléfono", "Tel").strip()
+            direccion = get_field_val(c, "Direccion", "Dirección").strip()
+
+            if "@" in nom and "@" not in email: nom, email = email, nom
+            if not nom or nom.lower() == "consumidor final": continue
+                
+            key_norm = nom.lower()
+            clientes_historico[key_norm] = {
+                "id_cliente": id_cli, "nombre": nom, "email": email, "telefono": tel, "direccion": direccion,
+                "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": []
+            }
+
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+        ventas = get_clean_records(sheet_ventas)
+
+        for idx, v in enumerate(ventas, start=2):
+            cliente_nombre = get_field_val(v, "Cliente").strip() or "Consumidor Final"
+            if not cliente_nombre or cliente_nombre.lower() == "consumidor final": continue
+
+            email_c, tel_c, dir_c = get_field_val(v, "Email", "Correo").strip(), get_field_val(v, "Teléfono", "Telefono", "Tel").strip(), get_field_val(v, "Dirección", "Direccion").strip()
+            fecha_norm = normalizar_fecha(get_field_val(v, "Fecha Pedido", "Fecha", "Fecha Entrega"))
+            
+            try: monto = float(get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
+            except ValueError: monto = 0.0
+
+            cant = int(get_field_val(v, "Cantidad")) if get_field_val(v, "Cantidad").isdigit() else 0
+            key_norm = cliente_nombre.lower()
+
+            pedido_item = {
+                "fila": idx, "id": get_field_val(v, "ID Venta", "ID"), "fecha": fecha_norm,
+                "producto": get_field_val(v, "Producto"), "cantidad": cant, "monto": monto,
+                "estado_pago": get_field_val(v, "Estado") or "Pendiente",
+                "estado_entrega": get_field_val(v, "Entrega", "Estado Entrega") or "Sin Registrar",
+                "direccion": dir_c
+            }
+
+            if key_norm not in clientes_historico:
+                clientes_historico[key_norm] = {
+                    "id_cliente": "", "nombre": cliente_nombre, "email": email_c, "telefono": tel_c, "direccion": dir_c,
+                    "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": []
+                }
+
+            clientes_historico[key_norm]["total_gastado"] += monto
+            clientes_historico[key_norm]["total_croissants"] += cant
+            clientes_historico[key_norm]["total_pedidos"] += 1
+            clientes_historico[key_norm]["historial"].append(pedido_item)
+
+            if fecha_norm and fecha_norm.startswith(mes_filtro):
+                if key_norm not in clientes_mes:
+                    clientes_mes[key_norm] = {
+                        "id_cliente": clientes_historico[key_norm]["id_cliente"],
+                        "nombre": clientes_historico[key_norm]["nombre"],
+                        "email": clientes_historico[key_norm]["email"],
+                        "telefono": clientes_historico[key_norm]["telefono"],
+                        "direccion": clientes_historico[key_norm]["direccion"],
+                        "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": []
+                    }
+
+                clientes_mes[key_norm]["total_gastado"] += monto
+                clientes_mes[key_norm]["total_croissants"] += cant
+                clientes_mes[key_norm]["total_pedidos"] += 1
+                clientes_mes[key_norm]["historial"].append(pedido_item)
+
+        lista_historico = list(clientes_historico.values())
+        lista_historico.sort(key=lambda x: x["nombre"].lower())
+        for c in lista_historico:
+            c["total_gastado"] = round(c["total_gastado"], 2)
+            c["historial"].sort(key=lambda x: str(x["fecha"]), reverse=True)
+
+        lista_mes = list(clientes_mes.values())
+        lista_mes.sort(key=lambda x: (x["total_croissants"], x["total_gastado"]), reverse=True)
+        for c in lista_mes: c["total_gastado"] = round(c["total_gastado"], 2)
+
+        return jsonify({
+            "status": "exito", "mes_filtrado": mes_filtro,
+            "clientes_todos": lista_historico, "ranking_mes": lista_mes,
+            "top_cliente_mes": lista_mes[0] if lista_mes else None
+        }), 200
+
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/cliente/editar', methods=['POST'])
+def editar_cliente():
+    try:
+        datos = request.json or {}
+        id_cliente = str(datos.get("id_cliente", "")).strip()
+        nombre_original = str(datos.get("nombre_original", datos.get("nombre", ""))).strip()
+        nuevo_nombre = str(datos.get("nombre", "")).strip() or nombre_original
+        nuevo_email, nuevo_telefono, nueva_direccion = str(datos.get("email", "")).strip(), str(datos.get("telefono", "")).strip(), str(datos.get("direccion", "")).strip()
+
+        sheet_crm = obtener_o_crear_sheet_clientes()
+        data_crm = sheet_crm.get_all_values()
+        
+        if data_crm and len(data_crm) >= 2:
+            for idx, row in enumerate(data_crm[1:], start=2):
+                val_id = row[0].strip() if len(row) > 0 else ""
+                val_nom = row[1].strip() if len(row) > 1 else ""
+                if (id_cliente and val_id.lower() == id_cliente.lower()) or (val_nom.lower() == nombre_original.lower()):
+                    id_final = val_id or id_cliente or f"CLI-{idx-1:04d}"
+                    ejecutar_con_reintento(sheet_crm.update, f"A{idx}:E{idx}", [[id_final, nuevo_nombre, nuevo_email, nuevo_telefono, nueva_direccion]])
+                    break
+
+        sheet_ventas = conectar_sheet("Ventas")
+        data_v = sheet_ventas.get_all_values()
+        if data_v and len(data_v) >= 2:
+            headers = [str(h).strip().lower() for h in data_v[0]]
+            col_cliente = headers.index("cliente") + 1 if "cliente" in headers else 4
+            for idx, row in enumerate(data_v[1:], start=2):
+                val_cli = row[col_cliente - 1] if col_cliente - 1 < len(row) else ""
+                if val_cli.strip().lower() == nombre_original.lower():
+                    ejecutar_con_reintento(sheet_ventas.update, f"D{idx}", [[nuevo_nombre]])
+                    ejecutar_con_reintento(sheet_ventas.update, f"J{idx}:L{idx}", [[nuevo_email, nuevo_telefono, nueva_direccion]])
+
+        return jsonify({"status": "exito", "mensaje": "Cliente actualizado correctamente"}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/cliente/eliminar', methods=['POST'])
+def eliminar_cliente():
+    try:
+        datos = request.json or {}
+        nombre_cliente, id_cliente = str(datos.get("nombre", "")).strip(), str(datos.get("id_cliente", "")).strip()
+        sheet_crm = obtener_o_crear_sheet_clientes()
+        data_crm = sheet_crm.get_all_values()
+        
+        if data_crm and len(data_crm) >= 2:
+            for idx, row in enumerate(data_crm[1:], start=2):
+                val_id = row[0].strip() if len(row) > 0 else ""
+                val_nom = row[1].strip() if len(row) > 1 else ""
+                if (id_cliente and val_id.lower() == id_cliente.lower()) or (nombre_cliente and val_nom.lower() == nombre_cliente.lower()):
+                    ejecutar_con_reintento(sheet_crm.delete_rows, idx)
+                    break
+
+        return jsonify({"status": "exito", "mensaje": "Cliente eliminado correctamente"}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+# ==========================================
+# BALANCE, CUENTAS Y OTROS ENDPOINTS
+# ==========================================
 @app.route('/api/balance', methods=['GET'])
 def obtener_balance():
     try:
@@ -858,62 +1019,6 @@ def marcar_entregado():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-@app.route('/api/cliente/editar', methods=['POST'])
-def editar_cliente():
-    try:
-        datos = request.json or {}
-        id_cliente = str(datos.get("id_cliente", "")).strip()
-        nombre_original = str(datos.get("nombre_original", datos.get("nombre", ""))).strip()
-        nuevo_nombre = str(datos.get("nombre", "")).strip() or nombre_original
-        nuevo_email, nuevo_telefono, nueva_direccion = str(datos.get("email", "")).strip(), str(datos.get("telefono", "")).strip(), str(datos.get("direccion", "")).strip()
-
-        sheet_crm = obtener_o_crear_sheet_clientes()
-        data_crm = sheet_crm.get_all_values()
-        
-        if data_crm and len(data_crm) >= 2:
-            for idx, row in enumerate(data_crm[1:], start=2):
-                val_id = row[0].strip() if len(row) > 0 else ""
-                val_nom = row[1].strip() if len(row) > 1 else ""
-                if (id_cliente and val_id.lower() == id_cliente.lower()) or (val_nom.lower() == nombre_original.lower()):
-                    id_final = val_id or id_cliente or f"CLI-{idx-1:04d}"
-                    ejecutar_con_reintento(sheet_crm.update, f"A{idx}:E{idx}", [[id_final, nuevo_nombre, nuevo_email, nuevo_telefono, nueva_direccion]])
-                    break
-
-        sheet_ventas = conectar_sheet("Ventas")
-        data_v = sheet_ventas.get_all_values()
-        if data_v and len(data_v) >= 2:
-            headers = [str(h).strip().lower() for h in data_v[0]]
-            col_cliente = headers.index("cliente") + 1 if "cliente" in headers else 4
-            for idx, row in enumerate(data_v[1:], start=2):
-                val_cli = row[col_cliente - 1] if col_cliente - 1 < len(row) else ""
-                if val_cli.strip().lower() == nombre_original.lower():
-                    ejecutar_con_reintento(sheet_ventas.update, f"D{idx}", [[nuevo_nombre]])
-                    ejecutar_con_reintento(sheet_ventas.update, f"J{idx}:L{idx}", [[nuevo_email, nuevo_telefono, nueva_direccion]])
-
-        return jsonify({"status": "exito", "mensaje": "Cliente actualizado correctamente"}), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-
-@app.route('/api/cliente/eliminar', methods=['POST'])
-def eliminar_cliente():
-    try:
-        datos = request.json or {}
-        nombre_cliente, id_cliente = str(datos.get("nombre", "")).strip(), str(datos.get("id_cliente", "")).strip()
-        sheet_crm = obtener_o_crear_sheet_clientes()
-        data_crm = sheet_crm.get_all_values()
-        
-        if data_crm and len(data_crm) >= 2:
-            for idx, row in enumerate(data_crm[1:], start=2):
-                val_id = row[0].strip() if len(row) > 0 else ""
-                val_nom = row[1].strip() if len(row) > 1 else ""
-                if (id_cliente and val_id.lower() == id_cliente.lower()) or (nombre_cliente and val_nom.lower() == nombre_cliente.lower()):
-                    ejecutar_con_reintento(sheet_crm.delete_rows, idx)
-                    break
-
-        return jsonify({"status": "exito", "mensaje": "Cliente eliminado correctamente"}), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-
 @app.route('/api/cambiar_estado_pago', methods=['POST'])
 def cambiar_estado_pago():
     try:
@@ -971,137 +1076,6 @@ def eliminar_gasto():
         return jsonify({"status": "exito", "mensaje": "Gasto eliminado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
-@app.route('/api/stock', methods=['GET'])
-def obtener_stock():
-    try:
-        sheet = conectar_sheet("Productos_Stock")
-        productos = get_clean_records(sheet)
-        return jsonify({"status": "exito", "productos": productos}), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-
-@app.route('/api/stock/actualizar', methods=['POST'])
-def actualizar_stock():
-    try:
-        datos = request.json or {}
-        prod_nombre, nuevo_stock, nuevo_precio = str(datos.get("producto", "")).strip(), datos.get("stock"), datos.get("precio")
-
-        sheet_stock = conectar_sheet("Productos_Stock")
-        headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
-        celda = sheet_stock.find(re.compile(rf"^{re.escape(prod_nombre)}$", re.IGNORECASE))
-        if not celda: return jsonify({"status": "error", "mensaje": f"No se encontró el producto {prod_nombre}"}), 404
-
-        fila, col_stock, col_precio = celda.row, 4, 3
-        for idx, h in enumerate(headers, start=1):
-            if "stock" in h: col_stock = idx
-            elif "precio" in h: col_precio = idx
-
-        if nuevo_stock is not None and str(nuevo_stock).isdigit():
-            ejecutar_con_reintento(sheet_stock.update_cell, fila, col_stock, int(nuevo_stock))
-
-        if nuevo_precio is not None:
-            try:
-                precio_val = float(str(nuevo_precio).replace("$", "").replace(",", "").strip())
-                ejecutar_con_reintento(sheet_stock.update_cell, fila, col_precio, precio_val)
-            except ValueError: pass
-
-        return jsonify({"status": "exito", "mensaje": "Stock y precio actualizados correctamente"}), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-
-@app.route('/api/clientes', methods=['GET'])
-def obtener_clientes():
-    try:
-        mes_filtro = request.args.get('mes', '').strip() or datetime.now().strftime("%Y-%m")
-        clientes_historico, clientes_mes = {}, {}
-
-        sheet_crm = obtener_o_crear_sheet_clientes()
-        crm_records = get_clean_records(sheet_crm)
-        
-        for c in crm_records:
-            id_cli = get_field_val(c, "ID Cliente", "ID", "Id Cliente", "Id").strip()
-            nom = get_field_val(c, "Nombre", "Cliente", "Nombre Cliente").strip()
-            email = get_field_val(c, "Email", "Correo").strip()
-            tel = get_field_val(c, "Telefono", "Teléfono", "Tel").strip()
-            direccion = get_field_val(c, "Direccion", "Dirección").strip()
-
-            if "@" in nom and "@" not in email: nom, email = email, nom
-            if not nom or nom.lower() == "consumidor final": continue
-                
-            key_norm = nom.lower()
-            clientes_historico[key_norm] = {
-                "id_cliente": id_cli, "nombre": nom, "email": email, "telefono": tel, "direccion": direccion,
-                "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": []
-            }
-
-        sheet_ventas = conectar_sheet("Ventas")
-        asegurar_encabezados_ventas(sheet_ventas)
-        ventas = get_clean_records(sheet_ventas)
-
-        for idx, v in enumerate(ventas, start=2):
-            cliente_nombre = get_field_val(v, "Cliente").strip() or "Consumidor Final"
-            if not cliente_nombre or cliente_nombre.lower() == "consumidor final": continue
-
-            email_c, tel_c, dir_c = get_field_val(v, "Email", "Correo").strip(), get_field_val(v, "Teléfono", "Telefono", "Tel").strip(), get_field_val(v, "Dirección", "Direccion").strip()
-            fecha_norm = normalizar_fecha(get_field_val(v, "Fecha Pedido", "Fecha", "Fecha Entrega"))
-            
-            try: monto = float(get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
-            except ValueError: monto = 0.0
-
-            cant = int(get_field_val(v, "Cantidad")) if get_field_val(v, "Cantidad").isdigit() else 0
-            key_norm = cliente_nombre.lower()
-
-            pedido_item = {
-                "fila": idx, "id": get_field_val(v, "ID Venta", "ID"), "fecha": fecha_norm,
-                "producto": get_field_val(v, "Producto"), "cantidad": cant, "monto": monto,
-                "estado_pago": get_field_val(v, "Estado") or "Pendiente",
-                "estado_entrega": get_field_val(v, "Entrega", "Estado Entrega") or "Sin Registrar",
-                "direccion": dir_c
-            }
-
-            if key_norm not in clientes_historico:
-                clientes_historico[key_norm] = {
-                    "id_cliente": "", "nombre": cliente_nombre, "email": email_c, "telefono": tel_c, "direccion": dir_c,
-                    "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": []
-                }
-
-            clientes_historico[key_norm]["total_gastado"] += monto
-            clientes_historico[key_norm]["total_croissants"] += cant
-            clientes_historico[key_norm]["total_pedidos"] += 1
-            clientes_historico[key_norm]["historial"].append(pedido_item)
-
-            if fecha_norm and fecha_norm.startswith(mes_filtro):
-                if key_norm not in clientes_mes:
-                    clientes_mes[key_norm] = clientes_historico[key_norm].copy()
-                    clientes_mes[key_norm]["total_gastado"] = 0.0
-                    clientes_mes[key_norm]["total_croissants"] = 0
-                    clientes_mes[key_norm]["total_pedidos"] = 0
-                    clientes_mes[key_norm]["historial"] = []
-
-                clientes_mes[key_norm]["total_gastado"] += monto
-                clientes_mes[key_norm]["total_croissants"] += cant
-                clientes_mes[key_norm]["total_pedidos"] += 1
-                clientes_mes[key_norm]["historial"].append(pedido_item)
-
-        lista_historico = list(clientes_historico.values())
-        lista_historico.sort(key=lambda x: x["nombre"].lower())
-        for c in lista_historico:
-            c["total_gastado"] = round(c["total_gastado"], 2)
-            c["historial"].sort(key=lambda x: str(x["fecha"]), reverse=True)
-
-        lista_mes = list(clientes_mes.values())
-        lista_mes.sort(key=lambda x: (x["total_croissants"], x["total_gastado"]), reverse=True)
-        for c in lista_mes: c["total_gastado"] = round(c["total_gastado"], 2)
-
-        return jsonify({
-            "status": "exito", "mes_filtrado": mes_filtro,
-            "clientes_todos": lista_historico, "ranking_mes": lista_mes,
-            "top_cliente_mes": lista_mes[0] if lista_mes else None
-        }), 200
-
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/gasto', methods=['POST'])
 def registrar_gasto():
@@ -1138,6 +1112,44 @@ def registrar_gasto():
             except Exception: pass
 
         return jsonify({"status": "exito", "mensaje": "Gasto registrado", "id": nuevo_id}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/stock', methods=['GET'])
+def obtener_stock():
+    try:
+        sheet = conectar_sheet("Productos_Stock")
+        productos = get_clean_records(sheet)
+        return jsonify({"status": "exito", "productos": productos}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/stock/actualizar', methods=['POST'])
+def actualizar_stock():
+    try:
+        datos = request.json or {}
+        prod_nombre, nuevo_stock, nuevo_precio = str(datos.get("producto", "")).strip(), datos.get("stock"), datos.get("precio")
+
+        sheet_stock = conectar_sheet("Productos_Stock")
+        headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
+        celda = sheet_stock.find(re.compile(rf"^{re.escape(prod_nombre)}$", re.IGNORECASE))
+        if not celda: return jsonify({"status": "error", "mensaje": f"No se encontró el producto {prod_nombre}"}), 404
+
+        fila, col_stock, col_precio = celda.row, 4, 3
+        for idx, h in enumerate(headers, start=1):
+            if "stock" in h: col_stock = idx
+            elif "precio" in h: col_precio = idx
+
+        if nuevo_stock is not None and str(nuevo_stock).isdigit():
+            ejecutar_con_reintento(sheet_stock.update_cell, fila, col_stock, int(nuevo_stock))
+
+        if nuevo_precio is not None:
+            try:
+                precio_val = float(str(nuevo_precio).replace("$", "").replace(",", "").strip())
+                ejecutar_con_reintento(sheet_stock.update_cell, fila, col_precio, precio_val)
+            except ValueError: pass
+
+        return jsonify({"status": "exito", "mensaje": "Stock y precio actualizados correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
