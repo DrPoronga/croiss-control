@@ -23,9 +23,26 @@ let clienteDetalleActual = null;
 let itemsEdicionTemp = [];
 let chartGastosCatInstance = null;
 let chartEvolucionLineaInstance = null;
+let chartSaboresInstance = null;
+let chartDiasInstance = null;
 
 // ==========================================
-// AUTENTICACIÓN BIOMÉTRICA (CON RESPALDO)
+// HELPER DE ANIMACIÓN Y TIEMPOS (REPARADO)
+// ==========================================
+async function esperarAnimacionMinima(tiempoInicio, minMs = 2200) {
+    const transcurrido = Date.now() - tiempoInicio;
+    if (transcurrido < minMs) {
+        await new Promise(resolve => setTimeout(resolve, minMs - transcurrido));
+    }
+}
+
+function getInputValueSafe(id, defaultVal = '') {
+    const el = document.getElementById(id);
+    return el ? el.value.trim() : defaultVal;
+}
+
+// ==========================================
+// AUTENTICACIÓN BIOMÉTRICA (RESPALDO MÓVIL/PC)
 // ==========================================
 function esDispositivoMovil() {
     return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
@@ -276,97 +293,6 @@ function actualizarMedioPagoSegunEstado() {
 }
 
 // ==========================================
-// CARGAR Y RENDERIZAR MENÚ Y STOCK
-// ==========================================
-async function cargarStock(forzar = false) {
-    if (isFetchingStock) return;
-    cargarSugerenciasClientes();
-
-    if (catalogoProductos.length > 0 && !forzar) {
-        renderizarMenuYStock();
-        return;
-    }
-
-    isFetchingStock = true;
-    try {
-        const res = await fetch('/api/stock');
-        const data = await res.json();
-        if (data.status === 'exito' && Array.isArray(data.productos)) {
-            catalogoProductos = data.productos;
-            renderizarMenuYStock();
-        }
-    } catch (err) {
-        console.error("Error al cargar stock:", err);
-    } finally {
-        isFetchingStock = false;
-    }
-}
-
-function renderizarMenuYStock() {
-    const select = document.getElementById('vProductoSelect');
-    const lista = document.getElementById('listaStock');
-    const seleccionPrevia = select ? select.value : '';
-
-    if (select) select.innerHTML = '<option value="" disabled selected>Seleccionar croissant...</option>';
-    if (lista) lista.innerHTML = '';
-
-    let productosRenderizados = 0;
-    catalogoProductos.forEach(prod => {
-        const nombreProd = obtenerNombreDesdeObjeto(prod);
-        if (!nombreProd || nombreProd.toLowerCase().includes('congelado')) return;
-
-        productosRenderizados++;
-        if (select) {
-            const opt = document.createElement('option');
-            opt.value = nombreProd;
-            opt.innerText = nombreProd;
-            select.appendChild(opt);
-        }
-
-        if (lista) {
-            const precioVenta = obtenerPrecioDesdeObjeto(prod);
-            const div = document.createElement('div');
-            div.className = 'stock-item';
-            div.style.padding = '12px';
-            div.innerHTML = `<div><strong>${nombreProd}</strong><br><small style="color:var(--text-muted); font-weight:600;">$${precioVenta} c/u</small></div>`;
-            lista.appendChild(div);
-        }
-    });
-
-    if (lista && productosRenderizados === 0) {
-        lista.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay productos cargados en el menú.</p>';
-    }
-
-    if (select && seleccionPrevia) {
-        const existe = Array.from(select.options).some(o => o.value === seleccionPrevia);
-        if (existe) select.value = seleccionPrevia;
-    }
-}
-
-async function cargarTodoElStock() {
-    const tInicio = Date.now();
-    mostrarCroissLoader();
-
-    try {
-        const resCong = await fetch('/api/stock/congelados');
-        const dataCong = await resCong.json();
-        if (dataCong.status === 'exito') {
-            const elCong = document.getElementById('cantCroissCongelados');
-            if (elCong) elCong.innerText = `${dataCong.stock} un.`;
-        }
-
-        await cargarStock(true);
-        await cargarInsumosYGastos();
-
-        await esperarAnimacionMinima(tInicio, 2200);
-        cerrarCroissLoaderSeguro();
-    } catch (err) {
-        cerrarCroissLoaderSeguro();
-        console.error("Error al cargar todo el stock:", err);
-    }
-}
-
-// ==========================================
 // CORTINAS DE CARGA Y NOTIFICACIONES
 // ==========================================
 function mostrarCroissLoader() {
@@ -535,6 +461,249 @@ function autocompletarDatosCliente() {
             });
         }
     }
+}
+
+// ==========================================
+// BALANCE Y MÉTRICAS DE VENTAS
+// ==========================================
+async function cargarBalance() {
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
+    try {
+        const mesVal = document.getElementById('bMesFilter').value || hoy.substring(0, 7);
+        let url = `/api/balance?mes=${mesVal}`;
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        await esperarAnimacionMinima(tInicio, 2200);
+        cerrarCroissLoaderSeguro();
+
+        if(data.status === 'exito') {
+            const elCroissMes = document.getElementById('bTotalCroissMes');
+            const elCroissHist = document.getElementById('bTotalCroissHist');
+            if (elCroissMes) elCroissMes.innerText = `${data.total_croissants_mes} un.`;
+            if (elCroissHist) elCroissHist.innerText = `${data.total_croissants_historico} un.`;
+
+            document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
+            document.getElementById('bCostos').innerText = `$${data.costos_produccion}`;
+            document.getElementById('bGastos').innerText = `$${data.gastos_varios}`;
+            document.getElementById('bTicketPromedio').innerText = `$${data.ticket_promedio}`;
+
+            const gananciaEl = document.getElementById('bGanancia');
+            gananciaEl.innerText = `$${data.ganancia_neta}`;
+            gananciaEl.style.color = data.ganancia_neta < 0 ? "#ef4444" : "#16a34a";
+
+            renderizarGraficoGastosCategoria(data.gastos_por_categoria);
+
+            const proy = data.proyeccion;
+            const txtCroiss = document.getElementById('txtProyeccionCroiss');
+            const txtIng = document.getElementById('txtProyeccionIngresos');
+
+            if (proy && proy.es_mes_actual) {
+                txtCroiss.innerText = `~${proy.croissants_estimados} Croissants`;
+                txtIng.innerText = `Ingresos estimados: $${proy.ingresos_estimados} al cierre del mes`;
+            } else {
+                txtCroiss.innerText = `${data.total_croissants_mes} Croissants Vendidos`;
+                txtIng.innerText = `Total final del período cerrado`;
+            }
+
+            const contTop = document.getElementById('boxTopClientesBalance');
+            if (contTop && data.top_clientes) {
+                const topM = data.top_clientes.mes;
+                const topH = data.top_clientes.historico;
+
+                contTop.innerHTML = `
+                    <div style="display:flex; gap:10px; margin-bottom:16px;">
+                        <div style="flex:1; background:#FAF0EB; border:1px solid #F7DFC8; border-radius:14px; padding:12px;">
+                            <small style="color:var(--accent); font-weight:800; text-transform:uppercase; font-size:0.68rem;">👑 LÍDER DEL MES</small>
+                            <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${topM ? topM.nombre : 'Sin ventas'}</div>
+                            <small style="color:#64748b;">${topM ? topM.croissants : 0} croiss. ($${topM ? topM.gastado : 0})</small>
+                        </div>
+                        <div style="flex:1; background:#F0FDF4; border:1px solid #DCFCE7; border-radius:14px; padding:12px;">
+                            <small style="color:#16A34A; font-weight:800; text-transform:uppercase; font-size:0.68rem;">🏆 LÍDER HISTÓRICO</small>
+                            <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${topH ? topH.nombre : 'Sin ventas'}</div>
+                            <small style="color:#16A34A; font-weight:700;">${topH ? topH.croissants : 0} croiss. ($${topH ? topH.gastado : 0})</small>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('txtPorcentajeJalea').innerText = `${data.stats_jalea.porcentaje}% (${data.stats_jalea.con_jalea} un.)`;
+
+            const contRank = document.getElementById('listaRankingSabores');
+            if (contRank) {
+                contRank.innerHTML = '';
+                if (!data.ranking_sabores || data.ranking_sabores.length === 0) {
+                    contRank.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas registradas en este mes.</p>';
+                } else {
+                    data.ranking_sabores.forEach(r => {
+                        const div = document.createElement('div');
+                        div.className = 'ios-cliente-row compact';
+                        div.style.cursor = 'default';
+                        div.innerHTML = `
+                            <div>
+                                <strong>🥐 ${r.sabor}</strong><br>
+                                <small style="color:var(--text-muted);">${r.porcentaje}% del total de ventas</small>
+                            </div>
+                            <strong style="color:var(--accent); font-size:0.95rem;">${r.cantidad} un.</strong>
+                        `;
+                        contRank.appendChild(div);
+                    });
+                }
+            }
+
+            renderizarGraficoSabores(data.ranking_sabores);
+            renderizarGraficoDias(data.dias_semana);
+            renderizarGraficoEvolucionLinea(data.historico_meses);
+
+            const contEvolucion = document.getElementById('listaEvolucionMeses');
+            if (contEvolucion) {
+                contEvolucion.innerHTML = '';
+                data.historico_meses.forEach(m => {
+                    const esPositivo = m.ganancia_neta >= 0;
+                    const colorGanancia = esPositivo ? '#16a34a' : '#dc2626';
+
+                    const div = document.createElement('div');
+                    div.className = 'ios-cliente-row compact';
+                    div.style.cursor = 'default';
+                    div.innerHTML = `
+                        <div>
+                            <strong>Fecha: ${m.mes_key}</strong> <small style="color:var(--text-muted);">(${m.croissants} croiss. / ${m.pedidos} pedidos)</small><br>
+                            <small style="color:#64748b;">Ingresos: $${m.ingresos} | Egresos: $${m.gastos_totales}</small>
+                        </div>
+                        <div style="text-align:right;">
+                            <strong style="color:${colorGanancia}; font-size:0.95rem;">$${m.ganancia_neta}</strong><br>
+                            <small style="color:var(--text-muted); font-size:0.7rem;">Ganancia Neta</small>
+                        </div>
+                    `;
+                    contEvolucion.appendChild(div);
+                });
+            }
+        }
+    } catch(err) {
+        cerrarCroissLoaderSeguro();
+        console.error("Error al cargar balance:", err);
+    }
+}
+
+function renderizarGraficoGastosCategoria(gastosCat) {
+    const ctx = document.getElementById('chartGastosCatCanvas');
+    if (!ctx) return;
+    if (chartGastosCatInstance) chartGastosCatInstance.destroy();
+    if (!gastosCat || gastosCat.length === 0) return;
+
+    chartGastosCatInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: gastosCat.map(g => g.categoria),
+            datasets: [{
+                data: gastosCat.map(g => g.monto),
+                backgroundColor: ['#DC2626', '#EA580C', '#D97706', '#0284C7', '#64748B']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } }
+        }
+    });
+}
+
+function renderizarGraficoEvolucionLinea(historico) {
+    const ctx = document.getElementById('chartEvolucionLineaCanvas');
+    if (!ctx) return;
+    if (chartEvolucionLineaInstance) chartEvolucionLineaInstance.destroy();
+    if (!historico || historico.length === 0) return;
+
+    chartEvolucionLineaInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: historico.map(h => h.mes_key),
+            datasets: [
+                {
+                    label: 'Ingresos ($)',
+                    data: historico.map(h => h.ingresos),
+                    borderColor: '#16A34A',
+                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                },
+                {
+                    label: 'Ganancia Neta ($)',
+                    data: historico.map(h => h.ganancia_neta),
+                    borderColor: '#C86D28',
+                    backgroundColor: 'transparent',
+                    borderDash: [5, 5],
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } },
+            scales: { y: { beginAtZero: true } }
+        }
+    });
+}
+
+function renderizarGraficoSabores(ranking) {
+    const ctx = document.getElementById('chartSaboresCanvas');
+    if (!ctx) return;
+    if (chartSaboresInstance) chartSaboresInstance.destroy();
+    if (!ranking || ranking.length === 0) return;
+
+    chartSaboresInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ranking.map(r => r.sabor),
+            datasets: [{
+                data: ranking.map(r => r.cantidad),
+                backgroundColor: ['#C86D28', '#2D1E18', '#D97706', '#9A4D15', '#7A6B63', '#CBD5E1']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+        }
+    });
+}
+
+function renderizarGraficoDias(diasObj) {
+    const ctx = document.getElementById('chartDiasCanvas');
+    if (!ctx) return;
+    if (chartDiasInstance) chartDiasInstance.destroy();
+    if (!diasObj) return;
+
+    chartDiasInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(diasObj),
+            datasets: [{
+                label: 'Croissants Entregados',
+                data: Object.values(diasObj),
+                backgroundColor: '#C86D28',
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+        }
+    });
+}
+
+function cambiarSegmentoBalance(segmento) {
+    document.getElementById('segBtnBalance').classList.toggle('active', segmento === 'balance');
+    document.getElementById('segBtnSabores').classList.toggle('active', segmento === 'sabores');
+    document.getElementById('segBtnEvolucion').classList.toggle('active', segmento === 'evolucion');
+    
+    document.getElementById('subSecBalance').classList.toggle('active', segmento === 'balance');
+    document.getElementById('subSecSabores').classList.toggle('active', segmento === 'sabores');
+    document.getElementById('subSecEvolucion').classList.toggle('active', segmento === 'evolucion');
+
+    cargarBalance();
 }
 
 // ==========================================
@@ -1273,7 +1442,7 @@ function abrirModalEditarInsumo(nombreInsumo, stockActual, unidadActual, vencAct
             mostrarCroissLoader();
             try {
                 const r = await fetch('/api/stock/editar_insumo', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(res.value) });
-                const data = await res.json();
+                const data = await r.json();
                 await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
@@ -1361,6 +1530,36 @@ function abrirModalSumarStock(tipoCategoria) {
                     cargarInsumosYGastos();
                 } else { Swal.fire('Atención', data.mensaje, 'warning'); }
             } catch (err) { Swal.fire('Error', 'No se pudo guardar el stock', 'error'); }
+        }
+    });
+}
+
+function abrirModalSumarCongelados() {
+    Swal.fire({
+        title: 'Agregar Producción de Masas',
+        customClass: { popup: 'croiss-swal-popup', title: 'croiss-swal-title', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
+        buttonsStyling: false,
+        html: `<div style="text-align: left; margin-top: 14px;"><label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Cantidad de masas preparadas</label><input type="number" id="inputSumarCongelados" class="croiss-swal-input" value="20" min="1" placeholder="Ej: 20"></div>`,
+        showCancelButton: true, confirmButtonText: '+ Sumar al Stock', cancelButtonText: 'Cancelar', focusConfirm: false,
+        preConfirm: () => {
+            const cant = document.getElementById('inputSumarCongelados').value;
+            if (!cant || parseInt(cant) <= 0) { Swal.showValidationMessage('Ingresá una cantidad válida.'); return false; }
+            return parseInt(cant);
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const res = await fetch('/api/stock/congelados', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ cantidad: result.value }) });
+                const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Producción Agregada!', `Se sumaron +${result.value} masas al stock congelado.`);
+                    document.getElementById('cantCroissCongelados').innerText = `${data.stock} un.`;
+                } else { Swal.fire('Error', data.mensaje, 'error'); }
+            } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
         }
     });
 }
@@ -1744,6 +1943,97 @@ function cambiarSegmentoGasto(segmento) {
     document.getElementById('subSecHistorialGasto').classList.toggle('active', segmento === 'historial');
 
     if (segmento === 'historial') cargarInsumosYGastos();
+}
+
+// ==========================================
+// CARGAR MENÚ Y STOCK
+// ==========================================
+async function cargarStock(forzar = false) {
+    if (isFetchingStock) return;
+    cargarSugerenciasClientes();
+
+    if (catalogoProductos.length > 0 && !forzar) {
+        renderizarMenuYStock();
+        return;
+    }
+
+    isFetchingStock = true;
+    try {
+        const res = await fetch('/api/stock');
+        const data = await res.json();
+        if (data.status === 'exito' && Array.isArray(data.productos)) {
+            catalogoProductos = data.productos;
+            renderizarMenuYStock();
+        }
+    } catch (err) {
+        console.error("Error al cargar stock:", err);
+    } finally {
+        isFetchingStock = false;
+    }
+}
+
+function renderizarMenuYStock() {
+    const select = document.getElementById('vProductoSelect');
+    const lista = document.getElementById('listaStock');
+    const seleccionPrevia = select ? select.value : '';
+
+    if (select) select.innerHTML = '<option value="" disabled selected>Seleccionar croissant...</option>';
+    if (lista) lista.innerHTML = '';
+
+    let productosRenderizados = 0;
+    catalogoProductos.forEach(prod => {
+        const nombreProd = obtenerNombreDesdeObjeto(prod);
+        if (!nombreProd || nombreProd.toLowerCase().includes('congelado')) return;
+
+        productosRenderizados++;
+        if (select) {
+            const opt = document.createElement('option');
+            opt.value = nombreProd;
+            opt.innerText = nombreProd;
+            select.appendChild(opt);
+        }
+
+        if (lista) {
+            const precioVenta = obtenerPrecioDesdeObjeto(prod);
+            const div = document.createElement('div');
+            div.className = 'stock-item';
+            div.style.padding = '12px';
+            div.innerHTML = `<div><strong>${nombreProd}</strong><br><small style="color:var(--text-muted); font-weight:600;">$${precioVenta} c/u</small></div>`;
+            lista.appendChild(div);
+        }
+    });
+
+    if (lista && productosRenderizados === 0) {
+        lista.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay productos cargados en el menú.</p>';
+    }
+
+    if (select && seleccionPrevia) {
+        const existe = Array.from(select.options).some(o => o.value === seleccionPrevia);
+        if (existe) select.value = seleccionPrevia;
+    }
+}
+
+async function cargarTodoElStock() {
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
+    try {
+        const resCong = await fetch('/api/stock/congelados');
+        const dataCong = await resCong.json();
+        if (dataCong.status === 'exito') {
+            const elCong = document.getElementById('cantCroissCongelados');
+            if (elCong) elCong.innerText = `${dataCong.stock} un.`;
+        }
+
+        await cargarStock(true);
+        await cargarInsumosYGastos();
+
+        await esperarAnimacionMinima(tInicio, 2200);
+        cerrarCroissLoaderSeguro();
+    } catch (err) {
+        cerrarCroissLoaderSeguro();
+        console.error("Error al cargar todo el stock:", err);
+    }
 }
 
 // ==========================================
