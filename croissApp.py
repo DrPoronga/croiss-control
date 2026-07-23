@@ -311,7 +311,7 @@ def obtener_o_crear_sheet_insumos():
 # ==========================================
 def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     if total_croissants <= 0:
-        return {"costo_base": 0.0, "costo_empaque": 0.0, "costo_total": 0.0, "cajas_6": 0, "cajas_3": 0, "papel": 0}
+        return {"costo_base": 0.0, "costo_empaque": 0.0, "costo_total": 0.0, "cajas_grande": 0, "cajas_mediana": 0, "cajas_chica": 0, "papel": 0}
     
     costo_croissants = 0.0
     
@@ -348,72 +348,145 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     else:
         costo_croissants = total_croissants * 24.10
 
-    cajas_6 = total_croissants // 6
+    # Lógica de cajas: Caja X6 (6), Caja X3 (3), Caja X1 (1)
+    cajas_grande = total_croissants // 6
     sobrante = total_croissants % 6
-    cajas_3 = 0
+    cajas_mediana = 0
+    cajas_chica = 0
     
-    if 1 <= sobrante <= 3:
-        cajas_3 = 1
-    elif sobrante >= 4:
-        cajas_6 += 1
+    if sobrante == 1:
+        cajas_chica = 1
+    elif sobrante in (2, 3):
+        cajas_mediana = 1
+    elif sobrante == 4:
+        cajas_mediana = 1
+        cajas_chica = 1
+    elif sobrante == 5:
+        cajas_grande += 1
         
-    papel = cajas_6 + cajas_3
-    costo_empaque = (cajas_6 * 36.0) + (cajas_3 * 27.0)
+    papel = cajas_grande + cajas_mediana + cajas_chica
+    costo_empaque = (cajas_grande * 36.0) + (cajas_mediana * 27.0) + (cajas_chica * 18.0)
     
     return {
         "costo_base": round(costo_croissants, 2),
         "costo_empaque": round(costo_empaque, 2),
         "costo_total": round(costo_croissants + costo_empaque, 2),
-        "cajas_6": cajas_6,
-        "cajas_3": cajas_3,
+        "cajas_grande": cajas_grande,
+        "cajas_mediana": cajas_mediana,
+        "cajas_chica": cajas_chica,
         "papel": papel
     }
+   
+# ==========================================
+# GESTIÓN Y CONTROL DE EMPAQUES (DESCUENTO Y DEVOLUCIÓN)
+# ==========================================
+def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False):
+    alertas = []
+    try:
+        calculo = calcular_costo_y_empaque_pedido(desc_producto, total_croissants)
+        
+        cajas_x6 = calculo["cajas_grande"]
+        cajas_x3 = calculo["cajas_mediana"]
+        cajas_x1 = calculo["cajas_chica"]
+        papel = calculo["papel"]
 
+        sheet_insumos = obtener_o_crear_sheet_insumos()
+        registros = get_clean_records(sheet_insumos)
+        if not registros:
+            return alertas
+
+        modificaciones = {}
+        nombres_alertas = {}
+
+        def aplicar_cambio(palabra_clave, cantidad):
+            if cantidad <= 0: return
+            for idx, ins_row in enumerate(registros, start=2):
+                nombre_insumo = get_field_val(ins_row, "Insumo").lower()
+                if palabra_clave in nombre_insumo:
+                    raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
+                    stock_actual = float(raw_st) if raw_st else 0.0
+                    if idx in modificaciones:
+                        stock_actual = modificaciones[idx]
+                    
+                    if es_devolucion:
+                        nuevo_stock = round(stock_actual + cantidad, 2)
+                    else:
+                        nuevo_stock = max(0.0, round(stock_actual - cantidad, 2))
+                        if nuevo_stock <= 10:
+                            nombres_alertas[get_field_val(ins_row, "Insumo")] = int(nuevo_stock)
+
+                    modificaciones[idx] = nuevo_stock
+                    break
+
+        aplicar_cambio("x6", cajas_x6)
+        aplicar_cambio("x3", cajas_x3)
+        aplicar_cambio("x1", cajas_x1)
+        aplicar_cambio("papel", papel)
+
+        for row_idx, n_stock in modificaciones.items():
+            ejecutar_con_reintento(sheet_insumos.update_cell, row_idx, 2, n_stock)
+
+        for ins, stock in nombres_alertas.items():
+            alertas.append(f"Solo quedan {stock} unidades de {ins}")
+
+    except Exception as e:
+        print(f"Aviso modificando empaque/stock: {e}", flush=True)
+
+    return alertas
+    
 # ==========================================
 # DESCUENTO AUTOMÁTICO DE EMPAQUE EN STOCK
 # ==========================================
-def descontar_insumos_por_receta(producto_nombre, cantidad_vendida, total_croissants_pedido=0):
+def descontar_insumos_por_receta(producto_nombre, total_croissants_pedido):
+    alertas = []
     try:
-        if total_croissants_pedido <= 0:
-            total_croissants_pedido = cantidad_vendida
-
         calculo = calcular_costo_y_empaque_pedido(producto_nombre, total_croissants_pedido)
         
-        cajas_6_usadas = calculo["cajas_6"]
-        cajas_3_usadas = calculo["cajas_3"]
+        cajas_x6_usadas = calculo["cajas_grande"]
+        cajas_x3_usadas = calculo["cajas_mediana"]
+        cajas_x1_usadas = calculo["cajas_chica"]
         papel_usado = calculo["papel"]
 
         sheet_insumos = obtener_o_crear_sheet_insumos()
         registros = get_clean_records(sheet_insumos)
         if not registros:
-            return
+            return alertas
 
         modificaciones = {}
+        nombres_alertas = {}
 
         def aplicar_descuento_insumo(palabra_clave, cantidad_a_restar):
             if cantidad_a_restar <= 0: return
             for idx, ins_row in enumerate(registros, start=2):
                 nombre_insumo = get_field_val(ins_row, "Insumo").lower()
                 if palabra_clave in nombre_insumo:
-                    if idx in modificaciones:
-                        stock_actual = modificaciones[idx]
-                    else:
-                        raw_st = get_field_val(ins_row, "Stock Actual").replace(",", ".").strip()
-                        stock_actual = float(raw_st) if raw_st else 0.0
+                    stock_actual = float(get_field_val(ins_row, "Stock Actual").replace(",", ".").strip() or 0.0) if idx not in modificaciones else modificaciones[idx]
                     
                     nuevo_stock = max(0.0, round(stock_actual - cantidad_a_restar, 2))
                     modificaciones[idx] = nuevo_stock
+                    
+                    # ALERTA: Si quedan 10 cajas o menos
+                    if nuevo_stock <= 10:
+                        nombres_alertas[get_field_val(ins_row, "Insumo")] = int(nuevo_stock)
                     break
 
-        aplicar_descuento_insumo("6", cajas_6_usadas)
-        aplicar_descuento_insumo("3", cajas_3_usadas)
+        # Buscar y preparar descuento
+        aplicar_descuento_insumo("x6", cajas_x6_usadas)
+        aplicar_descuento_insumo("x3", cajas_x3_usadas)
+        aplicar_descuento_insumo("x1", cajas_x1_usadas)
         aplicar_descuento_insumo("papel", papel_usado)
 
+        # Enviar descuento a Google Sheets (una sola vez por insumo)
         for row_idx, n_stock in modificaciones.items():
             ejecutar_con_reintento(sheet_insumos.update_cell, row_idx, 2, n_stock)
 
+        for ins, stock in nombres_alertas.items():
+            alertas.append(f"Solo quedan {stock} unidades de {ins}")
+
     except Exception as e:
         print(f"Aviso descontando empaque/stock: {e}", flush=True)
+        
+    return alertas
 
 @app.route('/api/balance', methods=['GET'])
 def obtener_balance():
@@ -635,36 +708,226 @@ def obtener_balance():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 # ==========================================
+# RUTAS DE VENTAS CON VALIDACIÓN Y DEVOLUCIÓN COMPLETA
+# ==========================================
+@app.route('/api/venta', methods=['POST'])
+def registrar_venta():
+    try:
+        datos = request.json or {}
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+        sheet_stock = conectar_sheet("Productos_Stock")
+        
+        items = datos.get("items", [])
+        total_unidades = sum(int(item.get("cantidad", 1)) for item in items)
+        
+        # 1. VALIDACIÓN PREVIA DE STOCK DE CONGELADOS
+        celda_cong = obtener_celda_congelados(sheet_stock)
+        st_actual_cong = 0
+        f_cong = None
+        
+        if celda_cong:
+            f_cong = celda_cong.row
+            headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
+            col_stock = 4
+            for idx, h in enumerate(headers, start=1):
+                if "stock" in h:
+                    col_stock = idx
+                    break
+
+            raw_st = sheet_stock.cell(f_cong, col_stock).value or "0"
+            val_clean = str(raw_st).replace(",", ".").strip()
+            st_actual_cong = int(float(val_clean)) if val_clean.replace(".", "", 1).isdigit() else 0
+
+        if total_unidades > st_actual_cong:
+            return jsonify({
+                "status": "error",
+                "mensaje": f"Stock insuficiente. Tienes {st_actual_cong} croissants congelados disponibles e intentas vender {total_unidades}."
+            }), 400
+
+        # 2. PROCESAR PEDIDO Y DESCONTAR CONGELADOS
+        registros = get_clean_records(sheet_ventas)
+        nuevo_id = f"V-{len(registros) + 1:04d}"
+        resumen_productos = []
+        
+        for item in items:
+            prod_nombre = item.get("producto")
+            cant = int(item.get("cantidad", 1))
+            jalea_str = " (Con Jalea)" if item.get("con_jalea") else ""
+            resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
+
+        descripcion_final = ", ".join(resumen_productos)
+
+        if f_cong:
+            nuevo_st_cong = max(0, st_actual_cong - total_unidades)
+            ejecutar_con_reintento(sheet_stock.update_cell, f_cong, col_stock, nuevo_st_cong)
+
+        # 3. DESCONTAR CAJAS Y PAPEL
+        alertas_stock = modificar_stock_empaque(descripcion_final, total_unidades, es_devolucion=False)
+
+        cliente_nombre = datos.get("cliente", "Consumidor Final")
+        email_cliente = str(datos.get("email", "")).strip()
+        telefono_cliente = str(datos.get("telefono", "")).strip()
+        direccion_cliente = str(datos.get("direccion", "")).strip()
+        fecha_entrega = datos.get("fecha_entrega", datos.get("fecha"))
+        monto_total = datos.get("monto_total", 0)
+        estado_pedido = datos.get("estado", "Pendiente")
+        
+        nueva_fila = [
+            nuevo_id, datos.get("fecha"), fecha_entrega, cliente_nombre,
+            descripcion_final, total_unidades, monto_total, estado_pedido,
+            datos.get("medio_pago", "-"), email_cliente, telefono_cliente,
+            direccion_cliente, "Pendiente"
+        ]
+        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
+
+        if email_cliente:
+            try:
+                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
+                enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
+            except Exception:
+                pass
+
+        try:
+            sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)
+        except Exception:
+            pass
+
+        return jsonify({
+            "status": "exito", 
+            "mensaje": "Pedido registrado correctamente", 
+            "id": nuevo_id,
+            "alertas": alertas_stock
+        }), 200
+
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+
+@app.route('/api/eliminar_venta', methods=['POST'])
+def eliminar_venta():
+    try:
+        datos = request.json or {}
+        num_fila = datos.get("fila")
+
+        if not num_fila:
+            return jsonify({"status": "error", "mensaje": "Fila no especificada"}), 400
+
+        sheet_ventas = conectar_sheet("Ventas")
+        row_data = sheet_ventas.row_values(int(num_fila))
+        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
+        
+        col_cant = 6
+        col_prod = 5
+        col_cli = 4
+        col_email = 10
+        col_tel = 11
+        col_dir = 12
+
+        for i, h in enumerate(headers, start=1):
+            if "cantidad" in h: col_cant = i
+            elif "producto" in h: col_prod = i
+            elif "cliente" in h: col_cli = i
+            elif "email" in h or "correo" in h: col_email = i
+            elif "tel" in h: col_tel = i
+            elif "direc" in h: col_dir = i
+
+        if col_cli - 1 < len(row_data):
+            cli_nom = row_data[col_cli - 1].strip()
+            cli_email = row_data[col_email - 1].strip() if col_email - 1 < len(row_data) else ""
+            cli_tel = row_data[col_tel - 1].strip() if col_tel - 1 < len(row_data) else ""
+            cli_dir = row_data[col_dir - 1].strip() if col_dir - 1 < len(row_data) else ""
+            sincronizar_cliente(cli_nom, cli_email, cli_tel, cli_dir)
+
+        cant_recuperar = 0
+        if col_cant - 1 < len(row_data):
+            val_cant = str(row_data[col_cant - 1]).strip()
+            if val_cant.isdigit():
+                cant_recuperar = int(val_cant)
+
+        desc_prod = row_data[col_prod - 1].strip() if col_prod - 1 < len(row_data) else ""
+
+        # 1. DEVOLVER CONGELADOS AL STOCK
+        if cant_recuperar > 0:
+            try:
+                sheet_stock = conectar_sheet("Productos_Stock")
+                celda_cong = obtener_celda_congelados(sheet_stock)
+                if celda_cong:
+                    f_cong = celda_cong.row
+                    headers_s = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
+                    col_stock = 4
+                    for idx, h in enumerate(headers_s, start=1):
+                        if "stock" in h:
+                            col_stock = idx
+                            break
+
+                    raw_st = sheet_stock.cell(f_cong, col_stock).value or "0"
+                    val_clean = str(raw_st).replace(",", ".").strip()
+                    st_actual_cong = int(float(val_clean)) if val_clean.replace(".", "", 1).isdigit() else 0
+                    
+                    nuevo_st_cong = st_actual_cong + cant_recuperar
+                    ejecutar_con_reintento(sheet_stock.update_cell, f_cong, col_stock, nuevo_st_cong)
+            except Exception as ec:
+                print(f"⚠️ Aviso devolviendo congelados al stock: {ec}", flush=True)
+
+        # 2. DEVOLVER EMPAQUES / CAJAS Y PAPEL AL STOCK DE INSUMOS
+        if cant_recuperar > 0:
+            modificar_stock_empaque(desc_prod, cant_recuperar, es_devolucion=True)
+
+        # 3. ELIMINAR REGISTRO DE VENTA
+        ejecutar_con_reintento(sheet_ventas.delete_rows, int(num_fila))
+
+        return jsonify({"status": "exito", "mensaje": "Pedido eliminado. Congelados y empaques devueltos correctamente al stock."}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
+# ==========================================
 # RUTAS DE LA APLICACIÓN
 # ==========================================
 @app.route('/')
 def inicio():
     return render_template('index.html')
 
+# ==========================================
+# HELPER Y RUTAS DE CONGELADOS (ÚNICA INSTANCIA)
+# ==========================================
+def obtener_celda_congelados(sheet_stock):
+    try:
+        celda = sheet_stock.find(re.compile(r"congelado", re.IGNORECASE))
+        if celda:
+            return celda
+    except Exception:
+        pass
+    
+    ejecutar_con_reintento(sheet_stock.append_row, ["CONG-001", "Croissants Congelados", 0, 0])
+    return sheet_stock.find(re.compile(r"congelado", re.IGNORECASE))
+
 @app.route('/api/stock/congelados', methods=['GET', 'POST'])
 def stock_congelados():
     try:
         sheet_stock = conectar_sheet("Productos_Stock")
+        celda = obtener_celda_congelados(sheet_stock)
         
-        celda = None
-        try:
-            celda = sheet_stock.find(re.compile(r"^Croissants Congelados$", re.IGNORECASE))
-        except Exception:
-            pass
-
         if not celda:
-            ejecutar_con_reintento(sheet_stock.append_row, ["CONG-001", "Croissants Congelados", 0, 0])
-            celda = sheet_stock.find(re.compile(r"^Croissants Congelados$", re.IGNORECASE))
+            return jsonify({"status": "error", "mensaje": "No se encontró el registro de congelados"}), 500
 
         fila = celda.row
-        raw_val = sheet_stock.cell(fila, 4).value or "0"
-        stock_actual = int(raw_val) if str(raw_val).isdigit() else 0
+        headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
+        col_stock = 4
+        for idx, h in enumerate(headers, start=1):
+            if "stock" in h:
+                col_stock = idx
+                break
+
+        raw_val = sheet_stock.cell(fila, col_stock).value or "0"
+        val_clean = str(raw_val).replace(",", ".").strip()
+        stock_actual = int(float(val_clean)) if val_clean.replace(".", "", 1).isdigit() else 0
 
         if request.method == 'POST':
             datos = request.json or {}
             cantidad_sumar = int(datos.get("cantidad", 0))
             nuevo_stock = max(0, stock_actual + cantidad_sumar)
-            ejecutar_con_reintento(sheet_stock.update_cell, fila, 4, nuevo_stock)
+            ejecutar_con_reintento(sheet_stock.update_cell, fila, col_stock, nuevo_stock)
             return jsonify({"status": "exito", "stock": nuevo_stock, "mensaje": "Stock congelado actualizado"})
 
         return jsonify({"status": "exito", "stock": stock_actual}), 200
@@ -672,6 +935,29 @@ def stock_congelados():
         print(f"❌ Error en /api/stock/congelados: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+@app.route('/api/stock/congelados/fijar', methods=['POST'])
+def fijar_stock_congelados():
+    try:
+        datos = request.json or {}
+        nuevo_stock = int(datos.get("stock", 0))
+        if nuevo_stock < 0:
+            return jsonify({"status": "error", "mensaje": "El stock no puede ser negativo"}), 400
+
+        sheet_stock = conectar_sheet("Productos_Stock")
+        celda = obtener_celda_congelados(sheet_stock)
+        if celda:
+            fila = celda.row
+            headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
+            col_stock = 4
+            for idx, h in enumerate(headers, start=1):
+                if "stock" in h:
+                    col_stock = idx
+                    break
+            ejecutar_con_reintento(sheet_stock.update_cell, fila, col_stock, nuevo_stock)
+            return jsonify({"status": "exito", "stock": nuevo_stock, "mensaje": "Stock de congelados actualizado"})
+        return jsonify({"status": "error", "mensaje": "No se encontró el registro de congelados"}), 404
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
 @app.route('/api/agenda', methods=['GET'])
 def obtener_agenda():
     try:
@@ -848,65 +1134,6 @@ def marcar_entregado():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-@app.route('/api/eliminar_venta', methods=['POST'])
-def eliminar_venta():
-    try:
-        datos = request.json or {}
-        num_fila = datos.get("fila")
-
-        if not num_fila:
-            return jsonify({"status": "error", "mensaje": "Fila no especificada"}), 400
-
-        sheet_ventas = conectar_sheet("Ventas")
-        row_data = sheet_ventas.row_values(int(num_fila))
-        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
-        
-        col_cant = 6
-        col_cli = 4
-        col_email = 10
-        col_tel = 11
-        col_dir = 12
-
-        for i, h in enumerate(headers, start=1):
-            if "cantidad" in h: col_cant = i
-            elif "cliente" in h: col_cli = i
-            elif "email" in h or "correo" in h: col_email = i
-            elif "tel" in h: col_tel = i
-            elif "direc" in h: col_dir = i
-
-        if col_cli - 1 < len(row_data):
-            cli_nom = row_data[col_cli - 1].strip()
-            cli_email = row_data[col_email - 1].strip() if col_email - 1 < len(row_data) else ""
-            cli_tel = row_data[col_tel - 1].strip() if col_tel - 1 < len(row_data) else ""
-            cli_dir = row_data[col_dir - 1].strip() if col_dir - 1 < len(row_data) else ""
-            sincronizar_cliente(cli_nom, cli_email, cli_tel, cli_dir)
-
-        cant_recuperar = 0
-        if col_cant - 1 < len(row_data):
-            val_cant = str(row_data[col_cant - 1]).strip()
-            if val_cant.isdigit():
-                cant_recuperar = int(val_cant)
-
-        if cant_recuperar > 0:
-            try:
-                sheet_stock = conectar_sheet("Productos_Stock")
-                celda_cong = sheet_stock.find(re.compile(r"^Croissants Congelados$", re.IGNORECASE))
-                if celda_cong:
-                    f_cong = celda_cong.row
-                    raw_st = sheet_stock.cell(f_cong, 4).value or "0"
-                    st_actual_cong = int(raw_st) if str(raw_st).isdigit() else 0
-                    
-                    nuevo_st_cong = st_actual_cong + cant_recuperar
-                    ejecutar_con_reintento(sheet_stock.update_cell, f_cong, 4, nuevo_st_cong)
-            except Exception as ec:
-                print(f"⚠️ Aviso devolviendo congelados al stock: {ec}", flush=True)
-
-        ejecutar_con_reintento(sheet_ventas.delete_rows, int(num_fila))
-
-        return jsonify({"status": "exito", "mensaje": "Pedido eliminado y stock devuelto correctamente"}), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-
 @app.route('/api/cliente/editar', methods=['POST'])
 def editar_cliente():
     try:
@@ -1058,85 +1285,6 @@ def actualizar_stock():
                 pass
 
         return jsonify({"status": "exito", "mensaje": "Stock y precio actualizados correctamente"}), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-
-@app.route('/api/venta', methods=['POST'])
-def registrar_venta():
-    try:
-        datos = request.json or {}
-        sheet_ventas = conectar_sheet("Ventas")
-        asegurar_encabezados_ventas(sheet_ventas)
-        sheet_stock = conectar_sheet("Productos_Stock")
-        
-        registros = get_clean_records(sheet_ventas)
-        nuevo_id = f"V-{len(registros) + 1:04d}"
-        
-        items = datos.get("items", [])
-        resumen_productos = []
-        total_unidades = sum(int(item.get("cantidad", 1)) for item in items)
-        
-        for idx_item, item in enumerate(items):
-            prod_nombre = item.get("producto")
-            cant = int(item.get("cantidad", 1))
-            
-            tot_pedido_flag = total_unidades if idx_item == 0 else 0
-            descontar_insumos_por_receta(prod_nombre, cant, tot_pedido_flag)
-            
-            jalea_str = " (Con Jalea)" if item.get("con_jalea") else ""
-            resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
-
-        if total_unidades > 0:
-            try:
-                celda_cong = sheet_stock.find(re.compile(r"^Croissants Congelados$", re.IGNORECASE))
-                if celda_cong:
-                    f_cong = celda_cong.row
-                    raw_st = sheet_stock.cell(f_cong, 4).value or "0"
-                    st_actual_cong = int(raw_st) if str(raw_st).isdigit() else 0
-                    nuevo_st_cong = max(0, st_actual_cong - total_unidades)
-                    ejecutar_con_reintento(sheet_stock.update_cell, f_cong, 4, nuevo_st_cong)
-            except Exception as ec:
-                print(f"Aviso descontando congelados: {ec}", flush=True)
-
-        descripcion_final = ", ".join(resumen_productos)
-        cliente_nombre = datos.get("cliente", "Consumidor Final")
-        email_cliente = str(datos.get("email", "")).strip()
-        telefono_cliente = str(datos.get("telefono", "")).strip()
-        direccion_cliente = str(datos.get("direccion", "")).strip()
-        fecha_entrega = datos.get("fecha_entrega", datos.get("fecha"))
-        monto_total = datos.get("monto_total", 0)
-        estado_pedido = datos.get("estado", "Pendiente")
-        
-        nueva_fila = [
-            nuevo_id,
-            datos.get("fecha"),
-            fecha_entrega,
-            cliente_nombre,
-            descripcion_final,
-            total_unidades,
-            monto_total,
-            estado_pedido,
-            datos.get("medio_pago", "-"),
-            email_cliente,
-            telefono_cliente,
-            direccion_cliente,
-            "Pendiente"
-        ]
-        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
-
-        if email_cliente:
-            try:
-                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
-                enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
-            except Exception:
-                pass
-
-        try:
-            sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)
-        except Exception:
-            pass
-
-        return jsonify({"status": "exito", "mensaje": "Pedido registrado correctamente", "id": nuevo_id}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
@@ -1360,6 +1508,71 @@ def registrar_gasto():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+# ==========================================
+# HELPER Y RUTAS DE CONGELADOS
+# ==========================================
+def obtener_celda_congelados(sheet_stock):
+    try:
+        celda = sheet_stock.find(re.compile(r"congelado", re.IGNORECASE))
+        if celda:
+            return celda
+    except Exception:
+        pass
+    
+    ejecutar_con_reintento(sheet_stock.append_row, ["CONG-001", "Croissants Congelados", 0, 0])
+    return sheet_stock.find(re.compile(r"congelado", re.IGNORECASE))
+
+@app.route('/api/stock/editar_insumo', methods=['POST'])
+def editar_insumo():
+    try:
+        datos = request.json or {}
+        insumo_nom = str(datos.get("insumo", "")).strip()
+        nuevo_stock = float(datos.get("stock", 0))
+        nueva_unidad = str(datos.get("unidad", "un")).strip()
+        nuevo_venc = str(datos.get("vencimiento", "")).strip() or "Sin fecha"
+
+        if not insumo_nom:
+            return jsonify({"status": "error", "mensaje": "Insumo no especificado"}), 400
+
+        sheet_insumos = obtener_o_crear_sheet_insumos()
+        registros = get_clean_records(sheet_insumos)
+
+        for idx, reg in enumerate(registros, start=2):
+            val_ins = get_field_val(reg, "Insumo", "Nombre")
+            if val_ins and val_ins.lower() == insumo_nom.lower():
+                ejecutar_con_reintento(
+                    sheet_insumos.update,
+                    f"B{idx}:D{idx}",
+                    [[nuevo_stock, nueva_unidad, nuevo_venc]]
+                )
+                return jsonify({"status": "exito", "mensaje": f"Insumo {insumo_nom} actualizado correctamente"}), 200
+
+        return jsonify({"status": "error", "mensaje": "Insumo no encontrado"}), 404
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/stock/eliminar_insumo', methods=['POST'])
+def eliminar_insumo():
+    try:
+        datos = request.json or {}
+        insumo_nom = str(datos.get("insumo", "")).strip()
+
+        if not insumo_nom:
+            return jsonify({"status": "error", "mensaje": "Insumo no especificado"}), 400
+
+        sheet_insumos = obtener_o_crear_sheet_insumos()
+        registros = get_clean_records(sheet_insumos)
+
+        for idx, reg in enumerate(registros, start=2):
+            val_ins = get_field_val(reg, "Insumo", "Nombre")
+            if val_ins and val_ins.lower() == insumo_nom.lower():
+                ejecutar_con_reintento(sheet_insumos.delete_rows, idx)
+                return jsonify({"status": "exito", "mensaje": f"Insumo {insumo_nom} eliminado correctamente"}), 200
+
+        return jsonify({"status": "error", "mensaje": "Insumo no encontrado"}), 404
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 # ==========================================
 # RUTA SUMAR STOCK (PROTEGIDA CONTRA ERRORES 429)
 # ==========================================

@@ -237,12 +237,23 @@ function mostrarCroissLoader() {
             popup: 'croiss-swal-popup-transparent'
         },
         didOpen: () => {
+            // Marcamos la ventana emergente como un loader activo
+            const popup = Swal.getPopup();
+            if (popup) popup.setAttribute('data-is-loader', 'true');
             iniciarAnimacionCanvasCroissant();
         },
         willClose: () => {
             if (croissAnimFrameId) cancelAnimationFrame(croissAnimFrameId);
         }
     });
+}
+
+// Función auxiliar para cerrar únicamente el loader sin tocar modales abiertos por el usuario
+function cerrarCroissLoaderSeguro() {
+    const popup = Swal.getPopup();
+    if (popup && popup.getAttribute('data-is-loader') === 'true') {
+        Swal.close();
+    }
 }
 
 function iniciarAnimacionCanvasCroissant() {
@@ -531,9 +542,13 @@ function renderizarMenuYStock() {
     }
     if (lista) lista.innerHTML = '';
 
+    let productosRenderizados = 0;
+
     catalogoProductos.forEach(prod => {
         const nombreProd = prod.Nombre || prod.Producto || prod.nombre || prod.producto || prod.Croissant || '';
         if (!nombreProd || nombreProd.toLowerCase().includes('congelado')) return;
+
+        productosRenderizados++;
 
         if (select) {
             const opt = document.createElement('option');
@@ -557,6 +572,10 @@ function renderizarMenuYStock() {
             lista.appendChild(div);
         }
     });
+
+    if (lista && productosRenderizados === 0) {
+        lista.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay productos cargados en el menú.</p>';
+    }
 
     if (select && seleccionPrevia) {
         const existe = Array.from(select.options).some(o => o.value === seleccionPrevia);
@@ -1401,8 +1420,24 @@ function cambiarSegmentoStock(segmento) {
     document.getElementById('subSecStockMateriaPrima').classList.toggle('active', segmento === 'materiaprima');
     document.getElementById('subSecStockEmpaque').classList.toggle('active', segmento === 'empaque');
 
-    if (segmento === 'materiaprima' || segmento === 'empaque') {
+    if (segmento === 'congelados') {
+        cargarStockCongelados();
+    } else if (segmento === 'materiaprima' || segmento === 'empaque') {
         cargarInsumosYGastos();
+    }
+}
+
+async function cargarStockCongelados() {
+    try {
+        const resCong = await fetch('/api/stock/congelados');
+        const dataCong = await resCong.json();
+        if (dataCong.status === 'exito') {
+            const elCong = document.getElementById('cantCroissCongelados');
+            if (elCong) elCong.innerText = `${dataCong.stock} un.`;
+        }
+        await cargarStock(true);
+    } catch (err) {
+        console.error("Error al cargar congelados:", err);
     }
 }
 
@@ -1435,14 +1470,21 @@ async function cargarInsumosYGastos() {
 
                     const esEmpaque = PalabrasEmpaque.some(p => nombreInsumo.toLowerCase().includes(p));
 
+                    const nomEscapado = nombreInsumo.replace(/'/g, "\\'");
+                    const vencEscapado = vencFecha.replace(/'/g, "\\'");
+
                     const itemHtml = `
-                        <div class="ios-cliente-row compact" style="margin-bottom: 8px;">
+                        <div class="ios-cliente-row compact" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <strong>${nombreInsumo}</strong><br>
                                 <small style="color:var(--text-muted);">${vencFecha !== 'Sin fecha' ? 'Vence: ' + vencFecha : 'Control de Stock'}</small>
                             </div>
-                            <div style="text-align: right;">
+                            <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                                 <strong style="color:var(--accent); font-size:1.05rem;">${stockVal} ${unidadVal}</strong>
+                                <div style="display: flex; gap: 4px;">
+                                    <button type="button" class="btn-jalea-chip active" style="font-size:0.7rem; padding: 2px 8px; margin:0;" onclick="abrirModalEditarInsumo('${nomEscapado}', ${stockVal}, '${unidadVal}', '${vencEscapado}')">Editar</button>
+                                    <button type="button" class="btn-remove" style="font-size:0.68rem; padding: 2px 6px;" onclick="eliminarInsumoDirecto('${nomEscapado}')">X</button>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -2044,14 +2086,13 @@ function abrirModalSumarStock(tipoCategoria) {
     const esEmpaque = tipoCategoria === 'Empaque';
 
     const opcionesEmpaque = `
-        <option value="Caja 6 Croiss (Ventana)">Caja 6 Croiss (Ventana)</option>
-        <option value="Caja 6 Croiss (Ciega)">Caja 6 Croiss (Ciega)</option>
-        <option value="Caja 3 Croiss (Ventana)">Caja 3 Croiss (Ventana)</option>
-        <option value="Caja 3 Croiss (Ciega)">Caja 3 Croiss (Ciega)</option>
-        <option value="Papel Manteca">Papel Manteca</option>
-        <option value="Rollo Film">Rollo Film</option>
-        <option value="Bolsas">Bolsas</option>
-    `;
+		<option value="Caja X6">Caja X6 (6 croiss)</option>
+		<option value="Caja X3">Caja X3 (3 croiss)</option>
+		<option value="Caja X1">Caja X1 (1 croiss)</option>
+		<option value="Papel Manteca">Papel Manteca</option>
+		<option value="Rollo Film">Rollo Film</option>
+		<option value="Bolsas">Bolsas</option>
+	`;
 
     const opcionesMateriaPrima = `
         <option value="Harina 000">Harina 000</option>
@@ -2315,10 +2356,29 @@ if (formFinalizarPedido) {
                 if(document.getElementById('vFecha')) document.getElementById('vFecha').value = hoy;
                 if(document.getElementById('vFechaEntrega')) document.getElementById('vFechaEntrega').value = hoy;
 
-                mostrarCroissExito(
-                    'Pedido Registrado!', 
-                    emailCliente ? 'Se envio el correo de confirmacion al cliente.' : 'El pedido se guardo correctamente en la agenda.'
-                );
+                let msjExito = emailCliente ? 'Se envió el correo de confirmación al cliente.' : 'El pedido se guardó correctamente en la agenda.';
+                
+                // MÓDULO DE ALERTA DE STOCK
+                if (data.alertas && data.alertas.length > 0) {
+                    let alertasHtml = data.alertas.map(a => `<li>${a}</li>`).join('');
+                    Swal.fire({
+                        title: 'Pedido Registrado ✅',
+                        html: `
+                            <p style="font-size:0.88rem; color:var(--text-muted);">${msjExito}</p>
+                            <div style="background:#FEF2F2; border:1px solid #FCA5A5; border-radius:12px; padding:12px; margin-top:16px; text-align:left;">
+                                <strong style="color:#DC2626; font-size:0.85rem;">⚠️ STOCK BAJO:</strong>
+                                <ul style="color:#991B1B; font-size:0.8rem; margin:6px 0 0 16px; padding:0;">
+                                    ${alertasHtml}
+                                </ul>
+                            </div>
+                        `,
+                        icon: 'warning',
+                        confirmButtonText: 'Entendido',
+                        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                    });
+                } else {
+                    mostrarCroissExito('Pedido Registrado!', msjExito);
+                }
 
                 if (typeof cargarAgenda === 'function') cargarAgenda();
                 if (typeof cargarStock === 'function') cargarStock();
@@ -2370,6 +2430,161 @@ if (formGasto) {
             }
         } catch (err) {
             Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+        }
+    });
+}
+
+// ==========================================
+// FUNCIONES DE EDICIÓN Y ELIMINACIÓN DE STOCK
+// ==========================================
+function abrirModalEditarCongeladosDirecto() {
+    const stockActualTxt = document.getElementById('cantCroissCongelados') ? document.getElementById('cantCroissCongelados').innerText.replace(' un.', '').trim() : '0';
+    
+    Swal.fire({
+        title: 'Corregir Stock de Congelados',
+        html: `
+            <div style="text-align: left; margin-top: 10px;">
+                <label style="display:block; font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase;">
+                    Cantidad real exacta en freezer:
+                </label>
+                <input type="number" id="inputFijarCongelados" class="croiss-swal-input" value="${stockActualTxt}" min="0">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Cantidad Real',
+        cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
+        preConfirm: () => {
+            const val = document.getElementById('inputFijarCongelados').value;
+            if (val === '' || parseInt(val) < 0) {
+                Swal.showValidationMessage('Ingresa una cantidad válida.');
+                return false;
+            }
+            return parseInt(val);
+        }
+    }).then(async (res) => {
+        if (res.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const r = await fetch('/api/stock/congelados/fijar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ stock: res.value })
+                });
+                const data = await r.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Stock Corregido', `Congelados ajustados a ${res.value} unidades.`);
+                    document.getElementById('cantCroissCongelados').innerText = `${data.stock} un.`;
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo actualizar el stock', 'error');
+            }
+        }
+    });
+}
+
+function abrirModalEditarInsumo(nombreInsumo, stockActual, unidadActual, vencActual) {
+    Swal.fire({
+        title: `Editar ${nombreInsumo}`,
+        html: `
+            <div style="text-align: left; margin-top: 10px; font-size:0.85rem;">
+                <label style="font-weight:700; display:block; margin-bottom:4px;">Stock Actual Exacto:</label>
+                <input type="number" id="editInsumoStock" class="swal2-input" value="${stockActual}" step="0.1" style="margin:0 0 10px 0; width:100%;">
+
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <label style="font-weight:700; display:block; margin-bottom:4px;">Unidad:</label>
+                        <select id="editInsumoUnidad" class="swal2-input" style="margin:0; width:100%;">
+                            <option value="un" ${unidadActual === 'un' ? 'selected' : ''}>un (Unidades)</option>
+                            <option value="kg" ${unidadActual === 'kg' ? 'selected' : ''}>kg (Kilos)</option>
+                            <option value="gr" ${unidadActual === 'gr' ? 'selected' : ''}>gr (Gramos)</option>
+                            <option value="ml" ${unidadActual === 'ml' ? 'selected' : ''}>ml (Mililitros)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label style="font-weight:700; display:block; margin-bottom:4px;">Vencimiento:</label>
+                <input type="date" id="editInsumoVenc" class="swal2-input" value="${vencActual !== 'Sin fecha' ? vencActual : ''}" style="margin:0; width:100%;">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Cambios',
+        cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
+        preConfirm: () => {
+            const st = parseFloat(document.getElementById('editInsumoStock').value);
+            if (isNaN(st) || st < 0) {
+                Swal.showValidationMessage('Ingresa un stock válido.');
+                return false;
+            }
+            return {
+                insumo: nombreInsumo,
+                stock: st,
+                unidad: document.getElementById('editInsumoUnidad').value,
+                vencimiento: document.getElementById('editInsumoVenc').value
+            };
+        }
+    }).then(async (res) => {
+        if (res.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const r = await fetch('/api/stock/editar_insumo', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(res.value)
+                });
+                const data = await r.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Insumo Actualizado', data.mensaje);
+                    cargarInsumosYGastos();
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo guardar la modificación', 'error');
+            }
+        }
+    });
+}
+
+function eliminarInsumoDirecto(nombreInsumo) {
+    Swal.fire({
+        title: `¿Eliminar ${nombreInsumo}?`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted);">Se eliminará este insumo de la lista de stock permanente.</p>`,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-btn-danger', cancelButton: 'croiss-swal-cancel' }
+    }).then(async (res) => {
+        if (res.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const r = await fetch('/api/stock/eliminar_insumo', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ insumo: nombreInsumo })
+                });
+                const data = await r.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Insumo Eliminado', `${nombreInsumo} fue removido.`);
+                    cargarInsumosYGastos();
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo eliminar el insumo', 'error');
+            }
         }
     });
 }
