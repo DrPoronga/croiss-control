@@ -1712,9 +1712,12 @@ function renderizarListaDirectorio(lista) {
             e.preventDefault();
             verDetalleCliente(c);
         };
+
+        const idTag = c.id_cliente ? `<small style="color:var(--accent); font-weight:700; margin-right:6px;">[${c.id_cliente}]</small>` : '';
+
         div.innerHTML = `
             <div>
-                <strong>${c.nombre || 'Sin nombre'}</strong><br>
+                <strong>${idTag}${c.nombre || 'Sin nombre'}</strong><br>
                 <small style="color:var(--text-muted);">${c.total_pedidos || 0} pedido(s) - ${c.total_croissants || 0} croiss.</small>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
@@ -1735,7 +1738,10 @@ function verDetalleCliente(clienteObj) {
     if (secDetalle) secDetalle.classList.add('active');
 
     const elNom = document.getElementById('detClienteNombre');
-    if (elNom) elNom.innerText = clienteObj.nombre || 'Cliente';
+    if (elNom) {
+        const idBadge = clienteObj.id_cliente ? `<span style="font-size:0.75rem; background:#FAF0EB; color:var(--accent); border:1px solid #F7DFC8; padding:3px 8px; border-radius:10px; font-weight:800; margin-left:8px; vertical-align:middle;">${clienteObj.id_cliente}</span>` : '';
+        elNom.innerHTML = `${clienteObj.nombre || 'Cliente'}${idBadge}`;
+    }
 
     const elStats = document.getElementById('detClienteStats');
     if (elStats) {
@@ -1858,6 +1864,7 @@ function abrirModalEditarCliente() {
                 return false;
             }
             return {
+                id_cliente: clienteObj.id_cliente || '',
                 nombre_original: clienteObj.nombre,
                 nombre: nomNuevo,
                 telefono: document.getElementById('editTelInput').value.trim(),
