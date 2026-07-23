@@ -1018,6 +1018,12 @@ function generarPDFDia(fecha) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
+    // Limpiador de emojis para evitar corrupción de texto en la fuente estándar de jsPDF
+    const limpiarEmojis = (texto) => {
+        if (!texto) return '';
+        return texto.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
+    };
+
     doc.setFont("helvetica", "bold");
     doc.setFontSize(18);
     doc.setTextColor(200, 109, 40);
@@ -1026,16 +1032,16 @@ function generarPDFDia(fecha) {
     doc.setFontSize(11);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(45, 30, 24);
-    doc.text(`Fecha: ${diaData.nombre_dia} (${fecha}) | Total Croissants: ${diaData.total_croissants} un.`, 14, 28);
+    doc.text(`Fecha: ${limpiarEmojis(diaData.nombre_dia)} (${fecha}) | Total Croissants: ${diaData.total_croissants} un.`, 14, 28);
     
     let bodyPedidos = [];
     diaData.pedidos.forEach(p => {
-        let contactoStr = p.cliente || 'Cliente';
-        if(p.telefono) contactoStr += `\nTel: ${p.telefono}`;
-        if(p.direccion) contactoStr += `\nDir: ${p.direccion}`;
+        let contactoStr = limpiarEmojis(p.cliente || 'Cliente');
+        if(p.telefono) contactoStr += `\nTel: ${limpiarEmojis(p.telefono)}`;
+        if(p.direccion) contactoStr += `\nDir: ${limpiarEmojis(p.direccion)}`;
 
-        let detalleStr = p.descripcion || '-';
-        if(p.notas) detalleStr += `\n📝 NOTA: ${p.notas}`;
+        let detalleStr = limpiarEmojis(p.descripcion || '-');
+        if(p.notas) detalleStr += `\nNOTA: ${limpiarEmojis(p.notas)}`;
 
         bodyPedidos.push([contactoStr, detalleStr, (p.cantidad || 0) + ' un.']);
     });
@@ -1062,7 +1068,7 @@ function generarPDFDia(fecha) {
         }
     });
     
-    let bodyResumen = Object.keys(resumenCantidades).map(sabor => [sabor, resumenCantidades[sabor] + ' un.']);
+    let bodyResumen = Object.keys(resumenCantidades).map(sabor => [limpiarEmojis(sabor), resumenCantidades[sabor] + ' un.']);
     
     doc.autoTable({
         startY: doc.lastAutoTable.finalY + 12, head: [['Resumen Total de Sabores (A Hornear)', 'Total Unidades']],
@@ -1377,30 +1383,41 @@ async function cargarInsumosYGastos() {
 }
 
 function abrirModalEditarCongeladosDirecto() {
-    const stockActualTxt = document.getElementById('cantCroissCongelados') ? document.getElementById('cantCroissCongelados').innerText.replace(' un.', '').trim() : '0';
-    
     Swal.fire({
-        title: 'Corregir Stock de Congelados',
-        html: `<div style="text-align: left; margin-top: 10px;"><label style="display:block; font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase;">Cantidad real exacta en freezer:</label><input type="number" id="inputFijarCongelados" class="croiss-swal-input" value="${stockActualTxt}" min="0"></div>`,
-        showCancelButton: true, confirmButtonText: 'Guardar Cantidad Real', cancelButtonText: 'Cancelar',
+        title: 'Fijar Masas en Heladera',
+        html: `
+            <div style="text-align: left; margin-top: 10px; font-size: 0.88rem;">
+                <label style="font-weight: 700; display: block; margin-bottom: 4px; color: var(--text-main);">🥣 Cantidad total de masas en la heladera:</label>
+                <input type="number" id="inputFijarMasas" class="croiss-swal-input" value="1" min="0" placeholder="Ej: 2">
+                <small style="color: var(--text-muted); display: block; margin-top: 2px;">Recordá que cada masa habilita hasta 10 croissants.</small>
+            </div>
+        `,
+        showCancelButton: true, confirmButtonText: 'Guardar Masas', cancelButtonText: 'Cancelar',
         customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
         preConfirm: () => {
-            const val = document.getElementById('inputFijarCongelados').value;
-            if (val === '' || parseInt(val) < 0) { Swal.showValidationMessage('Ingresa una cantidad válida.'); return false; }
-            return parseInt(val);
+            const val = parseInt(document.getElementById('inputFijarMasas').value);
+            if (isNaN(val) || val < 0) {
+                Swal.showValidationMessage('Ingresa una cantidad válida mayor o igual a 0.');
+                return false;
+            }
+            return val;
         }
     }).then(async (res) => {
         if (res.isConfirmed) {
             const tInicio = Date.now();
             mostrarCroissLoader();
             try {
-                const r = await fetch('/api/stock/congelados/fijar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ stock: res.value }) });
+                const r = await fetch('/api/stock/congelados/fijar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ masas: res.value })
+                });
                 const data = await r.json();
                 await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
-                    mostrarCroissExito('Stock Corregido', `Congelados ajustados a ${res.value} unidades.`);
-                    document.getElementById('cantCroissCongelados').innerText = `${data.stock} un.`;
+                    actualizarUIStockCongelados(data);
+                    mostrarCroissExito('Stock Fijado', `Se fijaron ${res.value} masa(s) (${data.croissants} croissants disponibles).`);
                 } else { Swal.fire('Error', data.mensaje, 'error'); }
             } catch (err) { Swal.fire('Error', 'No se pudo actualizar el stock', 'error'); }
         }
@@ -1536,14 +1553,14 @@ function abrirModalSumarStock(tipoCategoria) {
 
 function abrirModalSumarCongelados() {
     Swal.fire({
-        title: 'Agregar Producción de Masas',
+        title: 'Agregar Masas Listas',
         customClass: { popup: 'croiss-swal-popup', title: 'croiss-swal-title', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
         buttonsStyling: false,
-        html: `<div style="text-align: left; margin-top: 14px;"><label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Cantidad de masas preparadas</label><input type="number" id="inputSumarCongelados" class="croiss-swal-input" value="20" min="1" placeholder="Ej: 20"></div>`,
-        showCancelButton: true, confirmButtonText: '+ Sumar al Stock', cancelButtonText: 'Cancelar', focusConfirm: false,
+        html: `<div style="text-align: left; margin-top: 14px;"><label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Cantidad de masas preparadas (1 masa = 10 croiss)</label><input type="number" id="inputSumarMasas" class="croiss-swal-input" value="1" min="1" placeholder="Ej: 2"></div>`,
+        showCancelButton: true, confirmButtonText: '+ Sumar Masas', cancelButtonText: 'Cancelar', focusConfirm: false,
         preConfirm: () => {
-            const cant = document.getElementById('inputSumarCongelados').value;
-            if (!cant || parseInt(cant) <= 0) { Swal.showValidationMessage('Ingresá una cantidad válida.'); return false; }
+            const cant = document.getElementById('inputSumarMasas').value;
+            if (!cant || parseInt(cant) <= 0) { Swal.showValidationMessage('Ingresá una cantidad de masas válida.'); return false; }
             return parseInt(cant);
         }
     }).then(async (result) => {
@@ -1551,13 +1568,13 @@ function abrirModalSumarCongelados() {
             const tInicio = Date.now();
             mostrarCroissLoader();
             try {
-                const res = await fetch('/api/stock/congelados', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ cantidad: result.value }) });
+                const res = await fetch('/api/stock/congelados', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masas: result.value }) });
                 const data = await res.json();
                 await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
-                    mostrarCroissExito('Producción Agregada!', `Se sumaron +${result.value} masas al stock congelado.`);
-                    document.getElementById('cantCroissCongelados').innerText = `${data.stock} un.`;
+                    actualizarUIStockCongelados(data);
+                    mostrarCroissExito('Masas Agregadas!', `Se sumaron +${result.value} masa(s) (+${result.value * 10} croissants habilitados).`);
                 } else { Swal.fire('Error', data.mensaje, 'error'); }
             } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
         }
@@ -1983,7 +2000,7 @@ function renderizarMenuYStock() {
     let productosRenderizados = 0;
     catalogoProductos.forEach(prod => {
         const nombreProd = obtenerNombreDesdeObjeto(prod);
-        if (!nombreProd || nombreProd.toLowerCase().includes('congelado')) return;
+        if (!nombreProd || nombreProd.toLowerCase().includes('congelado') || nombreProd.toLowerCase().includes('sobrevendido')) return;
 
         productosRenderizados++;
         if (select) {
@@ -2156,3 +2173,76 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarStock();
     toggleCamposMateriaPrima();
 });
+
+function actualizarUIStockCongelados(data) {
+    const elCong = document.getElementById('cantCroissCongelados');
+    const elSobrevendidos = document.getElementById('cantSobrevendidos');
+    const elMasas = document.getElementById('cantMasasPendientes');
+    const boxContainer = document.getElementById('boxSobrevendidosContainer');
+    const lblTitulo = document.getElementById('lblSobrevendidosTitulo');
+
+    const croiss = data.croissants !== undefined ? data.croissants : (data.stock || 0);
+    const masas = data.masas !== undefined ? data.masas : Math.round((croiss / 10.0) * 10) / 10;
+
+    if (elCong) elCong.innerText = `${croiss} un.`;
+    if (elSobrevendidos) elSobrevendidos.innerText = `${masas} masas`;
+    if (elMasas) elMasas.innerText = `(Capacidad: ${croiss} croiss)`;
+
+    if (boxContainer) {
+        if (croiss <= 0) {
+            boxContainer.style.background = '#FEF2F2';
+            boxContainer.style.borderColor = '#FCA5A5';
+            if (lblTitulo) {
+                lblTitulo.style.color = '#991B1B';
+                lblTitulo.innerText = 'Sin Capacidad 🚫';
+            }
+            if (elSobrevendidos) elSobrevendidos.style.color = '#DC2626';
+            if (elMasas) elMasas.style.color = '#B91C1C';
+        } else {
+            boxContainer.style.background = '#F0FDF4';
+            boxContainer.style.borderColor = '#DCFCE7';
+            if (lblTitulo) {
+                lblTitulo.style.color = '#166534';
+                lblTitulo.innerText = 'Capacidad Disponible 🥣';
+            }
+            if (elSobrevendidos) elSobrevendidos.style.color = '#15803D';
+            if (elMasas) elMasas.style.color = '#16A34A';
+        }
+    }
+}
+
+async function cargarStockCongelados() {
+    try {
+        const resCong = await fetch('/api/stock/congelados');
+        const dataCong = await resCong.json();
+        if (dataCong.status === 'exito') {
+            actualizarUIStockCongelados(dataCong);
+        }
+        await cargarStock(true);
+    } catch (err) {
+        console.error("Error al cargar congelados:", err);
+    }
+}
+
+async function cargarTodoElStock() {
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
+    try {
+        const resCong = await fetch('/api/stock/congelados');
+        const dataCong = await resCong.json();
+        if (dataCong.status === 'exito') {
+            actualizarUIStockCongelados(dataCong);
+        }
+
+        await cargarStock(true);
+        await cargarInsumosYGastos();
+
+        await esperarAnimacionMinima(tInicio, 2200);
+        cerrarCroissLoaderSeguro();
+    } catch (err) {
+        cerrarCroissLoaderSeguro();
+        console.error("Error al cargar todo el stock:", err);
+    }
+}
+
