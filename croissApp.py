@@ -254,28 +254,21 @@ def eliminar_cliente():
     try:
         datos = request.json or {}
         nombre_cliente = str(datos.get("nombre", "")).strip()
-
-        if not nombre_cliente:
-            return jsonify({"status": "error", "mensaje": "Nombre de cliente no especificado"}), 400
+        id_cliente = str(datos.get("id_cliente", "")).strip()
 
         sheet_crm = obtener_o_crear_sheet_clientes()
         data_crm = sheet_crm.get_all_values()
         
         if data_crm and len(data_crm) >= 2:
-            headers = [str(h).strip().lower() for h in data_crm[0]]
-            col_nom = 1
-            for i, h in enumerate(headers, start=1):
-                if "nombre" in h or "cliente" in h:
-                    col_nom = i
-                    break
-            
             for idx, row in enumerate(data_crm[1:], start=2):
-                val_nom = row[col_nom - 1] if col_nom - 1 < len(row) else ""
-                if val_nom.strip().lower() == nombre_cliente.lower():
+                val_id = row[0].strip() if len(row) > 0 else ""
+                val_nom = row[1].strip() if len(row) > 1 else ""
+                
+                if (id_cliente and val_id.lower() == id_cliente.lower()) or (nombre_cliente and val_nom.lower() == nombre_cliente.lower()):
                     ejecutar_con_reintento(sheet_crm.delete_rows, idx)
                     break
 
-        return jsonify({"status": "exito", "mensaje": "Cliente eliminado correctamente del directorio"}), 200
+        return jsonify({"status": "exito", "mensaje": "Cliente eliminado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
@@ -1138,36 +1131,52 @@ def marcar_entregado():
 def editar_cliente():
     try:
         datos = request.json or {}
+        id_cliente = str(datos.get("id_cliente", "")).strip()
         nombre_original = str(datos.get("nombre_original", datos.get("nombre", ""))).strip()
         nuevo_nombre = str(datos.get("nombre", "")).strip() or nombre_original
         nuevo_email = str(datos.get("email", "")).strip()
         nuevo_telefono = str(datos.get("telefono", "")).strip()
         nueva_direccion = str(datos.get("direccion", "")).strip()
 
-        if not nombre_original:
-            return jsonify({"status": "error", "mensaje": "Nombre original no especificado"}), 400
+        if not nombre_original and not id_cliente:
+            return jsonify({"status": "error", "mensaje": "Identificador de cliente no especificado"}), 400
 
+        # 1. Actualizar en el CRM (Pestaña Clientes) buscando por ID o por Nombre Original
+        sheet_crm = obtener_o_crear_sheet_clientes()
+        data_crm = sheet_crm.get_all_values()
+        
+        if data_crm and len(data_crm) >= 2:
+            for idx, row in enumerate(data_crm[1:], start=2):
+                val_id = row[0].strip() if len(row) > 0 else ""
+                val_nom = row[1].strip() if len(row) > 1 else ""
+                
+                # Coincidencia exacta por ID o por el Nombre Original
+                if (id_cliente and val_id.lower() == id_cliente.lower()) or (val_nom.lower() == nombre_original.lower()):
+                    id_final = val_id or id_cliente or f"CLI-{idx-1:04d}"
+                    ejecutar_con_reintento(
+                        sheet_crm.update,
+                        f"A{idx}:E{idx}",
+                        [[id_final, nuevo_nombre, nuevo_email, nuevo_telefono, nueva_direccion]]
+                    )
+                    break
+
+        # 2. Actualizar el nombre y contacto en el historial de Ventas
         sheet_ventas = conectar_sheet("Ventas")
-        data = sheet_ventas.get_all_values()
-        if data and len(data) >= 2:
-            headers = [str(h).strip().lower() for h in data[0]]
+        data_v = sheet_ventas.get_all_values()
+        if data_v and len(data_v) >= 2:
+            headers = [str(h).strip().lower() for h in data_v[0]]
             col_cliente = headers.index("cliente") + 1 if "cliente" in headers else 4
             
-            for idx, row in enumerate(data[1:], start=2):
+            for idx, row in enumerate(data_v[1:], start=2):
                 val_cli = row[col_cliente - 1] if col_cliente - 1 < len(row) else ""
                 if val_cli.strip().lower() == nombre_original.lower():
                     ejecutar_con_reintento(sheet_ventas.update, f"D{idx}", [[nuevo_nombre]])
                     ejecutar_con_reintento(sheet_ventas.update, f"J{idx}:L{idx}", [[nuevo_email, nuevo_telefono, nueva_direccion]])
 
-        try:
-            sincronizar_cliente(nuevo_nombre, nuevo_email, nuevo_telefono, nueva_direccion)
-        except Exception as e:
-            print(f"Aviso actualizando cliente en CRM: {e}", flush=True)
-
         return jsonify({"status": "exito", "mensaje": "Cliente actualizado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/cambiar_estado_pago', methods=['POST'])
 def cambiar_estado_pago():
     try:
@@ -1330,8 +1339,9 @@ def obtener_clientes():
         sheet_crm = obtener_o_crear_sheet_clientes()
         crm_records = get_clean_records(sheet_crm)
         
-        # 1. Procesar directorio maestro CRM (Lectura pura en memoria RAM)
+        # 1. Procesar directorio maestro CRM
         for c in crm_records:
+            id_cli = get_field_val(c, "ID Cliente", "ID", "Id Cliente", "Id").strip()
             nom = get_field_val(c, "Nombre", "Cliente", "Nombre Cliente").strip()
             email = get_field_val(c, "Email", "Correo").strip()
             tel = get_field_val(c, "Telefono", "Teléfono", "Tel").strip()
@@ -1346,6 +1356,7 @@ def obtener_clientes():
             key_norm = nom.lower()
 
             clientes_historico[key_norm] = {
+                "id_cliente": id_cli,
                 "nombre": nom,
                 "email": email,
                 "telefono": tel,
@@ -1398,6 +1409,7 @@ def obtener_clientes():
 
             if key_norm not in clientes_historico:
                 clientes_historico[key_norm] = {
+                    "id_cliente": "",
                     "nombre": cliente_nombre,
                     "email": email_c,
                     "telefono": tel_c,
@@ -1407,13 +1419,6 @@ def obtener_clientes():
                     "total_pedidos": 0,
                     "historial": []
                 }
-            else:
-                if email_c and not clientes_historico[key_norm]["email"]:
-                    clientes_historico[key_norm]["email"] = email_c
-                if tel_c and not clientes_historico[key_norm]["telefono"]:
-                    clientes_historico[key_norm]["telefono"] = tel_c
-                if dir_c and not clientes_historico[key_norm]["direccion"]:
-                    clientes_historico[key_norm]["direccion"] = dir_c
 
             clientes_historico[key_norm]["total_gastado"] += monto
             clientes_historico[key_norm]["total_croissants"] += cant
@@ -1422,16 +1427,11 @@ def obtener_clientes():
 
             if fecha_norm and fecha_norm.startswith(mes_filtro):
                 if key_norm not in clientes_mes:
-                    clientes_mes[key_norm] = {
-                        "nombre": cliente_nombre,
-                        "email": email_c,
-                        "telefono": tel_c,
-                        "direccion": dir_c,
-                        "total_gastado": 0.0,
-                        "total_croissants": 0,
-                        "total_pedidos": 0,
-                        "historial": []
-                    }
+                    clientes_mes[key_norm] = clientes_historico[key_norm].copy()
+                    clientes_mes[key_norm]["total_gastado"] = 0.0
+                    clientes_mes[key_norm]["total_croissants"] = 0
+                    clientes_mes[key_norm]["total_pedidos"] = 0
+                    clientes_mes[key_norm]["historial"] = []
 
                 clientes_mes[key_norm]["total_gastado"] += monto
                 clientes_mes[key_norm]["total_croissants"] += cant

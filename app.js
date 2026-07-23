@@ -35,17 +35,15 @@ async function cargarBalance() {
         const res = await fetch(url);
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1800);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if(data.status === 'exito') {
-            // 1. DATO CLAVE: CROISSANTS VENDIDOS (MES VS HISTÓRICO)
             const elCroissMes = document.getElementById('bTotalCroissMes');
             const elCroissHist = document.getElementById('bTotalCroissHist');
             if (elCroissMes) elCroissMes.innerText = `${data.total_croissants_mes} un.`;
             if (elCroissHist) elCroissHist.innerText = `${data.total_croissants_historico} un.`;
 
-            // 2. FINANZAS Y DESGLOSE DE GASTOS
             document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
             document.getElementById('bCostos').innerText = `$${data.costos_produccion}`;
             document.getElementById('bGastos').innerText = `$${data.gastos_varios}`;
@@ -57,7 +55,6 @@ async function cargarBalance() {
 
             renderizarGraficoGastosCategoria(data.gastos_por_categoria);
 
-            // 3. PROYECCIÓN / FUTUROLOGÍA FIN DE MES
             const proy = data.proyeccion;
             const txtCroiss = document.getElementById('txtProyeccionCroiss');
             const txtIng = document.getElementById('txtProyeccionIngresos');
@@ -70,7 +67,6 @@ async function cargarBalance() {
                 txtIng.innerText = `Total final del período cerrado`;
             }
 
-            // 4. TOP COMPRADORES (MES VS HISTÓRICO)
             const contTop = document.getElementById('boxTopClientesBalance');
             if (contTop && data.top_clientes) {
                 const topM = data.top_clientes.mes;
@@ -92,7 +88,6 @@ async function cargarBalance() {
                 `;
             }
 
-            // 5. STATS JALEA & SABORES
             document.getElementById('txtPorcentajeJalea').innerText = `${data.stats_jalea.porcentaje}% (${data.stats_jalea.con_jalea} un.)`;
 
             const contRank = document.getElementById('listaRankingSabores');
@@ -121,7 +116,6 @@ async function cargarBalance() {
             renderizarGraficoDias(data.dias_semana);
             renderizarGraficoEvolucionLinea(data.historico_meses);
 
-            // 6. HISTORIAL DE MESES PASADOS
             const contEvolucion = document.getElementById('listaEvolucionMeses');
             if (contEvolucion) {
                 contEvolucion.innerHTML = '';
@@ -152,7 +146,6 @@ async function cargarBalance() {
     }
 }
 
-// GRÁFICO 1: Desglose de Gastos por Categoría
 function renderizarGraficoGastosCategoria(gastosCat) {
     const ctx = document.getElementById('chartGastosCatCanvas');
     if (!ctx) return;
@@ -176,7 +169,6 @@ function renderizarGraficoGastosCategoria(gastosCat) {
     });
 }
 
-// GRÁFICO 2: Línea Temporal de Evolución
 function renderizarGraficoEvolucionLinea(historico) {
     const ctx = document.getElementById('chartEvolucionLineaCanvas');
     if (!ctx) return;
@@ -215,7 +207,6 @@ function renderizarGraficoEvolucionLinea(historico) {
     });
 }
 
-// Garantiza ver la secuencia completa de la animacion
 async function esperarAnimacionMinima(tiempoInicio, minMs = 2200) {
     const transcurrido = Date.now() - tiempoInicio;
     if (transcurrido < minMs) {
@@ -223,14 +214,16 @@ async function esperarAnimacionMinima(tiempoInicio, minMs = 2200) {
     }
 }
 
-// Helper seguro para leer valores de inputs
 function getInputValueSafe(id, defaultVal = '') {
     const el = document.getElementById(id);
     return el ? el.value.trim() : defaultVal;
 }
 
-// LOADER CANVAS
 function mostrarCroissLoader() {
+    if (!croissImagePreload.src || croissImagePreload.src === '') {
+        croissImagePreload.src = '/static/croissant.png';
+    }
+
     Swal.fire({
         html: `
             <div class="croiss-canvas-container">
@@ -244,12 +237,23 @@ function mostrarCroissLoader() {
             popup: 'croiss-swal-popup-transparent'
         },
         didOpen: () => {
+            // Marcamos la ventana emergente como un loader activo
+            const popup = Swal.getPopup();
+            if (popup) popup.setAttribute('data-is-loader', 'true');
             iniciarAnimacionCanvasCroissant();
         },
         willClose: () => {
             if (croissAnimFrameId) cancelAnimationFrame(croissAnimFrameId);
         }
     });
+}
+
+// Función auxiliar para cerrar únicamente el loader sin tocar modales abiertos por el usuario
+function cerrarCroissLoaderSeguro() {
+    const popup = Swal.getPopup();
+    if (popup && popup.getAttribute('data-is-loader') === 'true') {
+        Swal.close();
+    }
 }
 
 function iniciarAnimacionCanvasCroissant() {
@@ -304,7 +308,6 @@ function iniciarAnimacionCanvasCroissant() {
                     }
                 }
             }
-
             canvas.className = currentShake;
         }
 
@@ -447,12 +450,16 @@ function cambiarSegmentoCliente(segmento) {
     document.querySelectorAll('#sec-clientes .sub-seccion').forEach(s => s.classList.remove('active'));
 
     if (segmento === 'lista') {
-        document.getElementById('segBtnLista').classList.add('active');
-        document.getElementById('subSecLista').classList.add('active');
+        const btn = document.getElementById('segBtnLista');
+        const sec = document.getElementById('subSecLista');
+        if (btn) btn.classList.add('active');
+        if (sec) sec.classList.add('active');
         datosClientesGlobal.subOrigen = 'lista';
     } else {
-        document.getElementById('segBtnPromo').classList.add('active');
-        document.getElementById('subSecPromo').classList.add('active');
+        const btn = document.getElementById('segBtnPromo');
+        const sec = document.getElementById('subSecPromo');
+        if (btn) btn.classList.add('active');
+        if (sec) sec.classList.add('active');
         datosClientesGlobal.subOrigen = 'promo';
     }
 }
@@ -524,7 +531,6 @@ async function cargarStock(forzar = false) {
     }
 }
 
-// MUESTRA EL MENU Y PRECIOS INFORMATIVOS (SIN CONTADOR INDIVIDUAL)
 function renderizarMenuYStock() {
     const select = document.getElementById('vProductoSelect');
     const lista = document.getElementById('listaStock');
@@ -536,9 +542,13 @@ function renderizarMenuYStock() {
     }
     if (lista) lista.innerHTML = '';
 
+    let productosRenderizados = 0;
+
     catalogoProductos.forEach(prod => {
         const nombreProd = prod.Nombre || prod.Producto || prod.nombre || prod.producto || prod.Croissant || '';
         if (!nombreProd || nombreProd.toLowerCase().includes('congelado')) return;
+
+        productosRenderizados++;
 
         if (select) {
             const opt = document.createElement('option');
@@ -563,6 +573,10 @@ function renderizarMenuYStock() {
         }
     });
 
+    if (lista && productosRenderizados === 0) {
+        lista.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay productos cargados en el menú.</p>';
+    }
+
     if (select && seleccionPrevia) {
         const existe = Array.from(select.options).some(o => o.value === seleccionPrevia);
         if (existe) select.value = seleccionPrevia;
@@ -584,7 +598,7 @@ async function cargarTodoElStock() {
         await cargarStock(true);
         await cargarInsumosYGastos();
 
-        await esperarAnimacionMinima(tInicio, 1500);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
     } catch (err) {
         Swal.close();
@@ -634,7 +648,7 @@ function abrirModalSumarCongelados() {
                     body: JSON.stringify({ cantidad: result.value })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1500);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Produccion Agregada!', `Se sumaron +${result.value} masas al stock congelado.`);
@@ -662,14 +676,13 @@ async function cargarAgenda() {
         const res = await fetch('/api/agenda');
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1800);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if(data.status === 'exito') {
             contenedor.innerHTML = '';
             agendaGlobalData = data.agenda || [];
 
-            // 🔍 Busca dinámicamente el primer día que contenga pedidos por entregar
             const primerDiaConPedidosIdx = agendaGlobalData.findIndex(d => d.pedidos && d.pedidos.length > 0);
 
             agendaGlobalData.forEach((dia, idxDia) => {
@@ -731,8 +744,6 @@ async function cargarAgenda() {
                 
                 const tienePedidos = dia.pedidos && dia.pedidos.length > 0;
                 const idDetalle = `dia-detalle-${idxDia}`;
-                
-                // Solo abre el primer día que realmente tenga pedidos
                 const estaAbierto = (idxDia === primerDiaConPedidosIdx);
 
                 card.innerHTML = `
@@ -775,7 +786,6 @@ function toggleExpandirDia(idDetalle) {
     }
 }
 
-// EDITOR INTERACTIVO DE ITEMS POR PEDIDO
 function parsearDescripcionAPedidos(desc) {
     if(!desc) return [];
     let partes = desc.split(',');
@@ -986,7 +996,7 @@ function abrirEdicionPedido(numFila) {
                     body: JSON.stringify(result.value)
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1500);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if(data.status === 'exito') {
                     mostrarCroissExito('Pedido Actualizado', 'Se guardaron los cambios en Google Sheets.');
@@ -1091,7 +1101,7 @@ async function cargarCuentas() {
         const res = await fetch('/api/cuentas');
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1800);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if (data.status === 'exito') {
@@ -1191,11 +1201,9 @@ async function eliminarPedido(numFila, clienteNombre) {
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Cancelado', 'Se removio la orden de la agenda.');
-                    
-                    // Actualizaciones en pantalla
                     if (typeof cargarCuentas === 'function') cargarCuentas();
                     if (typeof cargarAgenda === 'function') cargarAgenda();
-                    if (typeof cargarClientes === 'function') cargarClientes(); // <--- Recarga la lista de clientes
+                    if (typeof cargarClientes === 'function') cargarClientes();
                 } else {
                     Swal.fire('Error', data.mensaje, 'error');
                 }
@@ -1235,10 +1243,8 @@ async function notificarEntrega(numFila, nombreCliente) {
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Entregado!', `Notificacion enviada a ${nombreCliente}.`);
-                    
-                    // REFRESCAR VISTAS AL INSTANTE
                     if (typeof cargarCuentas === 'function') cargarCuentas();
-                    if (typeof cargarAgenda === 'function') cargarAgenda(); // Refresca la agenda para borrar el pedido entregado
+                    if (typeof cargarAgenda === 'function') cargarAgenda();
                     if (typeof cargarClientes === 'function') cargarClientes();
                 } else {
                     Swal.fire('Atención', data.mensaje, 'warning');
@@ -1364,88 +1370,6 @@ function renderizarGraficoDias(diasObj) {
     });
 }
 
-// ==========================================
-// RENDERIZAR HISTORIAL DE GASTOS CON BOTÓN ELIMINAR
-// ==========================================
-async function cargarInsumosYGastos() {
-    const tInicio = Date.now();
-    mostrarCroissLoader();
-
-    try {
-        const res = await fetch('/api/gastos_e_insumos');
-        const data = await res.json();
-
-        await esperarAnimacionMinima(tInicio, 1800);
-        Swal.close();
-
-        if (data.status === 'exito') {
-            const contInsumos = document.getElementById('listaInsumosStock');
-            if (contInsumos) {
-                contInsumos.innerHTML = '';
-                if (data.insumos.length === 0) {
-                    contInsumos.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay insumos registrados aún.</p>';
-                } else {
-                    data.insumos.forEach(ins => {
-                        const vencFecha = ins['Vencimiento Proximo'] || ins['Vencimiento Próximo'] || 'Sin fecha';
-                        const div = document.createElement('div');
-                        div.className = 'ios-cliente-row compact';
-                        div.innerHTML = `
-                            <div>
-                                <strong>Insumo: ${ins.Insumo}</strong><br>
-                                <small style="color:var(--text-muted);">Vence: ${vencFecha}</small>
-                            </div>
-                            <div>
-                                <strong style="color:var(--accent); font-size:1rem;">${ins['Stock Actual']} ${ins.Unidad}</strong>
-                            </div>
-                        `;
-                        contInsumos.appendChild(div);
-                    });
-                }
-            }
-
-            const contGastos = document.getElementById('listaGastosHistorico');
-            if (contGastos) {
-                contGastos.innerHTML = '';
-                if (data.gastos.length === 0) {
-                    contGastos.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay gastos cargados.</p>';
-                } else {
-                    data.gastos.forEach(g => {
-                        const desc = g.Descripcion || g.descripcion || 'Gasto';
-                        const cat = g.Categoria || g.categoria || 'Otros';
-                        const fecha = g.Fecha || g.fecha || '';
-                        const monto = g.Monto || g.monto || 0;
-                        const cant = g.Cantidad || g.cantidad || 1;
-                        const unidad = g.Unidad || g.unidad || '';
-                        const numFila = g.fila;
-
-                        const descEscapada = desc.replace(/'/g, "\\'");
-
-                        const div = document.createElement('div');
-                        div.className = 'cuenta-item';
-                        div.innerHTML = `
-                            <div>
-                                <strong>Fecha: ${fecha} - ${desc}</strong> <small style="color:#64748b;">(${cat})</small><br>
-                                <span style="font-size:0.85rem; color:#475569;">Cant: ${cant} ${unidad}</span>
-                            </div>
-                            <div style="text-align:right;">
-                                <strong style="color:#dc2626; font-size:0.95rem;">-$${monto}</strong><br>
-                                ${numFila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarGasto(${numFila}, '${descEscapada}')">Eliminar</button>` : ''}
-                            </div>
-                        `;
-                        contGastos.appendChild(div);
-                    });
-                }
-            }
-        }
-    } catch (err) {
-        Swal.close();
-        console.error("Error cargando inventario:", err);
-    }
-}
-
-// ==========================================
-// FUNCIÓN PARA BORRAR UN GASTO
-// ==========================================
 async function eliminarGasto(numFila, descGasto) {
     Swal.fire({
         title: `<strong style="color:var(--text-main); font-size:1.2rem;">¿Eliminar este gasto?</strong>`,
@@ -1470,7 +1394,7 @@ async function eliminarGasto(numFila, descGasto) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 1800);
+                await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Gasto Eliminado', 'Se removió el registro del historial.');
@@ -1487,9 +1411,6 @@ async function eliminarGasto(numFila, descGasto) {
     });
 }
 
-// ==========================================
-// CAMBIO DE SEGMENTOS DENTRO DE STOCK
-// ==========================================
 function cambiarSegmentoStock(segmento) {
     document.getElementById('segBtnStockCongelados').classList.toggle('active', segmento === 'congelados');
     document.getElementById('segBtnStockMateriaPrima').classList.toggle('active', segmento === 'materiaprima');
@@ -1499,14 +1420,27 @@ function cambiarSegmentoStock(segmento) {
     document.getElementById('subSecStockMateriaPrima').classList.toggle('active', segmento === 'materiaprima');
     document.getElementById('subSecStockEmpaque').classList.toggle('active', segmento === 'empaque');
 
-    if (segmento === 'materiaprima' || segmento === 'empaque') {
+    if (segmento === 'congelados') {
+        cargarStockCongelados();
+    } else if (segmento === 'materiaprima' || segmento === 'empaque') {
         cargarInsumosYGastos();
     }
 }
 
-// ==========================================
-// CARGAR Y CLASIFICAR INSUMOS (MATERIA PRIMA VS EMPAQUE)
-// ==========================================
+async function cargarStockCongelados() {
+    try {
+        const resCong = await fetch('/api/stock/congelados');
+        const dataCong = await resCong.json();
+        if (dataCong.status === 'exito') {
+            const elCong = document.getElementById('cantCroissCongelados');
+            if (elCong) elCong.innerText = `${dataCong.stock} un.`;
+        }
+        await cargarStock(true);
+    } catch (err) {
+        console.error("Error al cargar congelados:", err);
+    }
+}
+
 async function cargarInsumosYGastos() {
     const tInicio = Date.now();
     mostrarCroissLoader();
@@ -1515,7 +1449,7 @@ async function cargarInsumosYGastos() {
         const res = await fetch('/api/gastos_e_insumos');
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1500);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if (data.status === 'exito') {
@@ -1536,14 +1470,21 @@ async function cargarInsumosYGastos() {
 
                     const esEmpaque = PalabrasEmpaque.some(p => nombreInsumo.toLowerCase().includes(p));
 
+                    const nomEscapado = nombreInsumo.replace(/'/g, "\\'");
+                    const vencEscapado = vencFecha.replace(/'/g, "\\'");
+
                     const itemHtml = `
-                        <div class="ios-cliente-row compact" style="margin-bottom: 8px;">
+                        <div class="ios-cliente-row compact" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
                             <div>
                                 <strong>${nombreInsumo}</strong><br>
                                 <small style="color:var(--text-muted);">${vencFecha !== 'Sin fecha' ? 'Vence: ' + vencFecha : 'Control de Stock'}</small>
                             </div>
-                            <div style="text-align: right;">
+                            <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
                                 <strong style="color:var(--accent); font-size:1.05rem;">${stockVal} ${unidadVal}</strong>
+                                <div style="display: flex; gap: 4px;">
+                                    <button type="button" class="btn-jalea-chip active" style="font-size:0.7rem; padding: 2px 8px; margin:0;" onclick="abrirModalEditarInsumo('${nomEscapado}', ${stockVal}, '${unidadVal}', '${vencEscapado}')">Editar</button>
+                                    <button type="button" class="btn-remove" style="font-size:0.68rem; padding: 2px 6px;" onclick="eliminarInsumoDirecto('${nomEscapado}')">X</button>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -1564,7 +1505,6 @@ async function cargarInsumosYGastos() {
                 contEmpaque.innerHTML = htmlEmpaque || '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay insumos de empaque o cajas registrados.</p>';
             }
 
-            // Historial de gastos (Pestaña Gastos)
             const contGastos = document.getElementById('listaGastosHistorico');
             if (contGastos) {
                 contGastos.innerHTML = '';
@@ -1605,23 +1545,41 @@ async function cargarInsumosYGastos() {
 }
 
 function filtrarDirectorioClientes() {
-    const textoBuscado = document.getElementById('inputBuscarCliente').value.toLowerCase().trim();
+    const el = document.getElementById('inputBuscarCliente');
+    if (!el) return;
+    const textoBuscado = el.value.toLowerCase().trim();
     const listaFiltrada = datosClientesGlobal.todos.filter(c => 
-        c.nombre.toLowerCase().includes(textoBuscado)
+        c.nombre && c.nombre.toLowerCase().includes(textoBuscado)
     );
     renderizarListaDirectorio(listaFiltrada);
 }
 
+// ==========================================
+// MODO PRIVACIDAD INSTANTÁNEO (TOGGLE CSS PURO)
+// ==========================================
+function toggleModoPrivacidad() {
+    const estaPrivado = document.body.classList.toggle('modo-privado');
+    const txtBtn = document.getElementById('txtModoPrivado');
+    if (txtBtn) {
+        txtBtn.innerText = estaPrivado ? "Mostrar Cifras" : "Ocultar para Historia";
+    }
+}
+
+// ==========================================
+// CARGAR CLIENTES Y PODIO TOP 3 (SAFE NULL CHECK)
+// ==========================================
 async function cargarClientes() {
     const tInicio = Date.now();
     mostrarCroissLoader();
 
     try {
-        const mesVal = document.getElementById('cMesFilter').value || hoy.substring(0, 7);
+        const elMes = document.getElementById('cMesFilter');
+        const mesVal = elMes ? elMes.value : hoy.substring(0, 7);
+
         const res = await fetch(`/api/clientes?mes=${mesVal}`);
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1800);
+        await esperarAnimacionMinima(tInicio, 2200);
         Swal.close();
 
         if (data.status === 'exito') {
@@ -1632,51 +1590,104 @@ async function cargarClientes() {
 
             const bannerNombre = document.getElementById('topNombre');
             const bannerDetalle = document.getElementById('topDetalle');
+
             if (data.top_cliente_mes) {
-                bannerNombre.innerText = data.top_cliente_mes.nombre;
-                bannerDetalle.innerText = `Lidera con ${data.top_cliente_mes.total_croissants} croissants comprados`;
+                if (bannerNombre) bannerNombre.innerText = data.top_cliente_mes.nombre;
+                if (bannerDetalle) bannerDetalle.innerHTML = `Lidera el mes con <span class="cifra-sensible" style="font-weight:800;">${data.top_cliente_mes.total_croissants} croissants</span> comprados`;
             } else {
-                bannerNombre.innerText = 'Sin Compradores';
-                bannerDetalle.innerText = 'Aún no se registraron ventas en este mes.';
+                if (bannerNombre) bannerNombre.innerText = 'Sin Compradores';
+                if (bannerDetalle) bannerDetalle.innerText = 'Aún no se registraron ventas en este mes.';
             }
 
-            const contRanking = document.getElementById('listaClientesRanking');
-            if (contRanking) {
-                contRanking.innerHTML = '';
-                if (!data.ranking_mes || data.ranking_mes.length === 0) {
-                    contRanking.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas en el período seleccionado.</p>';
-                } else {
-                    data.ranking_mes.forEach((c, idx) => {
-                        const div = document.createElement('div');
-                        div.className = 'ios-cliente-row compact';
-                        div.style.cursor = 'pointer';
-                        div.onclick = (e) => {
-                            e.preventDefault();
-                            verDetalleCliente(c);
-                        };
-                        div.innerHTML = `
-                            <div style="display:flex; align-items:center; gap:8px;">
-                                <span class="cliente-rank-pos" style="font-weight: 800; color: var(--accent);">#${idx + 1}</span>
-                                <div>
-                                    <strong>${c.nombre || 'Cliente'}</strong>
-                                </div>
-                            </div>
-                            <div style="display:flex; align-items:center; gap:6px;">
-                                <strong style="color:var(--accent); font-size:0.95rem; background: var(--accent-light); padding: 4px 10px; border-radius: 12px;">
-                                    ${c.total_croissants || 0} un.
-                                </strong>
-                                <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
-                            </div>
-                        `;
-                        contRanking.appendChild(div);
-                    });
-                }
-            }
+            renderizarRankingMes(data.ranking_mes);
         }
     } catch (err) {
         Swal.close();
         console.error("Error al cargar clientes:", err);
     }
+}
+
+function renderizarRankingMes(rankingLista) {
+    const contRanking = document.getElementById('listaClientesRanking');
+    if (!contRanking) return;
+
+    contRanking.innerHTML = '';
+    if (!rankingLista || rankingLista.length === 0) {
+        contRanking.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin ventas en el período seleccionado.</p>';
+        return;
+    }
+
+    const medallas = ['🥇', '🥈', '🥉'];
+    const top3 = rankingLista.slice(0, 3);
+
+    top3.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = 'ios-cliente-row compact';
+        div.style.cursor = 'pointer';
+        div.onclick = (e) => {
+            e.preventDefault();
+            verDetalleCliente(c);
+        };
+
+        const iconoRank = medallas[idx] || `#${idx + 1}`;
+
+        div.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:1.2rem;">${iconoRank}</span>
+                <div>
+                    <strong>${c.nombre || 'Cliente'}</strong>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <strong class="cifra-sensible" style="color:var(--accent); font-size:0.9rem; background: var(--accent-light); padding: 4px 10px; border-radius: 12px;">
+                    ${c.total_croissants || 0} croiss.
+                </strong>
+                <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
+            </div>
+        `;
+        contRanking.appendChild(div);
+    });
+
+    if (rankingLista.length > 3) {
+        const btnVerMas = document.createElement('button');
+        btnVerMas.type = 'button';
+        btnVerMas.className = 'btn-jalea-chip';
+        btnVerMas.style.cssText = 'width: 100%; margin-top: 10px; padding: 8px; text-align: center;';
+        btnVerMas.innerText = `Ver ranking completo (${rankingLista.length} clientes)`;
+        btnVerMas.onclick = () => renderizarRankingCompleto(rankingLista);
+        contRanking.appendChild(btnVerMas);
+    }
+}
+
+function renderizarRankingCompleto(rankingLista) {
+    const contRanking = document.getElementById('listaClientesRanking');
+    if (!contRanking) return;
+
+    contRanking.innerHTML = '';
+    rankingLista.forEach((c, idx) => {
+        const div = document.createElement('div');
+        div.className = 'ios-cliente-row compact';
+        div.style.cursor = 'pointer';
+        div.onclick = (e) => {
+            e.preventDefault();
+            verDetalleCliente(c);
+        };
+        div.innerHTML = `
+            <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-weight: 800; color: var(--accent);">#${idx + 1}</span>
+                <div>
+                    <strong>${c.nombre || 'Cliente'}</strong>
+                </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <strong class="cifra-sensible" style="color:var(--accent); font-size:0.9rem;">
+                    ${c.total_croissants || 0} croiss.
+                </strong>
+                <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
+            </div>
+        `;
+        contRanking.appendChild(div);
+    });
 }
 
 function renderizarListaDirectorio(lista) {
@@ -1701,9 +1712,12 @@ function renderizarListaDirectorio(lista) {
             e.preventDefault();
             verDetalleCliente(c);
         };
+
+        const idTag = c.id_cliente ? `<small style="color:var(--accent); font-weight:700; margin-right:6px;">[${c.id_cliente}]</small>` : '';
+
         div.innerHTML = `
             <div>
-                <strong>${c.nombre || 'Sin nombre'}</strong><br>
+                <strong>${idTag}${c.nombre || 'Sin nombre'}</strong><br>
                 <small style="color:var(--text-muted);">${c.total_pedidos || 0} pedido(s) - ${c.total_croissants || 0} croiss.</small>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
@@ -1724,7 +1738,10 @@ function verDetalleCliente(clienteObj) {
     if (secDetalle) secDetalle.classList.add('active');
 
     const elNom = document.getElementById('detClienteNombre');
-    if (elNom) elNom.innerText = clienteObj.nombre || 'Cliente';
+    if (elNom) {
+        const idBadge = clienteObj.id_cliente ? `<span style="font-size:0.75rem; background:#FAF0EB; color:var(--accent); border:1px solid #F7DFC8; padding:3px 8px; border-radius:10px; font-weight:800; margin-left:8px; vertical-align:middle;">${clienteObj.id_cliente}</span>` : '';
+        elNom.innerHTML = `${clienteObj.nombre || 'Cliente'}${idBadge}`;
+    }
 
     const elStats = document.getElementById('detClienteStats');
     if (elStats) {
@@ -1764,10 +1781,8 @@ function verDetalleCliente(clienteObj) {
         historial.forEach(h => {
             const estPago = h.estado_pago || h.estado || 'Pendiente';
             const estEntrega = String(h.estado_entrega || h.entrega || '').trim().toLowerCase();
-
             const colorPago = estPago.toLowerCase() === 'pagado' ? '#16a34a' : '#dc2626';
 
-            // Lógica para renderizar los 3 estados distintos
             let estEntregaBadge = '';
             if (estEntrega.includes('entregad')) {
                 estEntregaBadge = '<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">🚚 Entregado</span>';
@@ -1849,6 +1864,7 @@ function abrirModalEditarCliente() {
                 return false;
             }
             return {
+                id_cliente: clienteObj.id_cliente || '',
                 nombre_original: clienteObj.nombre,
                 nombre: nomNuevo,
                 telefono: document.getElementById('editTelInput').value.trim(),
@@ -1882,7 +1898,6 @@ function abrirModalEditarCliente() {
                 Swal.fire('Error', 'No se pudo actualizar la información', 'error');
             }
         } else if (result.isDenied) {
-            // Solicitar confirmación de eliminación
             confirmarEliminarCliente(clienteObj.nombre);
         }
     });
@@ -1937,18 +1952,15 @@ function volverASeccionAnterior() {
 function obtenerExtraRelleno(nombreProducto) {
     if (!nombreProducto) return 0;
     
-    // Normaliza el texto: pasa a minúsculas y elimina tildes/diacríticos (ej: "Jamón" -> "jamon")
     const nombre = nombreProducto
         .toLowerCase()
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "");
 
-    // Detección de Jamón y/o Queso (+$50)
     if (nombre.includes('jamon') || nombre.includes('queso')) {
         return 50;
     }
 
-    // Detección de Dulce de Leche / DDL (+$30)
     if (nombre.includes('dulce de leche') || nombre.includes('ddl') || nombre.includes('dulce')) {
         return 30;
     }
@@ -2077,21 +2089,17 @@ function actualizarMedioPagoSegunEstado() {
     }
 }
 
-// ==========================================
-// MODAL PARA CARGAR STOCK CORREGIDO
-// ==========================================
 function abrirModalSumarStock(tipoCategoria) {
     const esEmpaque = tipoCategoria === 'Empaque';
 
     const opcionesEmpaque = `
-        <option value="Caja 6 Croiss (Ventana)">Caja 6 Croiss (Ventana)</option>
-        <option value="Caja 6 Croiss (Ciega)">Caja 6 Croiss (Ciega)</option>
-        <option value="Caja 3 Croiss (Ventana)">Caja 3 Croiss (Ventana)</option>
-        <option value="Caja 3 Croiss (Ciega)">Caja 3 Croiss (Ciega)</option>
-        <option value="Papel Manteca">Papel Manteca</option>
-        <option value="Rollo Film">Rollo Film</option>
-        <option value="Bolsas">Bolsas</option>
-    `;
+		<option value="Caja X6">Caja X6 (6 croiss)</option>
+		<option value="Caja X3">Caja X3 (3 croiss)</option>
+		<option value="Caja X1">Caja X1 (1 croiss)</option>
+		<option value="Papel Manteca">Papel Manteca</option>
+		<option value="Rollo Film">Rollo Film</option>
+		<option value="Bolsas">Bolsas</option>
+	`;
 
     const opcionesMateriaPrima = `
         <option value="Harina 000">Harina 000</option>
@@ -2180,7 +2188,7 @@ function abrirModalSumarStock(tipoCategoria) {
                 const data = await res.json();
 
                 if (typeof esperarAnimacionMinima === 'function') {
-                    await esperarAnimacionMinima(tInicio, 1500);
+                    await esperarAnimacionMinima(tInicio, 2200);
                 }
                 Swal.close();
 
@@ -2202,21 +2210,29 @@ function abrirModalSumarStock(tipoCategoria) {
     });
 }
 
+// ==========================================
+// AUTENTICACIÓN BIOMÉTRICA (SOLO MÓVIL)
+// ==========================================
+function esDispositivoMovil() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           ('ontouchstart' in window && navigator.maxTouchPoints > 1);
+}
 
-// ==========================================
-// AUTENTICACIÓN BIOMÉTRICA (AJUSTADA PARA iOS)
-// ==========================================
 async function inicializarFaceID() {
     const overlay = document.getElementById('lockScreenOverlay');
     if (!overlay) return;
 
+    // 🖥️ Si es PC / Escritorio, ocultar la pantalla de biometría de inmediato
+    if (!esDispositivoMovil()) {
+        overlay.style.display = 'none';
+        return;
+    }
+
+    // 📱 Si es Móvil, verificar biometría
     try {
-        // Verificar si el navegador y dispositivo soportan biometría
         if (window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) {
-            // Se mantiene el overlay visible para que el usuario presione el botón (Gesto obligatorio en iOS)
             overlay.style.display = 'flex';
         } else {
-            // Si no soporta biometría, oculta la pantalla de bloqueo
             overlay.style.display = 'none';
         }
     } catch (e) {
@@ -2231,7 +2247,6 @@ async function autenticarConBiometria() {
         const credentialId = localStorage.getItem('croiss_bio_cred_id');
 
         if (!credentialId) {
-            // REGISTRO PRIMERA VEZ (Enlaza el FaceID del iPhone con la web)
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
 
@@ -2259,7 +2274,6 @@ async function autenticarConBiometria() {
                 overlay.style.display = 'none';
             }
         } else {
-            // VERIFICACIÓN HABITUAL (Llama al sensor de FaceID)
             const challenge = new Uint8Array(32);
             window.crypto.getRandomValues(challenge);
 
@@ -2293,9 +2307,8 @@ async function autenticarConBiometria() {
     }
 }
 
-// Iniciar al cargar la página
+// Event Listeners y Formularios
 document.addEventListener('DOMContentLoaded', inicializarFaceID);
-
 
 const formFinalizarPedido = document.getElementById('formFinalizarPedido');
 if (formFinalizarPedido) {
@@ -2350,10 +2363,29 @@ if (formFinalizarPedido) {
                 if(document.getElementById('vFecha')) document.getElementById('vFecha').value = hoy;
                 if(document.getElementById('vFechaEntrega')) document.getElementById('vFechaEntrega').value = hoy;
 
-                mostrarCroissExito(
-                    'Pedido Registrado!', 
-                    emailCliente ? 'Se envio el correo de confirmacion al cliente.' : 'El pedido se guardo correctamente en la agenda.'
-                );
+                let msjExito = emailCliente ? 'Se envió el correo de confirmación al cliente.' : 'El pedido se guardó correctamente en la agenda.';
+                
+                // MÓDULO DE ALERTA DE STOCK
+                if (data.alertas && data.alertas.length > 0) {
+                    let alertasHtml = data.alertas.map(a => `<li>${a}</li>`).join('');
+                    Swal.fire({
+                        title: 'Pedido Registrado ✅',
+                        html: `
+                            <p style="font-size:0.88rem; color:var(--text-muted);">${msjExito}</p>
+                            <div style="background:#FEF2F2; border:1px solid #FCA5A5; border-radius:12px; padding:12px; margin-top:16px; text-align:left;">
+                                <strong style="color:#DC2626; font-size:0.85rem;">⚠️ STOCK BAJO:</strong>
+                                <ul style="color:#991B1B; font-size:0.8rem; margin:6px 0 0 16px; padding:0;">
+                                    ${alertasHtml}
+                                </ul>
+                            </div>
+                        `,
+                        icon: 'warning',
+                        confirmButtonText: 'Entendido',
+                        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                    });
+                } else {
+                    mostrarCroissExito('Pedido Registrado!', msjExito);
+                }
 
                 if (typeof cargarAgenda === 'function') cargarAgenda();
                 if (typeof cargarStock === 'function') cargarStock();
@@ -2405,6 +2437,161 @@ if (formGasto) {
             }
         } catch (err) {
             Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+        }
+    });
+}
+
+// ==========================================
+// FUNCIONES DE EDICIÓN Y ELIMINACIÓN DE STOCK
+// ==========================================
+function abrirModalEditarCongeladosDirecto() {
+    const stockActualTxt = document.getElementById('cantCroissCongelados') ? document.getElementById('cantCroissCongelados').innerText.replace(' un.', '').trim() : '0';
+    
+    Swal.fire({
+        title: 'Corregir Stock de Congelados',
+        html: `
+            <div style="text-align: left; margin-top: 10px;">
+                <label style="display:block; font-size:0.75rem; font-weight:800; color:var(--text-muted); text-transform:uppercase;">
+                    Cantidad real exacta en freezer:
+                </label>
+                <input type="number" id="inputFijarCongelados" class="croiss-swal-input" value="${stockActualTxt}" min="0">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Cantidad Real',
+        cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
+        preConfirm: () => {
+            const val = document.getElementById('inputFijarCongelados').value;
+            if (val === '' || parseInt(val) < 0) {
+                Swal.showValidationMessage('Ingresa una cantidad válida.');
+                return false;
+            }
+            return parseInt(val);
+        }
+    }).then(async (res) => {
+        if (res.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const r = await fetch('/api/stock/congelados/fijar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ stock: res.value })
+                });
+                const data = await r.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Stock Corregido', `Congelados ajustados a ${res.value} unidades.`);
+                    document.getElementById('cantCroissCongelados').innerText = `${data.stock} un.`;
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo actualizar el stock', 'error');
+            }
+        }
+    });
+}
+
+function abrirModalEditarInsumo(nombreInsumo, stockActual, unidadActual, vencActual) {
+    Swal.fire({
+        title: `Editar ${nombreInsumo}`,
+        html: `
+            <div style="text-align: left; margin-top: 10px; font-size:0.85rem;">
+                <label style="font-weight:700; display:block; margin-bottom:4px;">Stock Actual Exacto:</label>
+                <input type="number" id="editInsumoStock" class="swal2-input" value="${stockActual}" step="0.1" style="margin:0 0 10px 0; width:100%;">
+
+                <div style="display:flex; gap:10px; margin-bottom:10px;">
+                    <div style="flex:1;">
+                        <label style="font-weight:700; display:block; margin-bottom:4px;">Unidad:</label>
+                        <select id="editInsumoUnidad" class="swal2-input" style="margin:0; width:100%;">
+                            <option value="un" ${unidadActual === 'un' ? 'selected' : ''}>un (Unidades)</option>
+                            <option value="kg" ${unidadActual === 'kg' ? 'selected' : ''}>kg (Kilos)</option>
+                            <option value="gr" ${unidadActual === 'gr' ? 'selected' : ''}>gr (Gramos)</option>
+                            <option value="ml" ${unidadActual === 'ml' ? 'selected' : ''}>ml (Mililitros)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <label style="font-weight:700; display:block; margin-bottom:4px;">Vencimiento:</label>
+                <input type="date" id="editInsumoVenc" class="swal2-input" value="${vencActual !== 'Sin fecha' ? vencActual : ''}" style="margin:0; width:100%;">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Cambios',
+        cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
+        preConfirm: () => {
+            const st = parseFloat(document.getElementById('editInsumoStock').value);
+            if (isNaN(st) || st < 0) {
+                Swal.showValidationMessage('Ingresa un stock válido.');
+                return false;
+            }
+            return {
+                insumo: nombreInsumo,
+                stock: st,
+                unidad: document.getElementById('editInsumoUnidad').value,
+                vencimiento: document.getElementById('editInsumoVenc').value
+            };
+        }
+    }).then(async (res) => {
+        if (res.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const r = await fetch('/api/stock/editar_insumo', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(res.value)
+                });
+                const data = await r.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Insumo Actualizado', data.mensaje);
+                    cargarInsumosYGastos();
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo guardar la modificación', 'error');
+            }
+        }
+    });
+}
+
+function eliminarInsumoDirecto(nombreInsumo) {
+    Swal.fire({
+        title: `¿Eliminar ${nombreInsumo}?`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted);">Se eliminará este insumo de la lista de stock permanente.</p>`,
+        showCancelButton: true,
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-btn-danger', cancelButton: 'croiss-swal-cancel' }
+    }).then(async (res) => {
+        if (res.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const r = await fetch('/api/stock/eliminar_insumo', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ insumo: nombreInsumo })
+                });
+                const data = await r.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Insumo Eliminado', `${nombreInsumo} fue removido.`);
+                    cargarInsumosYGastos();
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (err) {
+                Swal.fire('Error', 'No se pudo eliminar el insumo', 'error');
+            }
         }
     });
 }
