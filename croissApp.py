@@ -398,15 +398,22 @@ def obtener_celda_sobrevendidos(sheet_stock):
     ejecutar_con_reintento(sheet_stock.append_row, ["SOBR-001", "Croissants Sobrevendidos", 0, 0])
     return sheet_stock.find(re.compile(r"sobrevendido", re.IGNORECASE))
 
-def obtener_niveles_stock_congelados(sheet_stock):
+def obtener_niveles_stock(sheet_stock):
     c_cong = obtener_celda_congelados(sheet_stock)
-    c_sobr = obtener_celda_sobrevendidos(sheet_stock)
     
+    try:
+        c_masas = sheet_stock.find(re.compile(r"masas", re.IGNORECASE))
+    except Exception: c_masas = None
+    
+    if not c_masas:
+        ejecutar_con_reintento(sheet_stock.append_row, ["MASA-001", "Masas Heladera", 0, 0])
+        c_masas = sheet_stock.find(re.compile(r"masas", re.IGNORECASE))
+
     headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
     col_stock = 4
     for idx, h in enumerate(headers, start=1):
         if "stock" in h: col_stock = idx; break
-        
+
     def _leer(celda):
         if not celda: return 0
         val = sheet_stock.cell(celda.row, col_stock).value or "0"
@@ -414,10 +421,8 @@ def obtener_niveles_stock_congelados(sheet_stock):
         try: return max(0, int(float(val_clean)))
         except ValueError: return 0
 
-    st_cong = _leer(c_cong)
-    st_sobr = _leer(c_sobr)
-    return c_cong, c_sobr, col_stock, st_cong, st_sobr
-
+    return c_cong, c_masas, col_stock, _leer(c_cong), _leer(c_masas)
+    
 @app.route('/api/agenda', methods=['GET'])
 def obtener_agenda():
     try:
@@ -470,65 +475,48 @@ def obtener_agenda():
 def stock_congelados():
     try:
         sheet_stock = conectar_sheet("Productos_Stock")
-        celda = obtener_celda_congelados(sheet_stock)
-        if not celda: return jsonify({"status": "error", "mensaje": "No se encontró el registro"}), 500
-
-        fila = celda.row
-        headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
-        col_stock = 4
-        for idx, h in enumerate(headers, start=1):
-            if "stock" in h: col_stock = idx; break
-
-        raw_val = sheet_stock.cell(fila, col_stock).value or "0"
-        val_clean = str(raw_val).replace(",", ".").strip()
-        try: stock_croiss = max(0, int(float(val_clean)))
-        except ValueError: stock_croiss = 0
+        c_cong, c_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
 
         if request.method == 'POST':
             datos = request.json or {}
-            masas_sumar = int(datos.get("masas", 0))
-            stock_croiss += (masas_sumar * 10)
-            ejecutar_con_reintento(sheet_stock.update_cell, fila, col_stock, stock_croiss)
-
-        masas_disponibles = round(stock_croiss / 10.0, 1)
+            st_cong += int(datos.get("congelados", 0))
+            st_masas += int(datos.get("masas", 0))
+            if c_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_cong.row, col_stock, st_cong)
+            if c_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_masas.row, col_stock, st_masas)
 
         return jsonify({
             "status": "exito",
-            "croissants": stock_croiss,
-            "masas": masas_disponibles,
-            "mensaje": "Stock actualizado correctamente"
+            "congelados": st_cong,
+            "masas": st_masas,
+            "capacidad_total": st_cong + (st_masas * 10),
+            "mensaje": "Stock actualizado"
         }), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
 
 @app.route('/api/stock/congelados/fijar', methods=['POST'])
 def fijar_stock_congelados():
     try:
         datos = request.json or {}
-        masas = int(datos.get("masas", 0))
-        stock_croiss = max(0, masas * 10)
+        st_cong = max(0, int(datos.get("congelados", 0)))
+        st_masas = max(0, int(datos.get("masas", 0)))
 
         sheet_stock = conectar_sheet("Productos_Stock")
-        celda = obtener_celda_congelados(sheet_stock)
-        if celda:
-            fila = celda.row
-            headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
-            col_stock = 4
-            for idx, h in enumerate(headers, start=1):
-                if "stock" in h: col_stock = idx; break
-            ejecutar_con_reintento(sheet_stock.update_cell, fila, col_stock, stock_croiss)
-            
-            return jsonify({
-                "status": "exito", 
-                "croissants": stock_croiss,
-                "masas": masas,
-                "mensaje": "Masas fijadas correctamente"
-            }), 200
-        return jsonify({"status": "error", "mensaje": "Registro no encontrado"}), 404
+        c_cong, c_masas, col_stock, _, _ = obtener_niveles_stock(sheet_stock)
+
+        if c_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_cong.row, col_stock, st_cong)
+        if c_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_masas.row, col_stock, st_masas)
+
+        return jsonify({
+            "status": "exito", 
+            "congelados": st_cong,
+            "masas": st_masas,
+            "capacidad_total": st_cong + (st_masas * 10),
+            "mensaje": "Valores fijados correctamente"
+        }), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 
 @app.route('/api/venta', methods=['POST'])
 def registrar_venta():
@@ -541,28 +529,27 @@ def registrar_venta():
         items = datos.get("items", [])
         total_unidades = sum(int(item.get("cantidad", 1)) for item in items)
         
-        # 1. Leer stock actual disponible (en croissants)
-        celda_cong = obtener_celda_congelados(sheet_stock)
-        st_actual_croiss = 0
-        f_cong, col_stock = None, 4
-        
-        if celda_cong:
-            f_cong = celda_cong.row
-            headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
-            for idx, h in enumerate(headers, start=1):
-                if "stock" in h: col_stock = idx; break
-            raw_st = sheet_stock.cell(f_cong, col_stock).value or "0"
-            val_clean = str(raw_st).replace(",", ".").strip()
-            try: st_actual_croiss = max(0, int(float(val_clean)))
-            except ValueError: st_actual_croiss = 0
+        c_cong, c_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
+        capacidad_total = st_cong + (st_masas * 10)
 
-        # 2. VALIDACIÓN BLOQUEANTE SEGÚN CAPACIDAD DE MASAS
-        if total_unidades > st_actual_croiss:
-            masas_disp = round(st_actual_croiss / 10.0, 1)
+        if total_unidades > capacidad_total:
             return jsonify({
                 "status": "error",
-                "mensaje": f"🚫 Límite de producción alcanzado. Tienes {st_actual_croiss} croissants disponibles (~{masas_disp} masas) e intentas vender {total_unidades}. Agrega más masas a la heladera para poder tomar el pedido."
+                "mensaje": f"🚫 Capacidad insuficiente. Tienes {st_cong} croiss congelados + {st_masas} masa(s) (Capacidad total: {capacidad_total}) e intentas vender {total_unidades}."
             }), 400
+
+        # Descuenta primero de congelados sueltos; si faltan, rompe las masas necesarias
+        if total_unidades <= st_cong:
+            st_cong -= total_unidades
+        else:
+            restante = total_unidades - st_cong
+            st_cong = 0
+            masas_a_romper = math.ceil(restante / 10.0)
+            st_masas -= masas_a_romper
+            st_cong += (masas_a_romper * 10) - restante
+
+        if c_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_cong.row, col_stock, st_cong)
+        if c_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_masas.row, col_stock, st_masas)
 
         registros = get_clean_records(sheet_ventas)
         nuevo_id = f"V-{len(registros) + 1:04d}"
@@ -575,12 +562,6 @@ def registrar_venta():
             resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
 
         descripcion_final = ", ".join(resumen_productos)
-
-        # 3. Descontar del stock disponible
-        if f_cong:
-            nuevo_st = max(0, st_actual_croiss - total_unidades)
-            ejecutar_con_reintento(sheet_stock.update_cell, f_cong, col_stock, nuevo_st)
-
         alertas_empaque = modificar_stock_empaque(descripcion_final, total_unidades, es_devolucion=False)
 
         cliente_nombre = datos.get("cliente", "Consumidor Final")
@@ -612,7 +593,6 @@ def registrar_venta():
         return jsonify({"status": "exito", "mensaje": "Pedido registrado correctamente", "id": nuevo_id, "alertas": alertas_empaque}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
 
 @app.route('/api/eliminar_venta', methods=['POST'])
 def eliminar_venta():
