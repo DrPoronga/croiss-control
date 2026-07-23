@@ -280,7 +280,7 @@ def eliminar_cliente():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 # ==========================================
-# GESTIÓN DE CLIENTES & INSUMOS
+# GESTIÓN DE CLIENTES CON ID ÚNICO
 # ==========================================
 def obtener_o_crear_sheet_clientes():
     ruta_credenciales = "credentials.json"
@@ -290,10 +290,10 @@ def obtener_o_crear_sheet_clientes():
     try:
         return doc.worksheet("Clientes")
     except Exception:
-        ws = doc.add_worksheet(title="Clientes", rows="100", cols="4")
-        ws.append_row(["Nombre", "Email", "Telefono", "Direccion"])
+        ws = doc.add_worksheet(title="Clientes", rows="100", cols="5")
+        ws.append_row(["ID Cliente", "Nombre", "Email", "Telefono", "Direccion"])
         return ws
-
+        
 def obtener_o_crear_sheet_insumos():
     ruta_credenciales = "credentials.json"
     creds = Credentials.from_service_account_file(ruta_credenciales, scopes=SCOPES)
@@ -1291,6 +1291,7 @@ def actualizar_stock():
 def sincronizar_cliente(nombre, email, telefono, direccion):
     if not nombre or nombre.lower() == "consumidor final": return
     
+    # Corregir si por error se pasaron cruzados
     if "@" in str(nombre) and "@" not in str(email):
         nombre, email = email, nombre
 
@@ -1298,17 +1299,28 @@ def sincronizar_cliente(nombre, email, telefono, direccion):
         sheet = obtener_o_crear_sheet_clientes()
         registros = get_clean_records(sheet)
         
+        # Buscar si el cliente ya existe para actualizar sus datos
         for idx, reg in enumerate(registros, start=2):
             val_nom = get_field_val(reg, "Nombre", "Cliente", "Nombre Cliente")
 
             if val_nom and val_nom.lower() == nombre.lower():
-                ejecutar_con_reintento(sheet.update, f"A{idx}:D{idx}", [[nombre, email, telefono, direccion]])
+                id_existente = get_field_val(reg, "ID Cliente", "ID") or f"CLI-{idx-1:04d}"
+                ejecutar_con_reintento(
+                    sheet.update, 
+                    f"A{idx}:E{idx}", 
+                    [[id_existente, nombre, email, telefono, direccion]]
+                )
                 return
         
-        ejecutar_con_reintento(sheet.append_row, [nombre, email, telefono, direccion])
+        # Si es un cliente nuevo, generar ID Cliente automático (CLI-0001, CLI-0002...)
+        nuevo_id = f"CLI-{len(registros) + 1:04d}"
+        ejecutar_con_reintento(
+            sheet.append_row, 
+            [nuevo_id, nombre, email, telefono, direccion]
+        )
     except Exception as e:
-        print(f"Aviso sincronizando cliente: {e}", flush=True)     
-
+        print(f"Aviso sincronizando cliente: {e}", flush=True)
+        
 @app.route('/api/clientes', methods=['GET'])
 def obtener_clientes():
     try:
