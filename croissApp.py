@@ -209,7 +209,7 @@ def _base_email_template(titulo_badge, badge_color, contenido_body):
               <!-- ENCABEZADO CON LOGO COMPLETO (RECTANGULAR) -->
               <tr>
                 <td style="background-color: #E6DFD3; padding: 32px 24px; text-align: center;">
-                  <img src="https://pedidos.croissuy.com/static/logo.png" alt="CROISS Logo" width="210" style="width: 210px; max-width: 85%; height: auto; display: block; margin: 0 auto; border: 0;">
+                  <img src="https://croissuy.com/static/logo.png" alt="CROISS Logo" width="210" style="width: 210px; max-width: 85%; height: auto; display: block; margin: 0 auto; border: 0;">
                 </td>
               </tr>
 
