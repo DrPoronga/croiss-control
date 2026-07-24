@@ -790,19 +790,25 @@ def obtener_clientes():
             key_norm = nom.lower()
             clientes_historico[key_norm] = {
                 "id_cliente": id_cli, "nombre": nom, "email": email, "telefono": tel, "direccion": direccion,
-                "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": []
+                "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": [],
+                "sabores_count": {}
             }
 
         sheet_ventas = conectar_sheet("Ventas")
         asegurar_encabezados_ventas(sheet_ventas)
         ventas = get_clean_records(sheet_ventas)
 
+        hoy_dt = datetime.now().date()
+
         for idx, v in enumerate(ventas, start=2):
             cliente_nombre = get_field_val(v, "Cliente").strip() or "Consumidor Final"
             if not cliente_nombre or cliente_nombre.lower() == "consumidor final": continue
 
-            email_c, tel_c, dir_c = get_field_val(v, "Email", "Correo").strip(), get_field_val(v, "Teléfono", "Telefono", "Tel").strip(), get_field_val(v, "Dirección", "Direccion").strip()
+            email_c = get_field_val(v, "Email", "Correo").strip()
+            tel_c = get_field_val(v, "Teléfono", "Telefono", "Tel").strip()
+            dir_c = get_field_val(v, "Dirección", "Direccion").strip()
             fecha_norm = normalizar_fecha(get_field_val(v, "Fecha Pedido", "Fecha", "Fecha Entrega"))
+            desc_prod = get_field_val(v, "Producto")
             
             try: monto = float(get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
             except ValueError: monto = 0.0
@@ -812,7 +818,7 @@ def obtener_clientes():
 
             pedido_item = {
                 "fila": idx, "id": get_field_val(v, "ID Venta", "ID"), "fecha": fecha_norm,
-                "producto": get_field_val(v, "Producto"), "cantidad": cant, "monto": monto,
+                "producto": desc_prod, "cantidad": cant, "monto": monto,
                 "estado_pago": get_field_val(v, "Estado") or "Pendiente",
                 "estado_entrega": get_field_val(v, "Entrega", "Estado Entrega") or "Sin Registrar",
                 "direccion": dir_c
@@ -821,13 +827,27 @@ def obtener_clientes():
             if key_norm not in clientes_historico:
                 clientes_historico[key_norm] = {
                     "id_cliente": "", "nombre": cliente_nombre, "email": email_c, "telefono": tel_c, "direccion": dir_c,
-                    "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": []
+                    "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": [],
+                    "sabores_count": {}
                 }
 
             clientes_historico[key_norm]["total_gastado"] += monto
             clientes_historico[key_norm]["total_croissants"] += cant
             clientes_historico[key_norm]["total_pedidos"] += 1
             clientes_historico[key_norm]["historial"].append(pedido_item)
+
+            if desc_prod:
+                for item in desc_prod.split(","):
+                    item_clean = item.strip()
+                    if not item_clean: continue
+                    sin_jalea_str = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
+                    m = re.match(r"^(\d+)x\s+(.+)", sin_jalea_str, re.IGNORECASE)
+                    if m:
+                        c_item, sabor_item = int(m.group(1)), m.group(2).strip()
+                    else:
+                        c_item, sabor_item = 1, sin_jalea_str
+
+                    clientes_historico[key_norm]["sabores_count"][sabor_item] = clientes_historico[key_norm]["sabores_count"].get(sabor_item, 0) + c_item
 
             if fecha_norm and fecha_norm.startswith(mes_filtro):
                 if key_norm not in clientes_mes:
@@ -845,11 +865,54 @@ def obtener_clientes():
                 clientes_mes[key_norm]["total_pedidos"] += 1
                 clientes_mes[key_norm]["historial"].append(pedido_item)
 
+        # 1. Calcular métricas completas sobre todos los clientes del histórico
+        for key, c in clientes_historico.items():
+            c["total_gastado"] = round(c["total_gastado"], 2)
+            c["ticket_promedio"] = round(c["total_gastado"] / c["total_pedidos"], 2) if c["total_pedidos"] > 0 else 0.0
+            
+            # Ordenar historial filtrando compras con fecha válida
+            items_con_fecha = [h for h in c["historial"] if h.get("fecha")]
+            if items_con_fecha:
+                items_con_fecha.sort(key=lambda x: str(x["fecha"]), reverse=True)
+                c["ultima_compra_fecha"] = items_con_fecha[0]["fecha"]
+                try:
+                    f_ult = datetime.strptime(c["ultima_compra_fecha"], "%Y-%m-%d").date()
+                    c["dias_sin_comprar"] = (hoy_dt - f_ult).days
+                except Exception:
+                    c["dias_sin_comprar"] = 999
+            else:
+                c["ultima_compra_fecha"] = "Sin registro"
+                c["dias_sin_comprar"] = 999
+
+            # Sabor preferido
+            if c["sabores_count"]:
+                sabor_fav = max(c["sabores_count"].items(), key=lambda x: x[1])[0]
+                c["sabor_favorito"] = sabor_fav
+            else:
+                c["sabor_favorito"] = "Variado"
+
+            # Categorización
+            if c["total_croissants"] >= 30:
+                c["categoria"] = "🌟 Cliente VIP"
+            elif c["dias_sin_comprar"] != 999 and c["dias_sin_comprar"] <= 30:
+                c["categoria"] = "🔄 Frecuente"
+            elif c["dias_sin_comprar"] > 45 and c["dias_sin_comprar"] != 999:
+                c["categoria"] = "⚠️ En Riesgo"
+            else:
+                c["categoria"] = "✨ Regular"
+
+        # 2. Copiar las métricas calculadas a los clientes del Ranking del Mes
+        for key, c_mes in clientes_mes.items():
+            full_c = clientes_historico.get(key, {})
+            c_mes["sabor_favorito"] = full_c.get("sabor_favorito", "Variado")
+            c_mes["ticket_promedio"] = full_c.get("ticket_promedio", 0.0)
+            c_mes["ultima_compra_fecha"] = full_c.get("ultima_compra_fecha", "Sin registro")
+            c_mes["dias_sin_comprar"] = full_c.get("dias_sin_comprar", 999)
+            c_mes["categoria"] = full_c.get("categoria", "✨ Regular")
+            c_mes["historial"] = full_c.get("historial", [])
+
         lista_historico = list(clientes_historico.values())
         lista_historico.sort(key=lambda x: x["nombre"].lower())
-        for c in lista_historico:
-            c["total_gastado"] = round(c["total_gastado"], 2)
-            c["historial"].sort(key=lambda x: str(x["fecha"]), reverse=True)
 
         lista_mes = list(clientes_mes.values())
         lista_mes.sort(key=lambda x: (x["total_croissants"], x["total_gastado"]), reverse=True)
@@ -863,7 +926,7 @@ def obtener_clientes():
 
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/cliente/editar', methods=['POST'])
 def editar_cliente():
     try:
@@ -941,6 +1004,16 @@ def obtener_balance():
 
         historico_dict, clientes_mes_dict, clientes_historico_dict = {}, {}, {}
 
+        # Días del mes filtrado
+        try:
+            anio_f, mes_f = int(mes_filtro.split("-")[0]), int(mes_filtro.split("-")[1])
+            dias_totales_mes = calendar.monthrange(anio_f, mes_f)[1]
+        except Exception:
+            dias_totales_mes = 31
+
+        flujo_diario_mes_dict = {f"{mes_filtro}-{d:02d}": {"croissants": 0, "monto": 0.0} for d in range(1, dias_totales_mes + 1)}
+        flujo_semanal_dict = {}
+
         for v in ventas:
             f_norm = normalizar_fecha(get_field_val(v, "Fecha Pedido", "Fecha"))
             if not f_norm or len(f_norm) < 7: continue
@@ -968,6 +1041,17 @@ def obtener_balance():
             historico_dict[key_mes]["pedidos"] += 1
             historico_dict[key_mes]["croissants"] += cant
 
+            # Flujo Semanal Histórico
+            if len(f_norm) == 10:
+                try:
+                    dt_v = datetime.strptime(f_norm, "%Y-%m-%d")
+                    lunes_semana = (dt_v - timedelta(days=dt_v.weekday())).strftime("%Y-%m-%d")
+                    if lunes_semana not in flujo_semanal_dict:
+                        flujo_semanal_dict[lunes_semana] = {"croissants": 0, "monto": 0.0}
+                    flujo_semanal_dict[lunes_semana]["croissants"] += cant
+                    flujo_semanal_dict[lunes_semana]["monto"] += monto
+                except Exception: pass
+
             cli_nombre = get_field_val(v, "Cliente").strip()
             if cli_nombre and cli_nombre.lower() != "consumidor final":
                 c_key = cli_nombre.lower()
@@ -989,6 +1073,10 @@ def obtener_balance():
                 costos_prod_mes += costo_pedido
                 pedidos_count_mes += 1
                 total_croiss_mes += cant
+
+                if f_norm in flujo_diario_mes_dict:
+                    flujo_diario_mes_dict[f_norm]["croissants"] += cant
+                    flujo_diario_mes_dict[f_norm]["monto"] += monto
 
                 try:
                     dt_v = datetime.strptime(f_norm, "%Y-%m-%d")
@@ -1053,12 +1141,18 @@ def obtener_balance():
         ranking_sabores = [{"sabor": sab, "cantidad": vals["cantidad"], "porcentaje": round((vals["cantidad"] / total_croiss_mes * 100), 1) if total_croiss_mes > 0 else 0} for sab, vals in sabores_dict.items()]
         lista_historica = [{"mes_key": m_key, "ingresos": round(v["ingresos"], 2), "gastos_totales": round(v["costos"] + v["gastos"], 2), "ganancia_neta": round(v["ingresos"] - (v["costos"] + v["gastos"]), 2), "pedidos": v["pedidos"], "croissants": v["croissants"]} for m_key, v in sorted(historico_dict.items())]
 
+        # Estructuras preparadas para el Gráfico Principal Interactivo
+        flujo_diario_lista = [{"etiqueta": f"Día {k.split('-')[2]}", "croissants": v["croissants"], "monto": round(v["monto"], 2)} for k, v in sorted(flujo_diario_mes_dict.items())]
+        flujo_semanal_lista = [{"etiqueta": f"Sem {datetime.strptime(k, '%Y-%m-%d').strftime('%d/%m')}", "croissants": v["croissants"], "monto": round(v["monto"], 2)} for k, v in sorted(flujo_semanal_dict.items())]
+
         return jsonify({
             "status": "exito", "mes_filtrado": mes_filtro, "ingresos": round(ingresos_mes, 2),
             "costos_produccion": round(costos_prod_mes, 2), "gastos_varios": round(gastos_mes, 2),
             "gastos_por_categoria": gastos_por_categoria, "ganancia_neta": round(ganancia_neta_mes, 2),
             "ticket_promedio": ticket_promedio, "total_croissants_mes": total_croiss_mes,
             "total_croissants_historico": total_croiss_historico,
+            "flujo_diario_mes": flujo_diario_lista,
+            "flujo_semanal_historico": flujo_semanal_lista,
             "proyeccion": {"es_mes_actual": es_mes_actual, "croissants_estimados": proy_croiss, "ingresos_estimados": proy_ingresos},
             "top_clientes": {"mes": top_mes, "historico": top_historico},
             "stats_jalea": {"con_jalea": con_jalea_count, "sin_jalea": sin_jalea_count, "porcentaje": round((con_jalea_count / (con_jalea_count + sin_jalea_count) * 100), 1) if (con_jalea_count + sin_jalea_count) > 0 else 0},
@@ -1066,7 +1160,7 @@ def obtener_balance():
         }), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/editar_pedido', methods=['POST'])
 def editar_pedido():
     try:

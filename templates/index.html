@@ -299,29 +299,62 @@
                             <button id="segBtnEvolucion" class="seg-btn" onclick="cambiarSegmentoBalance('evolucion')">Evolucion</button>
                         </div>
                         <div id="subSecBalance" class="sub-seccion active">
-                            <div class="balance-grid">
-                                <div class="balance-item pos"><small>Ingresos Brut.</small><strong id="bIngresos">$0</strong></div>
-                                <div class="balance-item neg"><small>Cost. Masa+Emp</small><strong id="bCostos">$0</strong></div>
-                                <div class="balance-item neg"><small>Gastos Fijos</small><strong id="bGastos">$0</strong></div>
-                                <div class="balance-item"><small>Ticket Prom.</small><strong id="bTicketPromedio">$0</strong></div>
-                                <div class="balance-item total"><small>Ganancia Neta del Mes</small><strong id="bGanancia">$0</strong></div>
-                            </div>
-                            <div style="margin-top: 16px; background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 14px; display: flex; justify-content: space-around; text-align: center;">
-                                <div><small style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Vendidos Mes</small><div id="bTotalCroissMes" style="font-size: 1.2rem; font-weight: 800; color: var(--accent);">0 un.</div></div>
-                                <div style="border-left: 1px dashed #E2D9D3;"></div>
-                                <div><small style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total Historico</small><div id="bTotalCroissHist" style="font-size: 1.2rem; font-weight: 800; color: var(--text-main);">0 un.</div></div>
-                            </div>
-                            <div style="margin-top: 16px; background: #FAF0EB; border: 1px solid #F7DFC8; border-radius: 16px; padding: 14px; text-align: center;">
-                                <small style="color: var(--accent); font-weight: 800; text-transform: uppercase; font-size: 0.72rem;">Proyeccion Cierre de Mes</small>
-                                <div id="txtProyeccionCroiss" style="font-size: 1.1rem; font-weight: 800; color: #2D1E18; margin-top: 2px;">~0 Croissants</div>
-                                <small id="txtProyeccionIngresos" style="color: #64748b; font-weight: 600;">Estimacion calculada por ritmo de ventas diario</small>
-                            </div>
-                            <div id="boxTopClientesBalance" style="margin-top: 16px;"></div>
-                            <div style="margin-top: 16px; text-align: center;">
-                                <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px;">Desglose de Gastos</h4>
-                                <canvas id="chartGastosCatCanvas" style="max-height: 220px;"></canvas>
-                            </div>
-                        </div>
+							<div class="balance-grid">
+								<div class="balance-item pos"><small>Ingresos Brut.</small><strong id="bIngresos">$0</strong></div>
+								<div class="balance-item neg"><small>Cost. Masa+Emp</small><strong id="bCostos">$0</strong></div>
+								<div class="balance-item neg"><small>Gastos Fijos</small><strong id="bGastos">$0</strong></div>
+								<div class="balance-item"><small>Ticket Prom.</small><strong id="bTicketPromedio">$0</strong></div>
+								<div class="balance-item total"><small>Ganancia Neta del Mes</small><strong id="bGanancia">$0</strong></div>
+							</div>
+
+							<!-- TARJETAS DE ACCESO RÁPIDO A KPIs -->
+							<div style="margin-top: 16px; background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 14px; display: flex; justify-content: space-around; text-align: center;">
+								<div onclick="cambiarModoFlujoPrincipal('diario')" style="cursor: pointer; flex: 1; padding: 6px; border-radius: 12px; transition: all 0.2s;" onmouseover="this.style.background='#FCEFE6'" onmouseout="this.style.background='transparent'">
+									<small style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Vendidos Mes 📊</small>
+									<div id="bTotalCroissMes" style="font-size: 1.25rem; font-weight: 800; color: var(--accent);">0 un.</div>
+									<small style="font-size: 0.65rem; color: var(--accent); font-weight: 700;">Ver en gráfico ↓</small>
+								</div>
+								<div style="border-left: 1px dashed #E2D9D3;"></div>
+								<div onclick="cambiarModoFlujoPrincipal('semanal')" style="cursor: pointer; flex: 1; padding: 6px; border-radius: 12px; transition: all 0.2s;" onmouseover="this.style.background='#FCEFE6'" onmouseout="this.style.background='transparent'">
+									<small style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total Histórico 📈</small>
+									<div id="bTotalCroissHist" style="font-size: 1.25rem; font-weight: 800; color: var(--text-main);">0 un.</div>
+									<small style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700;">Ver en gráfico ↓</small>
+								</div>
+							</div>
+
+							<!-- TARJETA PRINCIPAL DEL GRÁFICO PROFESIONAL -->
+							<div id="cardFlujoPrincipal" style="margin-top: 16px; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 20px; padding: 18px; box-shadow: 0 4px 14px rgba(45, 30, 24, 0.03);">
+								<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+									<div>
+										<h4 id="tituloFlujoPrincipal" style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Flujo Diario de Ventas</h4>
+										<small id="subtituloFlujoPrincipal" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Evolución día por día durante el mes</small>
+									</div>
+									<!-- Selector Integrado de Período -->
+									<div class="ios-segmented-control" style="margin: 0; width: auto; font-size: 0.75rem;">
+										<button id="btnFlujoDiario" class="seg-btn active" style="padding: 6px 12px; font-size: 0.75rem;" onclick="cambiarModoFlujoPrincipal('diario')">Día a Día</button>
+										<button id="btnFlujoSemanal" class="seg-btn" style="padding: 6px 12px; font-size: 0.75rem;" onclick="cambiarModoFlujoPrincipal('semanal')">Semanal</button>
+									</div>
+								</div>
+								
+								<!-- LIENZO GIGANTE DE ALTA RESOLUCIÓN -->
+								<div style="position: relative; width: 100%; height: 320px;">
+									<canvas id="chartFlujoPrincipalCanvas"></canvas>
+								</div>
+							</div>
+
+							<div style="margin-top: 16px; background: #FAF0EB; border: 1px solid #F7DFC8; border-radius: 16px; padding: 14px; text-align: center;">
+								<small style="color: var(--accent); font-weight: 800; text-transform: uppercase; font-size: 0.72rem;">Proyección Cierre de Mes</small>
+								<div id="txtProyeccionCroiss" style="font-size: 1.1rem; font-weight: 800; color: #2D1E18; margin-top: 2px;">~0 Croissants</div>
+								<small id="txtProyeccionIngresos" style="color: #64748b; font-weight: 600;">Estimación calculada por ritmo de ventas diario</small>
+							</div>
+
+							<div id="boxTopClientesBalance" style="margin-top: 16px;"></div>
+
+							<div style="margin-top: 16px; text-align: center;">
+								<h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px;">Desglose de Gastos</h4>
+								<canvas id="chartGastosCatCanvas" style="max-height: 220px;"></canvas>
+							</div>
+						</div>
                         <div id="subSecSabores" class="sub-seccion">
                             <div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; text-align: center; margin-bottom: 14px;">
                                 <small style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Pedidos con Jalea</small>

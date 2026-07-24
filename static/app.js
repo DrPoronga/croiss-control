@@ -25,6 +25,9 @@ let chartGastosCatInstance = null;
 let chartEvolucionLineaInstance = null;
 let chartSaboresInstance = null;
 let chartDiasInstance = null;
+let chartFlujoPrincipalInstance = null;
+let datosFlujoGlobal = { diario: [], semanal: [] };
+let modoFlujoActual = 'diario';
 
 // ==========================================
 // HELPER DE ANIMACIÓN Y TIEMPOS (REPARADO)
@@ -481,6 +484,13 @@ async function cargarBalance() {
         cerrarCroissLoaderSeguro();
 
         if(data.status === 'exito') {
+            // Guardamos correctamente en la variable que lee el gráfico principal
+            datosFlujoGlobal.diario = data.flujo_diario_mes || [];
+            datosFlujoGlobal.semanal = data.flujo_semanal_historico || [];
+            
+            // Renderizamos la gráfica gigante
+            renderizarGraficoFlujoPrincipal();
+
             const elCroissMes = document.getElementById('bTotalCroissMes');
             const elCroissHist = document.getElementById('bTotalCroissHist');
             if (elCroissMes) elCroissMes.innerText = `${data.total_croissants_mes} un.`;
@@ -704,6 +714,122 @@ function cambiarSegmentoBalance(segmento) {
     document.getElementById('subSecEvolucion').classList.toggle('active', segmento === 'evolucion');
 
     cargarBalance();
+}
+
+function cambiarModoFlujoPrincipal(modo) {
+    modoFlujoActual = modo;
+    const btnDiario = document.getElementById('btnFlujoDiario');
+    const btnSemanal = document.getElementById('btnFlujoSemanal');
+
+    if (btnDiario && btnSemanal) {
+        btnDiario.classList.toggle('active', modo === 'diario');
+        btnSemanal.classList.toggle('active', modo === 'semanal');
+    }
+
+    renderizarGraficoFlujoPrincipal();
+
+    // Scroll suave hacia la gráfica
+    const tarjetaChart = document.getElementById('cardFlujoPrincipal');
+    if (tarjetaChart) {
+        tarjetaChart.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function renderizarGraficoFlujoPrincipal() {
+    const ctx = document.getElementById('chartFlujoPrincipalCanvas');
+    if (!ctx) return;
+
+    if (chartFlujoPrincipalInstance) {
+        chartFlujoPrincipalInstance.destroy();
+    }
+
+    const esDiario = modoFlujoActual === 'diario';
+    const listaDatos = esDiario ? datosFlujoGlobal.diario : datosFlujoGlobal.semanal;
+
+    const tituloEl = document.getElementById('tituloFlujoPrincipal');
+    const subtituloEl = document.getElementById('subtituloFlujoPrincipal');
+
+    if (tituloEl) tituloEl.innerText = esDiario ? 'Flujo Diario de Ventas (Mes)' : 'Flujo Semanal Histórico';
+    if (subtituloEl) subtituloEl.innerText = esDiario ? 'Evolución día por día en el período seleccionado' : 'Tendencia de croissants vendidos por semana';
+
+    if (!listaDatos || listaDatos.length === 0) return;
+
+    const etiquetas = listaDatos.map(d => d.etiqueta);
+    const valoresCroiss = listaDatos.map(d => d.croissants);
+    const valoresMontos = listaDatos.map(d => d.monto);
+
+    // Gradiente sutil y elegante
+    const chartCtx = ctx.getContext('2d');
+    const gradiente = chartCtx.createLinearGradient(0, 0, 0, 300);
+    if (esDiario) {
+        gradiente.addColorStop(0, 'rgba(200, 109, 40, 0.35)');
+        gradiente.addColorStop(1, 'rgba(200, 109, 40, 0.02)');
+    } else {
+        gradiente.addColorStop(0, 'rgba(45, 30, 24, 0.35)');
+        gradiente.addColorStop(1, 'rgba(45, 30, 24, 0.02)');
+    }
+
+    chartFlujoPrincipalInstance = new Chart(ctx, {
+        type: esDiario ? 'bar' : 'line',
+        data: {
+            labels: etiquetas,
+            datasets: [{
+                label: 'Croissants',
+                data: valoresCroiss,
+                montosExtra: valoresMontos, // Datos adjuntos para tooltips inteligentes
+                backgroundColor: esDiario ? '#C86D28' : gradiente,
+                borderColor: esDiario ? '#9A4D15' : '#2D1E18',
+                borderWidth: esDiario ? 0 : 3,
+                borderRadius: esDiario ? 6 : 0,
+                fill: !esDiario,
+                tension: 0.3,
+                pointBackgroundColor: '#C86D28',
+                pointBorderColor: '#FFFFFF',
+                pointBorderWidth: 2,
+                pointRadius: esDiario ? 0 : 5,
+                pointHoverRadius: 7
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    backgroundColor: '#2D1E18',
+                    titleFont: { size: 13, weight: 'bold' },
+                    bodyFont: { size: 12 },
+                    padding: 12,
+                    cornerRadius: 12,
+                    displayColors: false,
+                    callbacks: {
+                        title: function(items) {
+                            return items[0].label;
+                        },
+                        label: function(context) {
+                            const cant = context.raw || 0;
+                            const monto = context.dataset.montosExtra[context.dataIndex] || 0;
+                            return [
+                                `🥐 Vendidos: ${cant} un.`,
+                                `💵 Facturado: $${monto}`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { font: { size: 10, weight: '600' }, color: '#7A6B63' }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(45, 30, 24, 0.06)' },
+                    ticks: { precision: 0, font: { size: 10, weight: '600' }, color: '#7A6B63' }
+                }
+            }
+        }
+    });
 }
 
 // ==========================================
@@ -1749,15 +1875,51 @@ function verDetalleCliente(clienteObj) {
     const secDetalle = document.getElementById('subSecDetalle');
     if (secDetalle) secDetalle.classList.add('active');
 
+    // Nombre y Categoría (Badge)
     const elNom = document.getElementById('detClienteNombre');
     if (elNom) {
-        const idBadge = clienteObj.id_cliente ? `<span style="font-size:0.75rem; background:#FAF0EB; color:var(--accent); border:1px solid #F7DFC8; padding:3px 8px; border-radius:10px; font-weight:800; margin-left:8px; vertical-align:middle;">${clienteObj.id_cliente}</span>` : '';
-        elNom.innerHTML = `${clienteObj.nombre || 'Cliente'}${idBadge}`;
+        const catBadge = clienteObj.categoria ? `<span style="font-size:0.75rem; background:#FAF0EB; color:var(--accent); border:1px solid #F7DFC8; padding:3px 10px; border-radius:12px; font-weight:800; margin-left:8px; vertical-align:middle;">${clienteObj.categoria}</span>` : '';
+        elNom.innerHTML = `${clienteObj.nombre || 'Cliente'}${catBadge}`;
     }
 
+    // Tarjetas de Métricas Clave del Cliente
     const elStats = document.getElementById('detClienteStats');
-    if (elStats) elStats.innerText = `Histórico: $${clienteObj.total_gastado || 0} gastados en ${clienteObj.total_croissants || 0} croissants (${clienteObj.total_pedidos || 0} pedidos)`;
+    if (elStats) {
+        let txtUltimaCompra = 'Sin datos';
+        
+        if (clienteObj.dias_sin_comprar !== undefined && clienteObj.dias_sin_comprar !== 999) {
+            if (clienteObj.dias_sin_comprar < 0) {
+                txtUltimaCompra = 'Pedido Agendado';
+            } else if (clienteObj.dias_sin_comprar === 0) {
+                txtUltimaCompra = 'Hoy';
+            } else {
+                txtUltimaCompra = `Hace ${clienteObj.dias_sin_comprar} día${clienteObj.dias_sin_comprar > 1 ? 's' : ''}`;
+            }
+        }
 
+        elStats.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; text-align: left;">
+                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
+                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">🥐 Sabor Favorito</small>
+                    <strong style="color: var(--text-main); font-size: 0.88rem;">${clienteObj.sabor_favorito || 'Variado'}</strong>
+                </div>
+                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
+                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">💵 Ticket Promedio</small>
+                    <strong style="color: #16A34A; font-size: 0.88rem;">$${clienteObj.ticket_promedio || 0} / pedido</strong>
+                </div>
+                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
+                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">📊 Croissants Totales</small>
+                    <strong style="color: var(--accent); font-size: 0.88rem;">${clienteObj.total_croissants || 0} un. (${clienteObj.total_pedidos || 0} pedidos)</strong>
+                </div>
+                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
+                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">🗓️ Última Compra</small>
+                    <strong style="color: var(--text-main); font-size: 0.88rem;">${txtUltimaCompra}</strong>
+                </div>
+            </div>
+        `;
+    }
+	
+    // Datos de Contacto y Botón Rápido de WhatsApp
     const contContacto = document.getElementById('detClienteContacto');
     if (contContacto) {
         let datosStr = [];
@@ -1767,10 +1929,23 @@ function verDetalleCliente(clienteObj) {
         let dirTexto = clienteObj.direccion ? `<br><span style="color:var(--text-main); font-weight:600;">Dir: ${clienteObj.direccion}</span>` : '';
         let mapsBtn = clienteObj.direccion ? ` <button type="button" class="btn-jalea-chip" style="margin-left:6px; font-size:0.7rem; padding: 2px 8px;" onclick="abrirGoogleMaps('${encodeURIComponent(clienteObj.direccion)}')">Abrir Maps</button>` : '';
 
-        const btnEditar = `<div style="margin-top:10px;"><button type="button" class="btn-jalea-chip active" style="font-size:0.8rem; padding:6px 12px;" onclick="abrirModalEditarCliente()">Editar Datos de Contacto</button></div>`;
-        contContacto.innerHTML = (datosStr.join(' | ') || 'Sin datos de contacto') + dirTexto + mapsBtn + btnEditar;
+        // Botón WhatsApp con mensaje pre-armado
+        let telLimpio = (clienteObj.telefono || '').replace(/\D/g, '');
+        let btnWhatsApp = '';
+        if (telLimpio) {
+            let msgText = encodeURIComponent(`¡Hola ${clienteObj.nombre}! Te escribimos de CROISS 🥐 ¿Cómo estás?`);
+            btnWhatsApp = `<a href="https://wa.me/${telLimpio}?text=${msgText}" target="_blank" class="btn-jalea-chip" style="background:#25D366; color:white; border:none; padding:6px 12px; font-size:0.78rem; text-decoration:none; font-weight:700; margin-right:6px; display:inline-block;">💬 Abrir WhatsApp</a>`;
+        }
+
+        const btnEditar = `<button type="button" class="btn-jalea-chip active" style="font-size:0.78rem; padding:6px 12px;" onclick="abrirModalEditarCliente()">✏️ Editar Datos</button>`;
+        
+        contContacto.innerHTML = `
+            <div>${datosStr.join(' | ') || 'Sin datos de contacto'}${dirTexto}${mapsBtn}</div>
+            <div style="margin-top:10px; display:flex; gap:6px;">${btnWhatsApp}${btnEditar}</div>
+        `;
     }
 
+    // Historial de Compras
     const contHist = document.getElementById('detClienteHistorial');
     if (contHist) {
         contHist.innerHTML = '';
