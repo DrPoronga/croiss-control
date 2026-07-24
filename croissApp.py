@@ -208,12 +208,9 @@ def _base_email_template(titulo_badge, badge_color, contenido_body):
               
               <!-- ENCABEZADO CON LOGO Y MARCA -->
               <tr>
-                <td style="background-color: #2D1E18; padding: 28px 24px; text-align: center;">
-                  <img src="https://pedidos.croissuy.com/static/icono.png" alt="CROISS Logo" width="65" height="65" style="border-radius: 50%; display: block; margin: 0 auto 10px auto; border: 2px solid #C86D28; object-fit: cover;">
-                  <h1 style="color: #FFFFFF; font-size: 20px; font-weight: 800; letter-spacing: 3px; margin: 0; text-transform: uppercase;">CROISS</h1>
-                  <p style="color: #C86D28; font-size: 10px; font-weight: 700; letter-spacing: 2px; margin: 4px 0 0 0; text-transform: uppercase;">Artesanos del Croissant</p>
-                </td>
-              </tr>
+                <td style="background-color: #E6DFD3; padding: 28px 24px; text-align: center;">
+                  <img src="https://pedidos.croissuy.com/static/logo.png" alt="CROISS Logo" width="65" height="65" style="border-radius: 50%; display: block; margin: 0 auto 10px auto; border: 2px solid #C86D28; object-fit: cover;">
+                </tr>
 
               <!-- INSIGNIA / ESTADO DE ACCIÓN -->
               <tr>
