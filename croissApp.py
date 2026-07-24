@@ -183,16 +183,10 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
 
     threading.Thread(target=_enviar).start()
 
-# --- PLANTILLAS DE EMAIL ---
 # ==========================================
-# PLANTILLAS DE EMAIL UNIFICADAS Y ELEGANTES
+# PLANTILLAS DE EMAIL UNIFICADAS
 # ==========================================
-
 def _base_email_template(titulo_badge, badge_color, contenido_body):
-    """
-    Estructura base responsiva para todos los correos de CROISS.
-    Logo ajustado en tamaño y encabezado proporcionado.
-    """
     LOGO_URL = "https://croissuy.com/static/logo.png"
 
     return f"""
@@ -207,15 +201,11 @@ def _base_email_template(titulo_badge, badge_color, contenido_body):
         <tr>
           <td align="center">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 500px; background-color: #FFFFFF; border-radius: 20px; overflow: hidden; border: 1px solid rgba(45, 30, 24, 0.08); box-shadow: 0 10px 25px rgba(45, 30, 24, 0.05);">
-              
-              <!-- ENCABEZADO CON LOGO PROPORCIONADO -->
               <tr>
                 <td style="background-color: #E6DFD3; padding: 22px 20px; text-align: center;">
                   <img src="{LOGO_URL}" alt="CROISS Logo" width="280" style="width: 280px; max-width: 75%; height: auto; display: block; margin: 0 auto; border: 0;">
                 </td>
               </tr>
-
-              <!-- INSIGNIA / ESTADO DE ACCIÓN -->
               <tr>
                 <td style="padding: 24px 28px 0 28px; text-align: center;">
                   <span style="display: inline-block; background-color: {badge_color}; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 6px 16px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -223,22 +213,17 @@ def _base_email_template(titulo_badge, badge_color, contenido_body):
                   </span>
                 </td>
               </tr>
-
-              <!-- CONTENIDO PRINCIPAL -->
               <tr>
                 <td style="padding: 20px 28px 30px 28px; color: #2D1E18; font-size: 14px; line-height: 1.6;">
                   {contenido_body}
                 </td>
               </tr>
-
-              <!-- PIE DE PÁGINA ELEGANTE -->
               <tr>
                 <td style="background-color: #FAF9F8; padding: 20px 28px; border-top: 1px solid #EFEAE6; text-align: center; font-size: 12px; color: #7A6B63;">
                   <p style="margin: 0 0 4px 0; font-weight: 700; color: #2D1E18;">CROISS · Artesanos del Croissant</p>
                   <p style="margin: 0; font-size: 11px; color: #7A6B63;">Mensaje automático sobre la gestión de tu pedido.</p>
                 </td>
               </tr>
-
             </table>
           </td>
         </tr>
@@ -320,6 +305,7 @@ def plantilla_email_cancelado(cliente, items_str):
     </div>
     """
     return _base_email_template("Pedido CANCELADO", "#DC2626", cuerpo)
+
 # ==========================================
 # GESTIÓN DE CLIENTES & INSUMOS
 # ==========================================
@@ -621,7 +607,6 @@ def fijar_stock_congelados():
         }), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
 
 @app.route('/api/venta', methods=['POST'])
 def registrar_venta():
@@ -643,7 +628,6 @@ def registrar_venta():
                 "mensaje": f"🚫 Capacidad insuficiente. Tienes {st_cong} croiss congelados + {st_masas} masa(s) (Capacidad total: {capacidad_total}) e intentas vender {total_unidades}."
             }), 400
 
-        # Descuenta primero de congelados sueltos; si faltan, rompe las masas necesarias
         if total_unidades <= st_cong:
             st_cong -= total_unidades
         else:
@@ -764,7 +748,7 @@ def eliminar_venta():
         return jsonify({"status": "exito", "mensaje": "Orden procesada y stock devuelto correctamente."}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 # ==========================================
 # RUTAS DE CLIENTES Y CRM
 # ==========================================
@@ -865,12 +849,10 @@ def obtener_clientes():
                 clientes_mes[key_norm]["total_pedidos"] += 1
                 clientes_mes[key_norm]["historial"].append(pedido_item)
 
-        # 1. Calcular métricas completas sobre todos los clientes del histórico
         for key, c in clientes_historico.items():
             c["total_gastado"] = round(c["total_gastado"], 2)
             c["ticket_promedio"] = round(c["total_gastado"] / c["total_pedidos"], 2) if c["total_pedidos"] > 0 else 0.0
             
-            # Ordenar historial filtrando compras con fecha válida
             items_con_fecha = [h for h in c["historial"] if h.get("fecha")]
             if items_con_fecha:
                 items_con_fecha.sort(key=lambda x: str(x["fecha"]), reverse=True)
@@ -884,14 +866,12 @@ def obtener_clientes():
                 c["ultima_compra_fecha"] = "Sin registro"
                 c["dias_sin_comprar"] = 999
 
-            # Sabor preferido
             if c["sabores_count"]:
                 sabor_fav = max(c["sabores_count"].items(), key=lambda x: x[1])[0]
                 c["sabor_favorito"] = sabor_fav
             else:
                 c["sabor_favorito"] = "Variado"
 
-            # Categorización
             if c["total_croissants"] >= 30:
                 c["categoria"] = "🌟 Cliente VIP"
             elif c["dias_sin_comprar"] != 999 and c["dias_sin_comprar"] <= 30:
@@ -901,7 +881,6 @@ def obtener_clientes():
             else:
                 c["categoria"] = "✨ Regular"
 
-        # 2. Copiar las métricas calculadas a los clientes del Ranking del Mes
         for key, c_mes in clientes_mes.items():
             full_c = clientes_historico.get(key, {})
             c_mes["sabor_favorito"] = full_c.get("sabor_favorito", "Variado")
@@ -926,7 +905,7 @@ def obtener_clientes():
 
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 @app.route('/api/cliente/editar', methods=['POST'])
 def editar_cliente():
     try:
@@ -1004,7 +983,6 @@ def obtener_balance():
 
         historico_dict, clientes_mes_dict, clientes_historico_dict = {}, {}, {}
 
-        # Días del mes filtrado
         try:
             anio_f, mes_f = int(mes_filtro.split("-")[0]), int(mes_filtro.split("-")[1])
             dias_totales_mes = calendar.monthrange(anio_f, mes_f)[1]
@@ -1041,7 +1019,6 @@ def obtener_balance():
             historico_dict[key_mes]["pedidos"] += 1
             historico_dict[key_mes]["croissants"] += cant
 
-            # Flujo Semanal Histórico
             if len(f_norm) == 10:
                 try:
                     dt_v = datetime.strptime(f_norm, "%Y-%m-%d")
@@ -1141,7 +1118,6 @@ def obtener_balance():
         ranking_sabores = [{"sabor": sab, "cantidad": vals["cantidad"], "porcentaje": round((vals["cantidad"] / total_croiss_mes * 100), 1) if total_croiss_mes > 0 else 0} for sab, vals in sabores_dict.items()]
         lista_historica = [{"mes_key": m_key, "ingresos": round(v["ingresos"], 2), "gastos_totales": round(v["costos"] + v["gastos"], 2), "ganancia_neta": round(v["ingresos"] - (v["costos"] + v["gastos"]), 2), "pedidos": v["pedidos"], "croissants": v["croissants"]} for m_key, v in sorted(historico_dict.items())]
 
-        # Estructuras preparadas para el Gráfico Principal Interactivo
         flujo_diario_lista = [{"etiqueta": f"Día {k.split('-')[2]}", "croissants": v["croissants"], "monto": round(v["monto"], 2)} for k, v in sorted(flujo_diario_mes_dict.items())]
         flujo_semanal_lista = [{"etiqueta": f"Sem {datetime.strptime(k, '%Y-%m-%d').strftime('%d/%m')}", "croissants": v["croissants"], "monto": round(v["monto"], 2)} for k, v in sorted(flujo_semanal_dict.items())]
 
@@ -1160,7 +1136,7 @@ def obtener_balance():
         }), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 @app.route('/api/editar_pedido', methods=['POST'])
 def editar_pedido():
     try:
@@ -1168,7 +1144,7 @@ def editar_pedido():
         num_fila = datos.get("fila")
         nuevo_producto = datos.get("producto")
         nueva_cantidad = datos.get("cantidad")
-        nuevas_notas = datos.get("notas")  # <--- Captura las notas/comentarios
+        nuevas_notas = datos.get("notas")
 
         if not num_fila or nuevo_producto is None:
             return jsonify({"status": "error", "mensaje": "Faltan datos requeridos"}), 400
@@ -1180,26 +1156,23 @@ def editar_pedido():
         col_producto = headers.index("producto") + 1 if "producto" in headers else 5
         col_cantidad = headers.index("cantidad") + 1 if "cantidad" in headers else 6
 
-        # Detectar la columna de notas/comentarios
         col_notas = 14
         for idx, h in enumerate(headers, start=1):
             if any(k in h for k in ["nota", "comentario", "observacion"]):
                 col_notas = idx
                 break
 
-        # Actualizar producto y cantidad
         ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_producto, str(nuevo_producto))
         if nueva_cantidad is not None:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_cantidad, int(nueva_cantidad))
 
-        # Actualizar comentario o nota si se envió
         if nuevas_notas is not None:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_notas, str(nuevas_notas))
 
         return jsonify({"status": "exito", "mensaje": "Pedido actualizado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 @app.route('/api/cuentas', methods=['GET'])
 def obtener_cuentas():
     try:

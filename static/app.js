@@ -30,7 +30,7 @@ let datosFlujoGlobal = { diario: [], semanal: [] };
 let modoFlujoActual = 'diario';
 
 // ==========================================
-// HELPER DE ANIMACIÓN Y TIEMPOS (REPARADO)
+// HELPER DE ANIMACIÓN Y TIEMPOS
 // ==========================================
 async function esperarAnimacionMinima(tiempoInicio, minMs = 2200) {
     const transcurrido = Date.now() - tiempoInicio;
@@ -484,11 +484,9 @@ async function cargarBalance() {
         cerrarCroissLoaderSeguro();
 
         if(data.status === 'exito') {
-            // Guardamos correctamente en la variable que lee el gráfico principal
             datosFlujoGlobal.diario = data.flujo_diario_mes || [];
             datosFlujoGlobal.semanal = data.flujo_semanal_historico || [];
             
-            // Renderizamos la gráfica gigante
             renderizarGraficoFlujoPrincipal();
 
             const elCroissMes = document.getElementById('bTotalCroissMes');
@@ -728,7 +726,6 @@ function cambiarModoFlujoPrincipal(modo) {
 
     renderizarGraficoFlujoPrincipal();
 
-    // Scroll suave hacia la gráfica
     const tarjetaChart = document.getElementById('cardFlujoPrincipal');
     if (tarjetaChart) {
         tarjetaChart.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -758,7 +755,6 @@ function renderizarGraficoFlujoPrincipal() {
     const valoresCroiss = listaDatos.map(d => d.croissants);
     const valoresMontos = listaDatos.map(d => d.monto);
 
-    // Gradiente sutil y elegante
     const chartCtx = ctx.getContext('2d');
     const gradiente = chartCtx.createLinearGradient(0, 0, 0, 300);
     if (esDiario) {
@@ -776,7 +772,7 @@ function renderizarGraficoFlujoPrincipal() {
             datasets: [{
                 label: 'Croissants',
                 data: valoresCroiss,
-                montosExtra: valoresMontos, // Datos adjuntos para tooltips inteligentes
+                montosExtra: valoresMontos,
                 backgroundColor: esDiario ? '#C86D28' : gradiente,
                 borderColor: esDiario ? '#9A4D15' : '#2D1E18',
                 borderWidth: esDiario ? 0 : 3,
@@ -1158,7 +1154,6 @@ function generarPDFDia(fecha) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
-    // Limpiador de emojis para evitar corrupción de texto en la fuente estándar de jsPDF
     const limpiarEmojis = (texto) => {
         if (!texto) return '';
         return texto.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '').trim();
@@ -1421,8 +1416,7 @@ async function cargarStockCongelados() {
         const resCong = await fetch('/api/stock/congelados');
         const dataCong = await resCong.json();
         if (dataCong.status === 'exito') {
-            const elCong = document.getElementById('cantCroissCongelados');
-            if (elCong) elCong.innerText = `${dataCong.stock} un.`;
+            actualizarUIStockCongelados(dataCong);
         }
         await cargarStock(true);
     } catch (err) {
@@ -1632,7 +1626,7 @@ function eliminarInsumoDirecto(nombreInsumo) {
             mostrarCroissLoader();
             try {
                 const r = await fetch('/api/stock/eliminar_insumo', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ insumo: nombreInsumo }) });
-                const data = await res.json();
+                const data = await r.json();
                 await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
@@ -1875,14 +1869,12 @@ function verDetalleCliente(clienteObj) {
     const secDetalle = document.getElementById('subSecDetalle');
     if (secDetalle) secDetalle.classList.add('active');
 
-    // Nombre y Categoría (Badge)
     const elNom = document.getElementById('detClienteNombre');
     if (elNom) {
         const catBadge = clienteObj.categoria ? `<span style="font-size:0.75rem; background:#FAF0EB; color:var(--accent); border:1px solid #F7DFC8; padding:3px 10px; border-radius:12px; font-weight:800; margin-left:8px; vertical-align:middle;">${clienteObj.categoria}</span>` : '';
         elNom.innerHTML = `${clienteObj.nombre || 'Cliente'}${catBadge}`;
     }
 
-    // Tarjetas de Métricas Clave del Cliente
     const elStats = document.getElementById('detClienteStats');
     if (elStats) {
         let txtUltimaCompra = 'Sin datos';
@@ -1918,8 +1910,7 @@ function verDetalleCliente(clienteObj) {
             </div>
         `;
     }
-	
-    // Datos de Contacto y Botón Rápido de WhatsApp
+
     const contContacto = document.getElementById('detClienteContacto');
     if (contContacto) {
         let datosStr = [];
@@ -1929,7 +1920,6 @@ function verDetalleCliente(clienteObj) {
         let dirTexto = clienteObj.direccion ? `<br><span style="color:var(--text-main); font-weight:600;">Dir: ${clienteObj.direccion}</span>` : '';
         let mapsBtn = clienteObj.direccion ? ` <button type="button" class="btn-jalea-chip" style="margin-left:6px; font-size:0.7rem; padding: 2px 8px;" onclick="abrirGoogleMaps('${encodeURIComponent(clienteObj.direccion)}')">Abrir Maps</button>` : '';
 
-        // Botón WhatsApp con mensaje pre-armado
         let telLimpio = (clienteObj.telefono || '').replace(/\D/g, '');
         let btnWhatsApp = '';
         if (telLimpio) {
@@ -1945,7 +1935,6 @@ function verDetalleCliente(clienteObj) {
         `;
     }
 
-    // Historial de Compras
     const contHist = document.getElementById('detClienteHistorial');
     if (contHist) {
         contHist.innerHTML = '';
@@ -2093,8 +2082,8 @@ function seleccionarInsumoRapido(nombreInsumo, unidadPredeterminada = '') {
 
 async function eliminarGasto(numFila, descGasto) {
     Swal.fire({
-        title: `¿Eliminar este gasto?`,
-        html: `<p style="font-size:0.88rem; color:var(--text-muted);">Se removerá <strong style="color:var(--text-main);">${descGasto}</strong> de los gastos.</p>`,
+        title: `¿Eliminar este registro?`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted);">Se removerá <strong style="color:var(--text-main);">${descGasto}</strong> del historial.</p>`,
         showCancelButton: true, confirmButtonText: 'Sí, eliminar', cancelButtonText: 'Cancelar',
         customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-btn-danger', cancelButton: 'croiss-swal-cancel' }
     }).then(async (result) => {
@@ -2107,7 +2096,7 @@ async function eliminarGasto(numFila, descGasto) {
                 await esperarAnimacionMinima(tInicio, 2200);
 
                 if (data.status === 'exito') {
-                    mostrarCroissExito('Gasto Eliminado', 'Se removió el registro.');
+                    mostrarCroissExito('Registro Eliminado', 'Se removió la transacción.');
                     cargarInsumosYGastos();
                     if (typeof cargarBalance === 'function') cargarBalance();
                 } else { Swal.fire('Error', data.mensaje, 'error'); }
@@ -2228,6 +2217,57 @@ function renderizarMenuYStock() {
     }
 }
 
+function actualizarUIStockCongelados(data) {
+    const elCong = document.getElementById('cantCroissCongelados');
+    const elSobrevendidos = document.getElementById('cantSobrevendidos');
+    const elMasas = document.getElementById('cantMasasPendientes');
+    const boxContainer = document.getElementById('boxSobrevendidosContainer');
+    const lblTitulo = document.getElementById('lblSobrevendidosTitulo');
+
+    const croiss = data.congelados !== undefined ? data.congelados : 0;
+    const masas = data.masas !== undefined ? data.masas : 0;
+    const capTotal = data.capacidad_total !== undefined ? data.capacidad_total : (croiss + (masas * 10));
+
+    if (elCong) elCong.innerText = `${croiss} un.`;
+    if (elSobrevendidos) elSobrevendidos.innerText = `${masas} masas`;
+    if (elMasas) elMasas.innerText = `(Cap. Total: ${capTotal} croiss)`;
+
+    if (boxContainer) {
+        if (capTotal <= 0) {
+            boxContainer.style.background = '#FEF2F2';
+            boxContainer.style.borderColor = '#FCA5A5';
+            if (lblTitulo) {
+                lblTitulo.style.color = '#991B1B';
+                lblTitulo.innerText = 'Sin Capacidad 🚫';
+            }
+            if (elSobrevendidos) elSobrevendidos.style.color = '#DC2626';
+            if (elMasas) elMasas.style.color = '#B91C1C';
+        } else {
+            boxContainer.style.background = '#F0FDF4';
+            boxContainer.style.borderColor = '#DCFCE7';
+            if (lblTitulo) {
+                lblTitulo.style.color = '#166534';
+                lblTitulo.innerText = 'Masas en Heladera 🥣';
+            }
+            if (elSobrevendidos) elSobrevendidos.style.color = '#15803D';
+            if (elMasas) elMasas.style.color = '#16A34A';
+        }
+    }
+}
+
+async function cargarStockCongelados() {
+    try {
+        const resCong = await fetch('/api/stock/congelados');
+        const dataCong = await resCong.json();
+        if (dataCong.status === 'exito') {
+            actualizarUIStockCongelados(dataCong);
+        }
+        await cargarStock(true);
+    } catch (err) {
+        console.error("Error al cargar congelados:", err);
+    }
+}
+
 async function cargarTodoElStock() {
     const tInicio = Date.now();
     mostrarCroissLoader();
@@ -2236,8 +2276,7 @@ async function cargarTodoElStock() {
         const resCong = await fetch('/api/stock/congelados');
         const dataCong = await resCong.json();
         if (dataCong.status === 'exito') {
-            const elCong = document.getElementById('cantCroissCongelados');
-            if (elCong) elCong.innerText = `${dataCong.stock} un.`;
+            actualizarUIStockCongelados(dataCong);
         }
 
         await cargarStock(true);
@@ -2371,77 +2410,3 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarStock();
     toggleCamposMateriaPrima();
 });
-
-function actualizarUIStockCongelados(data) {
-    const elCong = document.getElementById('cantCroissCongelados');
-    const elSobrevendidos = document.getElementById('cantSobrevendidos');
-    const elMasas = document.getElementById('cantMasasPendientes');
-    const boxContainer = document.getElementById('boxSobrevendidosContainer');
-    const lblTitulo = document.getElementById('lblSobrevendidosTitulo');
-
-    const croiss = data.congelados !== undefined ? data.congelados : 0;
-    const masas = data.masas !== undefined ? data.masas : 0;
-    const capTotal = data.capacidad_total !== undefined ? data.capacidad_total : (croiss + (masas * 10));
-
-    if (elCong) elCong.innerText = `${croiss} un.`;
-    if (elSobrevendidos) elSobrevendidos.innerText = `${masas} masas`;
-    if (elMasas) elMasas.innerText = `(Cap. Total: ${capTotal} croiss)`;
-
-    if (boxContainer) {
-        if (capTotal <= 0) {
-            boxContainer.style.background = '#FEF2F2';
-            boxContainer.style.borderColor = '#FCA5A5';
-            if (lblTitulo) {
-                lblTitulo.style.color = '#991B1B';
-                lblTitulo.innerText = 'Sin Capacidad 🚫';
-            }
-            if (elSobrevendidos) elSobrevendidos.style.color = '#DC2626';
-            if (elMasas) elMasas.style.color = '#B91C1C';
-        } else {
-            boxContainer.style.background = '#F0FDF4';
-            boxContainer.style.borderColor = '#DCFCE7';
-            if (lblTitulo) {
-                lblTitulo.style.color = '#166534';
-                lblTitulo.innerText = 'Masas en Heladera 🥣';
-            }
-            if (elSobrevendidos) elSobrevendidos.style.color = '#15803D';
-            if (elMasas) elMasas.style.color = '#16A34A';
-        }
-    }
-}
-
-async function cargarStockCongelados() {
-    try {
-        const resCong = await fetch('/api/stock/congelados');
-        const dataCong = await resCong.json();
-        if (dataCong.status === 'exito') {
-            actualizarUIStockCongelados(dataCong);
-        }
-        await cargarStock(true);
-    } catch (err) {
-        console.error("Error al cargar congelados:", err);
-    }
-}
-
-async function cargarTodoElStock() {
-    const tInicio = Date.now();
-    mostrarCroissLoader();
-
-    try {
-        const resCong = await fetch('/api/stock/congelados');
-        const dataCong = await resCong.json();
-        if (dataCong.status === 'exito') {
-            actualizarUIStockCongelados(dataCong);
-        }
-
-        await cargarStock(true);
-        await cargarInsumosYGastos();
-
-        await esperarAnimacionMinima(tInicio, 2200);
-        cerrarCroissLoaderSeguro();
-    } catch (err) {
-        cerrarCroissLoaderSeguro();
-        console.error("Error al cargar todo el stock:", err);
-    }
-}
-
