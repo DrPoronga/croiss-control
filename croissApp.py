@@ -191,8 +191,10 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
 def _base_email_template(titulo_badge, badge_color, contenido_body):
     """
     Estructura base responsiva para todos los correos de CROISS.
-    Mantiene la estética premium de la app mostrando el logo completo.
+    Logo ajustado en tamaño y encabezado proporcionado.
     """
+    LOGO_URL = "https://croissuy.com/static/logo.png"
+
     return f"""
     <!DOCTYPE html>
     <html lang="es">
@@ -206,10 +208,10 @@ def _base_email_template(titulo_badge, badge_color, contenido_body):
           <td align="center">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 500px; background-color: #FFFFFF; border-radius: 20px; overflow: hidden; border: 1px solid rgba(45, 30, 24, 0.08); box-shadow: 0 10px 25px rgba(45, 30, 24, 0.05);">
               
-              <!-- ENCABEZADO CON LOGO COMPLETO (RECTANGULAR) -->
+              <!-- ENCABEZADO CON LOGO PROPORCIONADO -->
               <tr>
-                <td style="background-color: #E6DFD3; padding: 32px 24px; text-align: center;">
-                  <img src="https://croissuy.com/static/logo.png" alt="CROISS Logo" width="210" style="width: 210px; max-width: 85%; height: auto; display: block; margin: 0 auto; border: 0;">
+                <td style="background-color: #E6DFD3; padding: 22px 20px; text-align: center;">
+                  <img src="{LOGO_URL}" alt="CROISS Logo" width="280" style="width: 280px; max-width: 75%; height: auto; display: block; margin: 0 auto; border: 0;">
                 </td>
               </tr>
 
@@ -244,7 +246,7 @@ def _base_email_template(titulo_badge, badge_color, contenido_body):
     </body>
     </html>
     """
-
+    
 def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
     es_pagado = estado_pago.lower() == "pagado"
     texto_pago = "PAGADO" if es_pagado else "Pendiente de pago"
