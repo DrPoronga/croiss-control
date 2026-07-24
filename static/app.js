@@ -963,10 +963,15 @@ function abrirEdicionPedido(numFila) {
     Swal.fire({
         title: `Editar Pedido de ${pEncontrado.cliente}`,
         html: `
-            <div style="max-height:350px; overflow-y:auto; padding-right:4px;" id="contenedorItemsEdicion">
+            <div style="max-height:260px; overflow-y:auto; padding-right:4px;" id="contenedorItemsEdicion">
                 ${generarHtmlListaEdicion()}
             </div>
-            <button type="button" class="btn-jalea-chip active" style="margin-top:12px; width:100%; padding:8px;" onclick="agregarItemEdicion()">+ Agregar otro producto</button>
+            <button type="button" class="btn-jalea-chip active" style="margin-top:8px; width:100%; padding:8px;" onclick="agregarItemEdicion()">+ Agregar otro producto</button>
+            
+            <div style="margin-top:14px; text-align:left;">
+                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOTAS / COMENTARIOS DEL PEDIDO</label>
+                <input type="text" id="editNotasInput" value="${pEncontrado.notas || ''}" placeholder="Ej: Separar salados, entregar con moño rojo..." class="croiss-swal-input" style="margin:0 !important;">
+            </div>
         `,
         showCancelButton: true, confirmButtonText: 'Guardar Cambios', cancelButtonText: 'Cancelar',
         customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' },
@@ -981,7 +986,16 @@ function abrirEdicionPedido(numFila) {
                 resumen.push(`${cant}x ${prodNombre}${item.con_jalea ? ' (Con Jalea)' : ''}`);
                 totalCant += cant;
             }
-            return { fila: numFila, producto: resumen.join(', '), cantidad: totalCant };
+
+            let campoNotas = document.getElementById('editNotasInput');
+            let nuevasNotas = campoNotas ? campoNotas.value.trim() : '';
+
+            return { 
+                fila: numFila, 
+                producto: resumen.join(', '), 
+                cantidad: totalCant,
+                notas: nuevasNotas 
+            };
         }
     }).then(async (result) => {
         if (result.isConfirmed && result.value) {

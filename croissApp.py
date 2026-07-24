@@ -966,23 +966,41 @@ def obtener_balance():
 def editar_pedido():
     try:
         datos = request.json or {}
-        num_fila, nuevo_producto, nueva_cantidad = datos.get("fila"), datos.get("producto"), datos.get("cantidad")
-        if not num_fila or nuevo_producto is None: return jsonify({"status": "error", "mensaje": "Faltan datos requeridos"}), 400
+        num_fila = datos.get("fila")
+        nuevo_producto = datos.get("producto")
+        nueva_cantidad = datos.get("cantidad")
+        nuevas_notas = datos.get("notas")  # <--- Captura las notas/comentarios
+
+        if not num_fila or nuevo_producto is None:
+            return jsonify({"status": "error", "mensaje": "Faltan datos requeridos"}), 400
 
         sheet_ventas = conectar_sheet("Ventas")
         asegurar_encabezados_ventas(sheet_ventas)
         headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
+        
         col_producto = headers.index("producto") + 1 if "producto" in headers else 5
         col_cantidad = headers.index("cantidad") + 1 if "cantidad" in headers else 6
 
+        # Detectar la columna de notas/comentarios
+        col_notas = 14
+        for idx, h in enumerate(headers, start=1):
+            if any(k in h for k in ["nota", "comentario", "observacion"]):
+                col_notas = idx
+                break
+
+        # Actualizar producto y cantidad
         ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_producto, str(nuevo_producto))
         if nueva_cantidad is not None:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_cantidad, int(nueva_cantidad))
 
+        # Actualizar comentario o nota si se envió
+        if nuevas_notas is not None:
+            ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_notas, str(nuevas_notas))
+
         return jsonify({"status": "exito", "mensaje": "Pedido actualizado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/cuentas', methods=['GET'])
 def obtener_cuentas():
     try:
