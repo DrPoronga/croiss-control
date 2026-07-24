@@ -191,7 +191,7 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
 def _base_email_template(titulo_badge, badge_color, contenido_body):
     """
     Estructura base responsiva para todos los correos de CROISS.
-    Mantiene la estética premium de la app (colores espresso, terracota y crema).
+    Mantiene la estética premium de la app mostrando el logo completo.
     """
     return f"""
     <!DOCTYPE html>
@@ -206,11 +206,12 @@ def _base_email_template(titulo_badge, badge_color, contenido_body):
           <td align="center">
             <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 500px; background-color: #FFFFFF; border-radius: 20px; overflow: hidden; border: 1px solid rgba(45, 30, 24, 0.08); box-shadow: 0 10px 25px rgba(45, 30, 24, 0.05);">
               
-              <!-- ENCABEZADO CON LOGO Y MARCA -->
+              <!-- ENCABEZADO CON LOGO COMPLETO (RECTANGULAR) -->
               <tr>
-                <td style="background-color: #E6DFD3; padding: 28px 24px; text-align: center;">
-                  <img src="https://pedidos.croissuy.com/static/logo.png" alt="CROISS Logo" width="65" height="65" style="border-radius: 50%; display: block; margin: 0 auto 10px auto; border: 2px solid #C86D28; object-fit: cover;">
-                </tr>
+                <td style="background-color: #E6DFD3; padding: 32px 24px; text-align: center;">
+                  <img src="https://pedidos.croissuy.com/static/logo.png" alt="CROISS Logo" width="210" style="width: 210px; max-width: 85%; height: auto; display: block; margin: 0 auto; border: 0;">
+                </td>
+              </tr>
 
               <!-- INSIGNIA / ESTADO DE ACCIÓN -->
               <tr>
