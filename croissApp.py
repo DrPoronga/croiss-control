@@ -184,37 +184,142 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
     threading.Thread(target=_enviar).start()
 
 # --- PLANTILLAS DE EMAIL ---
-def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
-    badge_pago = "Pagado" if estado_pago.lower() == "pagado" else "Pendiente de Pago"
-    return f"""
-    <div style="font-family: Arial, sans-serif; padding: 20px; background: #FAF9F8;">
-      <div style="max-width: 480px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 16px;">
-        <h2 style="color: #C86D28;">¡Hola, {cliente}! ✨</h2>
-        <p>Tu pedido está confirmado para el {fecha_entrega}:</p>
-        <p><strong>📦 {items_str}</strong></p>
-        <p>Total: <strong>${total}</strong> ({badge_pago})</p>
-      </div>
-    </div>
+# ==========================================
+# PLANTILLAS DE EMAIL UNIFICADAS Y ELEGANTES
+# ==========================================
+
+def _base_email_template(titulo_badge, badge_color, contenido_body):
     """
+    Estructura base responsiva para todos los correos de CROISS.
+    Mantiene la estética premium de la app (colores espresso, terracota y crema).
+    """
+    return f"""
+    <!DOCTYPE html>
+    <html lang="es">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #F9F3EE; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #2D1E18;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color: #F9F3EE; padding: 30px 10px;">
+        <tr>
+          <td align="center">
+            <table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width: 500px; background-color: #FFFFFF; border-radius: 20px; overflow: hidden; border: 1px solid rgba(45, 30, 24, 0.08); box-shadow: 0 10px 25px rgba(45, 30, 24, 0.05);">
+              
+              <!-- ENCABEZADO CON LOGO Y MARCA -->
+              <tr>
+                <td style="background-color: #2D1E18; padding: 28px 24px; text-align: center;">
+                  <img src="https://pedidos.croissuy.com/static/icono.png" alt="CROISS Logo" width="65" height="65" style="border-radius: 50%; display: block; margin: 0 auto 10px auto; border: 2px solid #C86D28; object-fit: cover;">
+                  <h1 style="color: #FFFFFF; font-size: 20px; font-weight: 800; letter-spacing: 3px; margin: 0; text-transform: uppercase;">CROISS</h1>
+                  <p style="color: #C86D28; font-size: 10px; font-weight: 700; letter-spacing: 2px; margin: 4px 0 0 0; text-transform: uppercase;">Artesanos del Croissant</p>
+                </td>
+              </tr>
+
+              <!-- INSIGNIA / ESTADO DE ACCIÓN -->
+              <tr>
+                <td style="padding: 24px 28px 0 28px; text-align: center;">
+                  <span style="display: inline-block; background-color: {badge_color}; color: #FFFFFF; font-size: 11px; font-weight: 800; padding: 6px 16px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px;">
+                    {titulo_badge}
+                  </span>
+                </td>
+              </tr>
+
+              <!-- CONTENIDO PRINCIPAL -->
+              <tr>
+                <td style="padding: 20px 28px 30px 28px; color: #2D1E18; font-size: 14px; line-height: 1.6;">
+                  {contenido_body}
+                </td>
+              </tr>
+
+              <!-- PIE DE PÁGINA ELEGANTE -->
+              <tr>
+                <td style="background-color: #FAF9F8; padding: 20px 28px; border-top: 1px solid #EFEAE6; text-align: center; font-size: 12px; color: #7A6B63;">
+                  <p style="margin: 0 0 4px 0; font-weight: 700; color: #2D1E18;">CROISS · Artesanos del Croissant</p>
+                  <p style="margin: 0; font-size: 11px; color: #7A6B63;">Mensaje automático sobre la gestión de tu pedido.</p>
+                </td>
+              </tr>
+
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+    """
+
+def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
+    es_pagado = estado_pago.lower() == "pagado"
+    texto_pago = "PAGADO" if es_pagado else "Pendiente de pago"
+    color_pago = "#16A34A" if es_pagado else "#DC2626"
+
+    cuerpo = f"""
+    <h2 style="color: #2D1E18; font-size: 18px; font-weight: 800; margin: 0 0 12px 0; text-align: center;">¡Hola, {cliente}!</h2>
+    <p style="margin: 0 0 18px 0; color: #7A6B63; text-align: center;">Tu pedido ha sido registrado con éxito. A continuación te dejamos el detalle de tu orden:</p>
+
+    <div style="background-color: #FAF9F8; border: 1px solid #EFEAE6; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 13px;">
+        <tr>
+          <td style="padding-bottom: 10px; color: #7A6B63; font-weight: 600;">Productos:</td>
+          <td style="padding-bottom: 10px; text-align: right; font-weight: 700; color: #2D1E18;">{items_str}</td>
+        </tr>
+        <tr>
+          <td style="padding-bottom: 10px; color: #7A6B63; font-weight: 600;">Fecha de Entrega:</td>
+          <td style="padding-bottom: 10px; text-align: right; font-weight: 700; color: #2D1E18;">{fecha_entrega}</td>
+        </tr>
+        <tr>
+          <td style="padding-top: 10px; border-top: 1px dashed #E2D9D3; color: #7A6B63; font-weight: 600;">Estado de Pago:</td>
+          <td style="padding-top: 10px; border-top: 1px dashed #E2D9D3; text-align: right;">
+            <span style="color: {color_pago}; font-weight: 800;">{texto_pago}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-top: 8px; color: #2D1E18; font-weight: 800; font-size: 15px;">Monto Total:</td>
+          <td style="padding-top: 8px; text-align: right; color: #C86D28; font-weight: 800; font-size: 16px;">${total}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="margin: 0; font-size: 13px; color: #7A6B63; text-align: center;">¡Muchas gracias por elegir la artesanía de CROISS!</p>
+    """
+    return _base_email_template("¡Pedido Confirmado! 🥐", "#C86D28", cuerpo)
 
 def plantilla_email_pago_recibido(cliente, monto):
-    return f"<h2>¡Pago Recibido!</h2><p>Hola {cliente}, registramos tu pago de ${monto}.</p>"
+    cuerpo = f"""
+    <h2 style="color: #2D1E18; font-size: 18px; font-weight: 800; margin: 0 0 12px 0; text-align: center;">¡Pago Acreditado, {cliente}!</h2>
+    <p style="margin: 0 0 18px 0; color: #7A6B63; text-align: center;">Registramos tu pago correctamente. Tu orden ya figura como <strong style="color: #16A34A;">PAGADA</strong>.</p>
+
+    <div style="background-color: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 14px; padding: 20px; text-align: center; margin-bottom: 20px;">
+      <span style="display: block; font-size: 11px; font-weight: 700; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;">Monto Registrado</span>
+      <strong style="font-size: 26px; color: #15803D; font-weight: 800; display: block; margin-top: 4px;">${monto}</strong>
+    </div>
+
+    <p style="margin: 0; font-size: 13px; color: #7A6B63; text-align: center;">Nos encargaremos de tener tus croissants listos y frescos a tiempo.</p>
+    """
+    return _base_email_template("Pago Recibido 💸", "#16A34A", cuerpo)
 
 def plantilla_email_entregado(cliente, link_google_review="https://share.google/dTCn5wDuysp01wARR"):
-    return f"<h2>¡Pedido Entregado! 🥐</h2><p>Gracias {cliente}. Podés dejarnos tu reseña en Google: {link_google_review}</p>"
+    cuerpo = f"""
+    <h2 style="color: #2D1E18; font-size: 18px; font-weight: 800; margin: 0 0 12px 0; text-align: center;">¡Gracias por tu compra, {cliente}! </h2>
+    <p style="margin: 0 0 18px 0; color: #7A6B63; text-align: center;">Te confirmamos que tu pedido ha sido entregado. Esperamos que disfrutes cada bocado.</p>
 
-def plantilla_email_cancelado(cliente, items_str):
-    return f"""
-    <div style="font-family: Arial, sans-serif; padding: 20px; background: #FAF9F8;">
-      <div style="max-width: 480px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 16px;">
-        <h2 style="color: #DC2626;">Pedido Cancelado ❌</h2>
-        <p>Hola <strong>{cliente}</strong>,</p>
-        <p>Te confirmamos que tu orden (<strong>{items_str}</strong>) ha sido cancelada.</p>
-        <p>Si deseas reprogramar o fue un error, no dudes en responder a este correo.</p>
-      </div>
+    <div style="background-color: #FAF0EB; border: 1px solid #F7DFC8; border-radius: 16px; padding: 22px 18px; text-align: center; margin-bottom: 20px;">
+      <p style="margin: 0 0 6px 0; font-size: 14px; font-weight: 800; color: #2D1E18;">¿Te gustó la experiencia?</p>
+      <p style="margin: 0 0 16px 0; font-size: 12px; color: #7A6B63; line-height: 1.4;">Tu opinión es sumamente valiosa para nuestro taller artesanal.</p>
+      <a href="{link_google_review}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #C86D28, #9A4D15); color: #FFFFFF; text-decoration: none; font-size: 13px; font-weight: 700; padding: 12px 22px; border-radius: 12px; box-shadow: 0 4px 12px rgba(200, 109, 40, 0.25);">Déjanos tu reseña en Google ★★★★★</a>
     </div>
     """
+    return _base_email_template("¡Pedido Entregado! ", "#C86D28", cuerpo)
 
+def plantilla_email_cancelado(cliente, items_str):
+    cuerpo = f"""
+    <h2 style="color: #2D1E18; font-size: 18px; font-weight: 800; margin: 0 0 12px 0; text-align: center;">Hola, {cliente}</h2>
+    <p style="margin: 0 0 18px 0; color: #7A6B63; text-align: center;">Te informamos que tu orden correspondiente a <strong>{items_str}</strong> ha sido cancelada.</p>
+
+    <div style="background-color: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 14px; padding: 16px; margin-bottom: 20px; text-align: center;">
+      <p style="margin: 0; font-size: 13px; color: #991B1B; font-weight: 600;">Si deseas reprogramar tu pedido o fue un inconveniente, podés responder directamente a este correo.</p>
+    </div>
+    """
+    return _base_email_template("Pedido CANCELADO", "#DC2626", cuerpo)
 # ==========================================
 # GESTIÓN DE CLIENTES & INSUMOS
 # ==========================================
