@@ -1145,6 +1145,7 @@ def editar_pedido():
         nuevo_producto = datos.get("producto")
         nueva_cantidad = datos.get("cantidad")
         nuevas_notas = datos.get("notas")
+        nueva_fecha_entrega = datos.get("fecha_entrega") # NUEVO: Capturar fecha
 
         if not num_fila or nuevo_producto is None:
             return jsonify({"status": "error", "mensaje": "Faltan datos requeridos"}), 400
@@ -1155,6 +1156,9 @@ def editar_pedido():
         
         col_producto = headers.index("producto") + 1 if "producto" in headers else 5
         col_cantidad = headers.index("cantidad") + 1 if "cantidad" in headers else 6
+        
+        # NUEVO: Encontrar la columna de Fecha de Entrega
+        col_fecha_entrega = headers.index("fecha entrega") + 1 if "fecha entrega" in headers else 3
 
         col_notas = 14
         for idx, h in enumerate(headers, start=1):
@@ -1168,11 +1172,15 @@ def editar_pedido():
 
         if nuevas_notas is not None:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_notas, str(nuevas_notas))
+            
+        # NUEVO: Si se envió una nueva fecha, se actualiza en el Sheets
+        if nueva_fecha_entrega:
+            ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_fecha_entrega, str(nueva_fecha_entrega))
 
         return jsonify({"status": "exito", "mensaje": "Pedido actualizado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/cuentas', methods=['GET'])
 def obtener_cuentas():
     try:
