@@ -45,89 +45,6 @@ function getInputValueSafe(id, defaultVal = '') {
 }
 
 // ==========================================
-// AUTENTICACIÓN BIOMÉTRICA (RESPALDO MÓVIL/PC)
-// ==========================================
-function esDispositivoMovil() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-           ('ontouchstart' in window && navigator.maxTouchPoints > 1);
-}
-
-async function inicializarFaceID() {
-    const overlay = document.getElementById('lockScreenOverlay');
-    if (!overlay) return;
-
-    if (!esDispositivoMovil()) {
-        overlay.style.display = 'none';
-        return;
-    }
-
-    try {
-        if (window.PublicKeyCredential && await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable()) {
-            overlay.style.display = 'flex';
-        } else {
-            overlay.style.display = 'none';
-        }
-    } catch (e) {
-        overlay.style.display = 'none';
-    }
-}
-
-async function autenticarConBiometria() {
-    const overlay = document.getElementById('lockScreenOverlay');
-    try {
-        if (!window.isSecureContext || !navigator.credentials) {
-            if (overlay) overlay.style.display = 'none';
-            return;
-        }
-
-        const credentialId = localStorage.getItem('croiss_bio_cred_id');
-
-        if (!credentialId) {
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-
-            const credential = await navigator.credentials.create({
-                publicKey: {
-                    challenge: challenge,
-                    rp: { name: "CROISS Control" },
-                    user: { id: new Uint8Array([1, 2, 3, 4]), name: "admin@croissuy.com", displayName: "Administrador CROISS" },
-                    pubKeyCredParams: [{ alg: -7, type: "public-key" }, { alg: -257, type: "public-key" }],
-                    authenticatorSelection: { authenticatorAttachment: "platform", userVerification: "required" },
-                    timeout: 60000
-                }
-            });
-
-            if (credential) {
-                const idStr = btoa(String.fromCharCode(...new Uint8Array(credential.rawId)));
-                localStorage.setItem('croiss_bio_cred_id', idStr);
-                if (overlay) overlay.style.display = 'none';
-            }
-        } else {
-            const challenge = new Uint8Array(32);
-            window.crypto.getRandomValues(challenge);
-
-            const rawId = Uint8Array.from(atob(credentialId), c => c.charCodeAt(0));
-
-            const assertion = await navigator.credentials.get({
-                publicKey: {
-                    challenge: challenge,
-                    allowCredentials: [{ id: rawId, type: 'public-key' }],
-                    userVerification: "required",
-                    timeout: 60000
-                }
-            });
-
-            if (assertion && overlay) {
-                overlay.style.display = 'none';
-            }
-        }
-    } catch (err) {
-        console.error("Aviso de biometría:", err);
-        if (overlay) overlay.style.display = 'none';
-    }
-}
-
-// ==========================================
 // DETECTOR INTELIGENTE DE COLUMNAS SHEETS
 // ==========================================
 function obtenerNombreDesdeObjeto(prod) {
@@ -2309,7 +2226,6 @@ async function cargarTodoElStock() {
 // FORMULARIOS DE REGISTRO (SUBMIT LISTENERS)
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => {
-    inicializarFaceID();
 
     const formFinalizarPedido = document.getElementById('formFinalizarPedido');
     if (formFinalizarPedido) {

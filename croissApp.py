@@ -19,7 +19,7 @@ import math
 app = Flask(__name__)
 
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "croiss_super_secreta_2026")
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=365)
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
 
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASS = os.environ.get("ADMIN_PASSWORD", "croisscamigera")
