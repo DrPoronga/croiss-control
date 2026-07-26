@@ -390,17 +390,20 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     else:
         costo_croissants = total_croissants * 24.10
 
+    # ==========================================
+    # LÓGICA DE CAJAS CORREGIDA
+    # ==========================================
     cajas_grande = total_croissants // 6
     sobrante = total_croissants % 6
     cajas_mediana = 0
     cajas_chica = 0
     
-    if sobrante == 1: cajas_chica = 1
-    elif sobrante in (2, 3): cajas_mediana = 1
-    elif sobrante == 4:
+    # Sobrantes de 1, 2 o 3 entran en 1 Caja de 3
+    if sobrante in (1, 2, 3):
         cajas_mediana = 1
-        cajas_chica = 1
-    elif sobrante == 5: cajas_grande += 1
+    # Sobrantes de 4 o 5 requieren 1 Caja de 6 adicional
+    elif sobrante in (4, 5):
+        cajas_grande += 1
         
     papel = cajas_grande + cajas_mediana + cajas_chica
     costo_empaque = (cajas_grande * 36.0) + (cajas_mediana * 27.0) + (cajas_chica * 18.0)
@@ -414,7 +417,7 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
         "cajas_chica": cajas_chica,
         "papel": papel
     }
-
+    
 def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False):
     alertas = []
     try:
