@@ -378,26 +378,29 @@
                             <button id="segBtnPromo" class="seg-btn" onclick="cambiarSegmentoCliente('promo')">Cliente del Mes</button>
                         </div>
                         <div id="subSecLista" class="sub-seccion active">
-                            <div style="margin-bottom: 12px; display: flex; gap: 8px; align-items: center; width: 100%;">
-                                <input type="text" id="inputBuscarCliente" placeholder="Buscar cliente..." onkeyup="filtrarDirectorioClientes()" style="margin: 0; flex: 1; min-width: 0; padding: 12px 14px; border-radius: 14px; font-size: 0.88rem; border: 1.5px solid var(--border-color); background: #FAF9F8; outline: none; box-sizing: border-box;">
-                                <input type="month" id="cMesFilter" onchange="cargarClientes()" style="margin: 0; width: 130px; flex-shrink: 0; padding: 12px 8px; border-radius: 14px; font-size: 0.85rem; border: 1.5px solid var(--border-color); background: #FAF9F8; outline: none; box-sizing: border-box; cursor: pointer; text-align: center;">
-                            </div>
-                            <h4 id="cantClientesLabel" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Directorio General</h4>
-                            <div id="listaClientesDirectorio" class="ios-list-container">Cargando clientes...</div>
-                        </div>
+							<div style="margin-bottom: 12px; width: 100%;">
+								<input type="text" id="inputBuscarCliente" placeholder="Buscar cliente..." onkeyup="filtrarDirectorioClientes()" style="margin: 0; width: 100%; padding: 12px 14px; border-radius: 14px; font-size: 0.88rem; border: 1.5px solid var(--border-color); background: #FAF9F8; outline: none; box-sizing: border-box;">
+							</div>
+							<h4 id="cantClientesLabel" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Directorio General</h4>
+							<div id="listaClientesDirectorio" class="ios-list-container">Cargando clientes...</div>
+						</div>
                         <div id="subSecPromo" class="sub-seccion">
-                            <div style="background: linear-gradient(135deg, #C86D28, #9A4D15); color: white; padding: 22px 18px; border-radius: 20px; text-align: center; box-shadow: 0 8px 20px rgba(200, 109, 40, 0.25); margin-bottom: 20px;">
-                                <small style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 12px; display: inline-block; margin-bottom: 6px;">Cliente del Mes</small>
-                                <h2 id="topNombre" style="font-size: 1.8rem; font-weight: 800; margin: 4px 0;">Cargando...</h2>
-                                <p id="topDetalle" style="font-size: 0.82rem; opacity: 0.9; margin-bottom: 0;">Procesando ventas...</p>
-                            </div>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                                <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin: 0; text-transform: uppercase;">Podio del Mes</h4>
-                                <button type="button" id="btnModoPrivado" onclick="toggleModoPrivacidad()" style="background: #FAF0EB; border: 1px solid #F7DFC8; color: var(--accent); font-weight: 800; padding: 6px 12px; border-radius: 10px; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><span id="txtModoPrivado">Ocultar para Historia</span></button>
-                            </div>
-                            <div id="listaClientesRanking" class="ios-list-container">Cargando ranking del mes...</div>
-                        </div>
-                        <div id="subSecDetalle" class="sub-seccion">
+    						<div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+								<input type="month" id="cMesFilter" onchange="cargarClientes()" style="width: 140px; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; border: 1.5px solid var(--border-color); background: #FAF9F8; outline: none; cursor: pointer; text-align: center;">
+							</div>
+
+							<div style="background: linear-gradient(135deg, #C86D28, #9A4D15); color: white; padding: 22px 18px; border-radius: 20px; text-align: center; box-shadow: 0 8px 20px rgba(200, 109, 40, 0.25); margin-bottom: 20px;">
+								<small style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 12px; display: inline-block; margin-bottom: 6px;">Cliente del Mes</small>
+								<h2 id="topNombre" style="font-size: 1.8rem; font-weight: 800; margin: 4px 0;">Cargando...</h2>
+								<p id="topDetalle" style="font-size: 0.82rem; opacity: 0.9; margin-bottom: 0;">Procesando ventas...</p>
+							</div>
+							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+								<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin: 0; text-transform: uppercase;">Podio del Mes</h4>
+								<button type="button" id="btnModoPrivado" onclick="toggleModoPrivacidad()" style="background: #FAF0EB; border: 1px solid #F7DFC8; color: var(--accent); font-weight: 800; padding: 6px 12px; border-radius: 10px; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><span id="txtModoPrivado">Ocultar para Historia</span></button>
+							</div>
+							<div id="listaClientesRanking" class="ios-list-container">Cargando ranking del mes...</div>
+						</div>
+						<div id="subSecDetalle" class="sub-seccion">
                             <button type="button" class="btn-jalea-chip active" style="margin-bottom: 14px;" onclick="volverASeccionAnterior()">Volver</button>
                             <div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 18px; padding: 16px; margin-bottom: 16px;">
                                 <h3 id="detClienteNombre" style="font-size: 1.3rem; font-weight: 800; color: var(--text-main); margin: 0 0 4px 0;">Cliente</h3>
