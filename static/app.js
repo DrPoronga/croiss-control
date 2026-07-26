@@ -1065,12 +1065,17 @@ function agregarItemEdicion() {
 function abrirEdicionPedido(numFila) {
     if (!numFila) return;
     let pEncontrado = null;
+    let fechaActual = ''; // NUEVO: Para guardar la fecha en la que está el pedido
 
     if (Array.isArray(agendaGlobalData)) {
         for (let dia of agendaGlobalData) {
             if (dia.pedidos) {
                 let p = dia.pedidos.find(item => item.fila === numFila);
-                if (p) { pEncontrado = p; break; }
+                if (p) { 
+                    pEncontrado = p; 
+                    fechaActual = dia.fecha; // NUEVO: Extraemos la fecha del día
+                    break; 
+                }
             }
         }
     }
@@ -1091,6 +1096,10 @@ function abrirEdicionPedido(numFila) {
             <button type="button" class="btn-jalea-chip active" style="margin-top:8px; width:100%; padding:8px;" onclick="agregarItemEdicion()">+ Agregar otro producto</button>
             
             <div style="margin-top:14px; text-align:left;">
+                <!-- NUEVO: Selector de Fecha de Entrega -->
+                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">FECHA DE ENTREGA</label>
+                <input type="date" id="editFechaEntregaInput" value="${fechaActual}" class="croiss-swal-input" style="margin:0 0 10px 0 !important;">
+
                 <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOTAS / COMENTARIOS DEL PEDIDO</label>
                 <input type="text" id="editNotasInput" value="${pEncontrado.notas || ''}" placeholder="Ej: Separar salados, entregar con moño rojo..." class="croiss-swal-input" style="margin:0 !important;">
             </div>
@@ -1112,11 +1121,16 @@ function abrirEdicionPedido(numFila) {
             let campoNotas = document.getElementById('editNotasInput');
             let nuevasNotas = campoNotas ? campoNotas.value.trim() : '';
 
+            // NUEVO: Capturamos la fecha del input
+            let campoFecha = document.getElementById('editFechaEntregaInput');
+            let nuevaFecha = campoFecha ? campoFecha.value.trim() : '';
+
             return { 
                 fila: numFila, 
                 producto: resumen.join(', '), 
                 cantidad: totalCant,
-                notas: nuevasNotas 
+                notas: nuevasNotas,
+                fecha_entrega: nuevaFecha // NUEVO: Enviamos la fecha en el payload
             };
         }
     }).then(async (result) => {
@@ -1133,7 +1147,7 @@ function abrirEdicionPedido(numFila) {
 
                 if(data.status === 'exito') {
                     mostrarCroissExito('Pedido Actualizado', 'Se guardaron los cambios.');
-                    cargarAgenda();
+                    cargarAgenda(); // Esto refrescará la agenda y moverá el pedido al día nuevo automáticamente
                 } else { Swal.fire('Error', data.mensaje, 'error'); }
             } catch(e) { Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error'); }
         }
