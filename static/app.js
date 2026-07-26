@@ -1775,6 +1775,7 @@ async function cargarClientes() {
     mostrarCroissLoader();
 
     try {
+        // Vuelve a leer el filtro (que ahora está en la pestaña "Cliente del Mes")
         const elMes = document.getElementById('cMesFilter');
         const mesVal = elMes ? elMes.value : hoy.substring(0, 7);
 
