@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CROISS · Armá tu Pedido 🥐</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=4">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        body { background-color: #F9F3EE; min-height: 100vh; overflow-y: auto; }
+        .wizard-container { max-width: 480px; margin: 0 auto; padding: 20px 16px; }
+        
+        /* Barra de Progreso */
+        .progress-bar-wizard { display: flex; justify-content: space-between; margin-bottom: 24px; position: relative; }
+        .progress-bar-wizard::before { content: ''; position: absolute; top: 14px; left: 0; right: 0; height: 3px; background: #EFEAE6; z-index: 1; }
+        .progress-line-fill { position: absolute; top: 14px; left: 0; height: 3px; background: var(--accent); z-index: 1; transition: width 0.3s ease; }
+        .step-node { width: 30px; height: 30px; border-radius: 50%; background: #EFEAE6; color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; z-index: 2; position: relative; transition: all 0.3s ease; }
+        .step-node.active { background: var(--accent); color: white; transform: scale(1.15); box-shadow: 0 4px 12px rgba(200, 109, 40, 0.3); }
+        .step-node.completed { background: #2D1E18; color: white; }
+
+        /* Pasos Animados */
+        .step-card { display: none; background: white; border-radius: 24px; padding: 22px 18px; box-shadow: 0 12px 32px rgba(45,30,24,0.06); border: 1px solid rgba(45,30,24,0.08); }
+        .step-card.active { display: block; animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(15px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+        /* Tarjeta de Producto */
+        .prod-card-shop { display: flex; align-items: center; justify-content: space-between; background: #FAF9F8; border-radius: 16px; padding: 14px; margin-bottom: 12px; border: 1px solid rgba(45,30,24,0.06); }
+        .qty-controls { display: flex; align-items: center; gap: 8px; }
+        .btn-qty { width: 32px; height: 32px; border-radius: 10px; border: none; background: #EFEAE6; color: var(--text-main); font-weight: 800; font-size: 1.1rem; cursor: pointer; }
+        .btn-qty:active { transform: scale(0.92); }
+
+        /* Fechas Chips */
+        .dates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+        .date-chip { background: #FAF9F8; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .date-chip.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 800; }
+        .date-chip.disabled { opacity: 0.4; cursor: not-allowed; background: #EFEAE6; }
+
+        .btn-next { width: 100%; background: linear-gradient(135deg, #2D1E18, #422D24); color: white; border: none; padding: 16px; font-size: 1rem; font-weight: 800; border-radius: 16px; margin-top: 18px; cursor: pointer; box-shadow: 0 6px 16px rgba(45,30,24,0.18); }
+        .btn-prev { background: transparent; border: none; color: var(--text-muted); font-weight: 700; font-size: 0.88rem; padding: 10px; cursor: pointer; margin-top: 8px; width: 100%; }
+    </style>
+</head>
+<body>
+
+    <div class="wizard-container">
+        <!-- Logo Header -->
+        <div style="text-align: center; margin-bottom: 18px;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="CROISS" style="height: 65px; width: auto;">
+        </div>
+
+        <!-- Barra de Progreso -->
+        <div class="progress-bar-wizard">
+            <div class="progress-line-fill" id="progressFill" style="width: 0%;"></div>
+            <div class="step-node active" id="node1">1</div>
+            <div class="step-node" id="node2">2</div>
+            <div class="step-node" id="node3">3</div>
+            <div class="step-node" id="node4">4</div>
+        </div>
+
+        <!-- PASO 1: PRODUCTOS -->
+        <div class="step-card active" id="step1">
+            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">1. Elegí tus Croissants 🥐</h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">¡Cuantos más sumes, mejor precio conseguís!</p>
+            
+            <div id="shopProductsList">Cargando menú delicioso...</div>
+
+            <div style="background: #FAF0EB; border: 1px dashed #F7DFC8; border-radius: 14px; padding: 12px; margin-top: 14px; text-align: center;">
+                <small style="color: var(--accent); font-weight: 700; display: block; font-size: 0.75rem;">SUBTOTAL TICKET</small>
+                <span id="shopSubtotalText" style="font-size: 1.4rem; font-weight: 800; color: #2D1E18;">$0</span>
+                <small id="shopPromoMsg" style="display: block; font-size: 0.7rem; color: #64748b; margin-top: 2px;">Agregá 3 o más para mejor precio por unidad</small>
+            </div>
+
+            <button type="button" class="btn-next" onclick="nextStep(2)">Continuar a la Fecha ➔</button>
+        </div>
+
+        <!-- PASO 2: FECHA -->
+        <div class="step-card" id="step2">
+            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">2. Fecha Estimada 🗓️</h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Elegí el día en que querés recibir tus croissants.</p>
+            
+            <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 12px; padding: 10px; font-size: 0.78rem; color: #166534; font-weight: 600; margin-bottom: 12px;">
+                💬 <strong>Nota:</strong> La zona exacta y horario de entrega los coordinamos directamente por WhatsApp tras confirmar tu pedido.
+            </div>
+
+            <div id="datesContainer" class="dates-grid">Cargando días con disponibilidad...</div>
+
+            <button type="button" class="btn-next" onclick="nextStep(3)">Paso Siguiente ➔</button>
+            <button type="button" class="btn-prev" onclick="prevStep(1)">⬅️ Volver a Productos</button>
+        </div>
+
+        <!-- PASO 3: DATOS DEL CLIENTE -->
+        <div class="step-card" id="step3">
+            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">3. Tus Datos 📝</h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">Para contactarte y avisarte cuando salgan del horno.</p>
+
+            <div class="form-group">
+                <label>Nombre Completo *</label>
+                <input type="text" id="custNombre" placeholder="Ej: María Silva" required>
+            </div>
+            <div class="form-group">
+                <label>Teléfono / WhatsApp *</label>
+                <input type="tel" id="custTel" placeholder="Ej: 099 123 456" required>
+            </div>
+            <div class="form-group">
+                <label>Email *</label>
+                <input type="email" id="custEmail" placeholder="ejemplo@email.com" required>
+            </div>
+            <div class="form-group">
+                <label>Dirección / Barrio (Opcional)</label>
+                <input type="text" id="custDir" placeholder="Ej: Pocitos, Calle Falsa 123">
+            </div>
+            <div class="form-group">
+                <label>Aclaraciones / Notas (Opcional)</label>
+                <input type="text" id="custNotas" placeholder="Ej: Es para un cumpleaños...">
+            </div>
+
+            <button type="button" class="btn-next" onclick="nextStep(4)">Ver Resumen y Finalizar ➔</button>
+            <button type="button" class="btn-prev" onclick="prevStep(2)">⬅️ Volver a Fecha</button>
+        </div>
+
+        <!-- PASO 4: RESUMEN -->
+        <div class="step-card" id="step4">
+            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">4. Resumen de tu Orden 🛍️</h3>
+            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">Revisá que todo esté correcto antes de enviar.</p>
+
+            <div id="orderSummaryBox" style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 16px; font-size: 0.88rem; margin-bottom: 16px;"></div>
+
+            <button type="button" class="btn-next" style="background: linear-gradient(135deg, #16A34A, #15803D);" onclick="confirmarPedidoTienda()">Confirmar Pedido 🥐</button>
+            <button type="button" class="btn-prev" onclick="prevStep(3)">⬅️ Modificar Datos</button>
+        </div>
+    </div>
+
+    <!-- Script Lógica Tienda -->
+    <script>
+        let currentStep = 1;
+        let menuItems = [];
+        let cart = {}; // { "Nombre": { cantidad: X, con_jalea: false, precio: Y } }
+        let selectedDate = "";
+        let datesCapacity = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchCatalogo();
+            fetchFechas();
+        });
+
+        async function fetchCatalogo() {
+            try {
+                const res = await fetch('/api/public/catalogo');
+                const data = await res.json();
+                if(data.status === 'exito') {
+                    menuItems = data.productos;
+                    renderProducts();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        async function fetchFechas() {
+            try {
+                const res = await fetch('/api/public/fechas');
+                const data = await res.json();
+                if(data.status === 'exito') {
+                    datesCapacity = data.fechas;
+                    renderDates();
+                }
+            } catch(e) { console.error(e); }
+        }
+
+        function renderProducts() {
+            const container = document.getElementById('shopProductsList');
+            container.innerHTML = '';
+
+            menuItems.forEach(p => {
+                const name = p.nombre;
+                const qty = cart[name] ? cart[name].cantidad : 0;
+                const conJalea = cart[name] ? cart[name].con_jalea : false;
+
+                const div = document.createElement('div');
+                div.className = 'prod-card-shop';
+                div.innerHTML = `
+                    <div>
+                        <strong style="color:var(--text-main); font-size:0.95rem;">${name}</strong><br>
+                        ${qty > 0 ? `<button type="button" class="btn-jalea-chip ${conJalea ? 'active' : ''}" onclick="toggleJaleaShop('${name}')" style="margin-top:4px;">${conJalea ? 'Con Jalea' : 'Sin Jalea'}</button>` : ''}
+                    </div>
+                    <div class="qty-controls">
+                        <button type="button" class="btn-qty" onclick="updateQty('${name}', -1)">-</button>
+                        <span style="font-weight:800; min-width:20px; text-align:center;">${qty}</span>
+                        <button type="button" class="btn-qty" onclick="updateQty('${name}', 1)">+</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            updateSubtotal();
+        }
+
+        function updateQty(name, change) {
+            if(!cart[name]) cart[name] = { cantidad: 0, con_jalea: false };
+            cart[name].cantidad += change;
+            if(cart[name].cantidad <= 0) delete cart[name];
+            renderProducts();
+        }
+
+        function toggleJaleaShop(name) {
+            if(cart[name]) {
+                cart[name].con_jalea = !cart[name].con_jalea;
+                renderProducts();
+            }
+        }
+
+        function calculatePrices() {
+            let totalCroissants = 0;
+            for(let k in cart) totalCroissants += cart[k].cantidad;
+
+            let basePrice = 140;
+            if(totalCroissants >= 6) basePrice = 100;
+            else if(totalCroissants >= 3) basePrice = 110;
+
+            let totalMoney = 0;
+            for(let k in cart) {
+                let nameLower = k.toLowerCase();
+                let extra = 0;
+                if(nameLower.includes('jamon') || nameLower.includes('queso')) extra = 50;
+                else if(nameLower.includes('dulce') || nameLower.includes('ddl')) extra = 30;
+
+                totalMoney += (basePrice + extra) * cart[k].cantidad;
+            }
+            return { totalCroissants, totalMoney, basePrice };
+        }
+
+        function updateSubtotal() {
+            const calc = calculatePrices();
+            document.getElementById('shopSubtotalText').innerText = `$${calc.totalMoney}`;
+            
+            const msgEl = document.getElementById('shopPromoMsg');
+            if(calc.totalCroissants === 0) {
+                msgEl.innerText = 'Seleccioná al menos un croissant para continuar.';
+            } else if(calc.totalCroissants < 3) {
+                msgEl.innerText = `Llevás ${calc.totalCroissants}. ¡Agregá ${3 - calc.totalCroissants} más para precio promo!`;
+            } else if(calc.totalCroissants < 6) {
+                msgEl.innerText = `¡Precio promo activado ($110)! Agregá ${6 - calc.totalCroissants} más para precio mayorista ($100).`;
+            } else {
+                msgEl.innerText = '🎉 ¡Mejor precio mayorista activado ($100)!';
+            }
+        }
+
+        function renderDates() {
+            const container = document.getElementById('datesContainer');
+            container.innerHTML = '';
+
+            datesCapacity.forEach(d => {
+                const div = document.createElement('div');
+                const esLleno = d.ocupados >= 35;
+                const isSel = d.fecha === selectedDate;
+
+                div.className = `date-chip ${isSel ? 'selected' : ''} ${esLleno ? 'disabled' : ''}`;
+                div.innerHTML = `
+                    <div style="font-size:0.85rem; font-weight:800;">${d.nombre_dia}</div>
+                    <small style="font-size:0.7rem;">${esLleno ? '❌ CUPO LLENO' : `Quedan ${35 - d.ocupados} un.`}</small>
+                `;
+
+                if(!esLleno) {
+                    div.onclick = () => {
+                        selectedDate = d.fecha;
+                        renderDates();
+                    };
+                }
+                container.appendChild(div);
+            });
+        }
+
+        function nextStep(step) {
+            const calc = calculatePrices();
+            if(currentStep === 1 && calc.totalCroissants === 0) {
+                Swal.fire('Elegí tus croissants', 'Agregá al menos 1 croissant a tu pedido.', 'warning');
+                return;
+            }
+            if(currentStep === 2 && !selectedDate) {
+                Swal.fire('Seleccioná la fecha', 'Por favor marcá el día que querés recibir tu pedido.', 'warning');
+                return;
+            }
+            if(currentStep === 3) {
+                const nom = document.getElementById('custNombre').value.trim();
+                const tel = document.getElementById('custTel').value.trim();
+                const email = document.getElementById('custEmail').value.trim();
+
+                if(!nom || !tel || !email) {
+                    Swal.fire('Campos Obligatorios', 'Por favor ingresá tu Nombre, Teléfono y Email para notificarte.', 'warning');
+                    return;
+                }
+                buildSummary();
+            }
+
+            goToStep(step);
+        }
+
+        function prevStep(step) { goToStep(step); }
+
+        function goToStep(step) {
+            document.querySelectorAll('.step-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`step${step}`).classList.add('active');
+
+            currentStep = step;
+            const pct = ((step - 1) / 3) * 100;
+            document.getElementById('progressFill').style.width = `${pct}%`;
+
+            for(let i = 1; i <= 4; i++) {
+                const node = document.getElementById(`node${i}`);
+                if(i < step) { node.className = 'step-node completed'; node.innerText = '✓'; }
+                else if(i === step) { node.className = 'step-node active'; node.innerText = i; }
+                else { node.className = 'step-node'; node.innerText = i; }
+            }
+        }
+
+        function buildSummary() {
+            const calc = calculatePrices();
+            const nom = document.getElementById('custNombre').value.trim();
+            const tel = document.getElementById('custTel').value.trim();
+            const email = document.getElementById('custEmail').value.trim();
+            const dir = document.getElementById('custDir').value.trim();
+            const notas = document.getElementById('custNotas').value.trim();
+
+            let itemsHtml = '';
+            for(let k in cart) {
+                itemsHtml += `<div>• ${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
+            }
+
+            document.getElementById('orderSummaryBox').innerHTML = `
+                <div style="border-bottom:1px dashed #E2D9D3; padding-bottom:8px; margin-bottom:8px;">
+                    <strong>Cliente:</strong> ${nom}<br>
+                    <strong>Teléfono:</strong> ${tel}<br>
+                    <strong>Email:</strong> ${email}<br>
+                    ${dir ? `<strong>Dirección:</strong> ${dir}<br>` : ''}
+                    <strong>Fecha Entrega:</strong> ${selectedDate}<br>
+                    ${notas ? `<strong>Aclaración:</strong> ${notas}` : ''}
+                </div>
+                <div>
+                    <strong style="color:var(--accent);">Croissants Pedidos:</strong>
+                    ${itemsHtml}
+                </div>
+                <div style="margin-top:12px; font-size:1.1rem; font-weight:800; text-align:right; color:#2D1E18;">
+                    Total A Pagar: $${calc.totalMoney}
+                </div>
+            `;
+        }
+
+        async function confirmarPedidoTienda() {
+            const calc = calculatePrices();
+            let itemsArr = [];
+            for(let k in cart) {
+                itemsArr.push({
+                    producto: k,
+                    cantidad: cart[k].cantidad,
+                    con_jalea: cart[k].con_jalea
+                });
+            }
+
+            const payload = {
+                cliente: document.getElementById('custNombre').value.trim(),
+                telefono: document.getElementById('custTel').value.trim(),
+                email: document.getElementById('custEmail').value.trim(),
+                direccion: document.getElementById('custDir').value.trim(),
+                fecha_entrega: selectedDate,
+                notas: document.getElementById('custNotas').value.trim(),
+                items: itemsArr,
+                monto_total: calc.totalMoney
+            };
+
+            Swal.fire({ title: 'Procesando tu orden...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            try {
+                const res = await fetch('/api/public/crear_pedido', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if(data.status === 'exito') {
+                    const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
+                    const wpUrl = `https://wa.me/59899000000?text=${msgWp}`; // Reemplazar con tu número real de WP
+
+                    Swal.fire({
+                        title: '¡Pedido Recibido! 🥐',
+                        html: `
+                            <p style="font-size:0.88rem; color:var(--text-muted);">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
+                            <p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">Tocá el botón para coordinar por WhatsApp:</p>
+                        `,
+                        icon: 'success',
+                        confirmButtonText: '💬 Confirmar por WhatsApp',
+                        customClass: { confirmButton: 'croiss-swal-confirm' }
+                    }).then(() => {
+                        window.location.href = wpUrl;
+                    });
+                } else {
+                    Swal.fire('Atención', data.mensaje, 'error');
+                }
+            } catch(e) {
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+            }
+        }
+    </script>
+</body>
+</html>

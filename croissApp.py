@@ -68,7 +68,7 @@ def ejecutar_con_reintento(func, *args, **kwargs):
 # ==========================================
 @app.before_request
 def verificar_autenticacion():
-    if request.endpoint in ['login', 'static']:
+    if request.endpoint in ['login', 'static', 'tienda_publica', 'api_public_catalogo', 'api_public_fechas', 'api_public_crear_pedido']:
         return
     if not session.get('logueado'):
         return redirect(url_for('login'))
@@ -577,6 +577,178 @@ def registrar_venta():
 # RUTAS DE VISTA Y API CONGELADOS INDEPENDIENTES
 # ==========================================
 @app.route('/')
+
+# ==========================================
+# RUTAS PÚBLICAS DE E-COMMERCE / TIENDA
+# ==========================================
+@app.route('/tienda')
+def tienda_publica():
+    return render_template('tienda.html')
+
+@app.route('/api/public/catalogo', methods=['GET'])
+def api_public_catalogo():
+    try:
+        sheet = conectar_sheet("Productos_Stock")
+        productos = get_clean_records(sheet)
+        menu_publico = []
+        
+        for prod in productos:
+            nombre = get_field_val(prod, "Nombre", "Producto", "Croissant")
+            name_lower = nombre.lower()
+            if not nombre or any(k in name_lower for k in ["congelado", "sobrevendido", "masa"]):
+                continue
+            
+            raw_precio = get_field_val(prod, "Precio Venta", "Precio", "precio")
+            try:
+                precio = float(str(raw_precio).replace("$", "").replace(",", ".").strip())
+            except ValueError:
+                precio = 0.0
+
+            menu_publico.append({"nombre": nombre, "precio": precio})
+
+        return jsonify({"status": "exito", "productos": menu_publico}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/public/fechas', methods=['GET'])
+def api_public_fechas():
+    try:
+        sheet_ventas = conectar_sheet("Ventas")
+        registros = get_clean_records(sheet_ventas)
+        hoy = datetime.now().date()
+        
+        conteo_fechas = {}
+        nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
+        fechas_lista = []
+
+        # Inicializar próximos 10 días
+        for i in range(1, 11):
+            f_dt = hoy + timedelta(days=i)
+            f_str = f_dt.strftime("%Y-%m-%d")
+            conteo_fechas[f_str] = {
+                "fecha": f_str,
+                "nombre_dia": f"{nombres_dias[f_dt.weekday()]} {f_dt.strftime('%d/%m')}",
+                "ocupados": 0
+            }
+
+        for reg in registros:
+            f_entrega = normalizar_fecha(get_field_val(reg, "Fecha Entrega", "Fecha"))
+            if f_entrega in conteo_fechas:
+                cant_str = get_field_val(reg, "Cantidad")
+                cant = int(cant_str) if cant_str.isdigit() else 0
+                conteo_fechas[f_entrega]["ocupados"] += cant
+
+        return jsonify({"status": "exito", "fechas": list(conteo_fechas.values())}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/public/crear_pedido', methods=['POST'])
+def api_public_crear_pedido():
+    try:
+        datos = request.json or {}
+        fecha_entrega = datos.get("fecha_entrega")
+        items = datos.get("items", [])
+        total_unidades = sum(int(item.get("cantidad", 1)) for item in items)
+
+        if not fecha_entrega or total_unidades <= 0:
+            return jsonify({"status": "error", "mensaje": "Datos de pedido inválidos."}), 400
+
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+        registros = get_clean_records(sheet_ventas)
+
+        # VALIDAR LÍMITE ESTRICTO DE 35
+        acumulado_dia = sum(
+            int(get_field_val(r, "Cantidad"))
+            for r in registros
+            if normalizar_fecha(get_field_val(r, "Fecha Entrega", "Fecha")) == fecha_entrega and get_field_val(r, "Cantidad").isdigit()
+        )
+
+        if (acumulado_dia + total_unidades) > 35:
+            return jsonify({
+                "status": "error",
+                "mensaje": f"🚫 ¡Cupo excedido! Para el día {fecha_entrega} quedan solo {max(0, 35 - acumulado_dia)} lugares y estás pidiendo {total_unidades}."
+            }), 400
+
+        # Control de Capacidad de Masa / Freezer
+        sheet_stock = conectar_sheet("Productos_Stock")
+        c_cong, c_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
+        capacidad_total = st_cong + (st_masas * 10)
+
+        if total_unidades > capacidad_total:
+            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin insumos suficientes para esta cantidad."}), 400
+
+        # Descontar stock
+        if total_unidades <= st_cong:
+            st_cong -= total_unidades
+        else:
+            restante = total_unidades - st_cong
+            st_cong = 0
+            masas_a_romper = math.ceil(restante / 10.0)
+            st_masas -= masas_a_romper
+            st_cong += (masas_a_romper * 10) - restante
+
+        batch_stock = []
+        if c_cong: batch_stock.append({'range': f'D{c_cong.row}', 'values': [[st_cong]]})
+        if c_masas: batch_stock.append({'range': f'D{c_masas.row}', 'values': [[st_masas]]})
+        if batch_stock: ejecutar_con_reintento(sheet_stock.batch_update, batch_stock)
+
+        nuevo_id = f"V-{len(registros) + 1:04d}"
+        resumen_productos = []
+        for item in items:
+            prod_nombre = item.get("producto")
+            cant = int(item.get("cantidad", 1))
+            jalea_str = " (Con Jalea)" if item.get("con_jalea") else ""
+            resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
+
+        descripcion_final = ", ".join(resumen_productos)
+        modificar_stock_empaque(descripcion_final, total_unidades, es_devolucion=False)
+
+        cliente_nombre = datos.get("cliente", "Cliente Web")
+        email_cliente = str(datos.get("email", "")).strip()
+        telefono_cliente = str(datos.get("telefono", "")).strip()
+        direccion_cliente = str(datos.get("direccion", "")).strip()
+        hoy_str = datetime.now().strftime("%Y-%m-%d")
+        monto_total = datos.get("monto_total", 0)
+        notas_cliente = f"[WEB] {str(datos.get('notas', '')).strip()}".strip()
+
+        nueva_fila = [
+            nuevo_id, hoy_str, fecha_entrega, cliente_nombre,
+            descripcion_final, total_unidades, monto_total, "Pendiente",
+            "Web / WhatsApp", email_cliente, telefono_cliente,
+            direccion_cliente, "Pendiente", notas_cliente
+        ]
+        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
+
+        # 1. Enviar email de confirmación al cliente
+        if email_cliente:
+            try:
+                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, "Pendiente")
+                enviar_email_async(email_cliente, f"🥐 ¡Pedido {nuevo_id} Registrado en CROISS!", html)
+            except Exception: pass
+
+        # 2. ALERTA AL ADMIN POR MAIL (¡NUEVO!)
+        try:
+            cuerpo_admin = f"""
+            <h2>🚨 ¡Nuevo Pedido Web Recibido!</h2>
+            <p><strong>ID Orden:</strong> {nuevo_id}</p>
+            <p><strong>Cliente:</strong> {cliente_nombre}</p>
+            <p><strong>Teléfono:</strong> {telefono_cliente}</p>
+            <p><strong>Fecha Solicitada:</strong> {fecha_entrega}</p>
+            <p><strong>Productos:</strong> {descripcion_final}</p>
+            <p><strong>Monto Total:</strong> ${monto_total}</p>
+            """
+            enviar_email_async(EMAIL_EMISOR, f"🚨 NUEVO PEDIDO WEB #{nuevo_id} - {cliente_nombre}", cuerpo_admin)
+        except Exception: pass
+
+        try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)
+        except Exception: pass
+
+        return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
+        
 def inicio():
     return render_template('index.html')
 
