@@ -57,6 +57,33 @@
             <div class="step-node" id="node4">4</div>
         </div>
 
+		<!-- 🥐 ESCENARIO ANIMADO (ESTILO FLASH) -->
+		<div class="flash-stage-container">
+			<!-- Capa Paso 1: Ingredientes -->
+			<div class="stage-layer active" id="stage1">
+				<div class="stage-icon-floating">🌾🧈🍫</div>
+				<p class="stage-caption">1. Ingredientes Frescos y Artesanales</p>
+			</div>
+
+			<!-- Capa Paso 2: Amasado -->
+			<div class="stage-layer" id="stage2">
+				<div class="stage-icon-floating">🥣✨</div>
+				<p class="stage-caption">2. Amasado y Laminado en Capas</p>
+			</div>
+
+			<!-- Capa Paso 3: Horno -->
+			<div class="stage-layer" id="stage3">
+				<div class="stage-icon-floating">🔥🥐</div>
+				<p class="stage-caption">3. Horno a 180°C - Cobrando Vida</p>
+			</div>
+
+			<!-- Capa Paso 4: Croissant Listo -->
+			<div class="stage-layer" id="stage4">
+				<div class="stage-icon-floating">✨🥐✨</div>
+				<p class="stage-caption">4. ¡Listos para Disfrutar!</p>
+			</div>
+		</div>
+
         <!-- PASO 1: PRODUCTOS -->
         <div class="step-card active" id="step1">
             <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">1. Elegí tus Croissants 🥐</h3>
@@ -323,20 +350,29 @@
         function prevStep(step) { goToStep(step); }
 
         function goToStep(step) {
-            document.querySelectorAll('.step-card').forEach(c => c.classList.remove('active'));
-            document.getElementById(`step${step}`).classList.add('active');
+		// 1. Ocultar tarjetas de formulario anteriores
+		document.querySelectorAll('.step-card').forEach(c => c.classList.remove('active'));
+		document.getElementById(`step${step}`).classList.add('active');
 
-            currentStep = step;
-            const pct = ((step - 1) / 3) * 100;
-            document.getElementById('progressFill').style.width = `${pct}%`;
+		currentStep = step;
+		const pct = ((step - 1) / 3) * 100;
+		document.getElementById('progressFill').style.width = `${pct}%`;
 
-            for(let i = 1; i <= 4; i++) {
-                const node = document.getElementById(`node${i}`);
-                if(i < step) { node.className = 'step-node completed'; node.innerText = '✓'; }
-                else if(i === step) { node.className = 'step-node active'; node.innerText = i; }
-                else { node.className = 'step-node'; node.innerText = i; }
-            }
-        }
+		// 🎬 2. CAMBIAR EL FOTOGRAMA DEL ESCENARIO
+		document.querySelectorAll('.stage-layer').forEach(l => l.classList.remove('active'));
+		const currentLayer = document.getElementById(`stage${step}`);
+		if (currentLayer) {
+			currentLayer.classList.add('active');
+		}
+
+		// 3. Actualizar nodos del wizard
+		for(let i = 1; i <= 4; i++) {
+			const node = document.getElementById(`node${i}`);
+			if(i < step) { node.className = 'step-node completed'; node.innerText = '✓'; }
+			else if(i === step) { node.className = 'step-node active'; node.innerText = i; }
+			else { node.className = 'step-node'; node.innerText = i; }
+		}
+	}
 
         function buildSummary() {
             const calc = calculatePrices();
