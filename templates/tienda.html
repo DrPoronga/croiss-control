@@ -542,18 +542,17 @@
 
         // DESPLIEGA LA IMAGEN MENU.PNG DESDE LA CARPETA STATIC
 		function verMenuPublico() {
-			const imagenUrl = "{{ url_for('static', filename='menu.png') }}";
-
 			Swal.fire({
 				html: `
 					<div style="text-align:center; padding: 0; cursor:pointer;" onclick="Swal.close()">
-						<img src="${imagenUrl}" 
+						<img src="/static/menu.png" 
 							 alt="Menú CROISS" 
-							 style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);">
+							 style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);"
+							 onerror="alert('Error: La imagen no está en la carpeta static con el nombre menu.png');">
 					</div>
 				`,
-				showConfirmButton: false, // Elimina el botón "OK" automático
-				showCloseButton: false,    // Agrega una 'X' sutil arriba para cerrar
+				showConfirmButton: false,
+				showCloseButton: true,
 				background: 'transparent',
 				customClass: { popup: 'croiss-swal-popup-transparent' }
 			});
