@@ -102,6 +102,13 @@ def logout():
     return redirect(url_for('login'))
 
 # ==========================================
+# RUTA PRINCIPAL DE LA APP (INICIO / DASHBOARD)
+# ==========================================
+@app.route('/')
+def inicio():
+    return render_template('index.html')
+    
+# ==========================================
 # HELPER SHEETS Y EMAIL
 # ==========================================
 def conectar_sheet(nombre_pestaña):
