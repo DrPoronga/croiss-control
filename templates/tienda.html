@@ -5,17 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CROISS · Artesanos del Croissant 🥐</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=9">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        html { scroll-behavior: smooth; }
-        body { 
-            background-color: #F9F3EE; 
-            color: #2D1E18; 
-            min-height: 100vh; 
-            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
-            margin: 0;
-            padding: 0;
+        /* DESBLOQUEO DE SCROLL OBLIGATORIO PARA TIENDA */
+        html, body { 
+            height: auto !important;
+            min-height: 100vh !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
+            background-color: #F9F3EE !important; 
+            color: #2D1E18 !important; 
+            font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            scroll-behavior: smooth;
         }
 
         .web-site-wrapper {
@@ -432,7 +436,9 @@
 
         function scrollToSection(idSeccion) {
             const el = document.getElementById(idSeccion);
-            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
         }
 
         // ANIMACIÓN CANVAS DEL CROISSANT MORDIÉNDOSE
