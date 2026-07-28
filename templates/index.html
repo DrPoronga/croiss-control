@@ -312,6 +312,20 @@
                                 <div class="balance-item total"><small>Ganancia Neta del Mes</small><strong id="bGanancia">$0</strong></div>
                             </div>
 
+                            <!-- NUEVO: Módulo Origen de Ventas (Web vs Manual) -->
+                            <div style="margin-top: 14px; background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; display: flex; gap: 10px;">
+                                <div style="flex: 1; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; text-align: center;">
+                                    <small style="font-size: 0.68rem; font-weight: 700; color: var(--accent); text-transform: uppercase;">🌐 Ventas Web</small>
+                                    <div id="bWebMonto" style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">$0</div>
+                                    <small id="bWebDetalle" style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">0 ped. (0 un.)</small>
+                                </div>
+                                <div style="flex: 1; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; text-align: center;">
+                                    <small style="font-size: 0.68rem; font-weight: 700; color: #475569; text-transform: uppercase;">📝 Ventas Manuales</small>
+                                    <div id="bManualMonto" style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">$0</div>
+                                    <small id="bManualDetalle" style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">0 ped. (0 un.)</small>
+                                </div>
+                            </div>
+
                             <div style="margin-top: 16px; background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 14px; display: flex; justify-content: space-around; text-align: center;">
                                 <div onclick="cambiarModoFlujoPrincipal('diario')" style="cursor: pointer; flex: 1; padding: 6px; border-radius: 12px; transition: all 0.2s;">
                                     <small style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Vendidos Mes 📊</small>

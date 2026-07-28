@@ -240,24 +240,52 @@
             } else {
                 msgEl.innerText = '🎉 ¡Mejor precio mayorista activado ($100)!';
             }
+
+            // Recalcular disponibilidad de fechas según la cantidad elegida
+            renderDates();
         }
 
         function renderDates() {
             const container = document.getElementById('datesContainer');
+            if (!container) return;
             container.innerHTML = '';
+
+            const calc = calculatePrices();
+            const croissantsPedidos = calc.totalCroissants;
 
             datesCapacity.forEach(d => {
                 const div = document.createElement('div');
-                const esLleno = d.ocupados >= 35;
-                const isSel = d.fecha === selectedDate;
+                const acumulado = d.ocupados || 0;
+                const disponible = 35 - acumulado;
 
-                div.className = `date-chip ${isSel ? 'selected' : ''} ${esLleno ? 'disabled' : ''}`;
+                const esLleno = acumulado >= 35;
+                const esInsuficiente = !esLleno && (croissantsPedidos > disponible);
+                let isSel = d.fecha === selectedDate;
+
+                // Si la fecha seleccionada dejó de tener cupo suficiente (porque agregaron más croissants), se desmarca
+                if (isSel && (esLleno || esInsuficiente)) {
+                    selectedDate = "";
+                    isSel = false;
+                }
+
+                let statusText = "✅ Disponible";
+                let extraClass = "";
+
+                if (esLleno) {
+                    statusText = "❌ Sin Cupo";
+                    extraClass = "disabled";
+                } else if (esInsuficiente) {
+                    statusText = `⚠️ Quedan solo ${disponible} un.`;
+                    extraClass = "disabled";
+                }
+
+                div.className = `date-chip ${isSel ? 'selected' : ''} ${extraClass}`;
                 div.innerHTML = `
-                    <div style="font-size:0.85rem; font-weight:800;">${d.nombre_dia}</div>
-                    <small style="font-size:0.7rem;">${esLleno ? '❌ CUPO LLENO' : `Quedan ${35 - d.ocupados} un.`}</small>
+                    <div style="font-size:0.88rem; font-weight:800;">${d.nombre_dia}</div>
+                    <small style="font-size:0.7rem; margin-top:2px; display:block;">${statusText}</small>
                 `;
 
-                if(!esLleno) {
+                if (!esLleno && !esInsuficiente) {
                     div.onclick = () => {
                         selectedDate = d.fecha;
                         renderDates();

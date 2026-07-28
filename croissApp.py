@@ -1183,7 +1183,12 @@ def obtener_balance():
 
         ventas, gastos = get_clean_records(sheet_ventas), get_clean_records(sheet_gastos)
         ingresos_mes, costos_prod_mes, pedidos_count_mes, total_croiss_mes = 0.0, 0.0, 0, 0
-        total_descuentos_mes = 0.0 # NUEVO: Variable para sumar los descuentos
+        total_descuentos_mes = 0.0
+        
+        # NUEVO: Contadores para separar Web vs Manual
+        web_pedidos_mes, web_croiss_mes, web_monto_mes = 0, 0, 0.0
+        manual_pedidos_mes, manual_croiss_mes, manual_monto_mes = 0, 0, 0.0
+
         total_croiss_historico, total_pedidos_historico, total_ingresos_historico = 0, 0, 0.0
         con_jalea_count, sin_jalea_count = 0, 0
         sabores_dict = {}
@@ -1215,22 +1220,18 @@ def obtener_balance():
             raw_cant = get_field_val(v, "Cantidad")
             cant = int(raw_cant) if raw_cant.isdigit() else 0
             desc_prod = get_field_val(v, "Producto")
-            notas = get_field_val(v, "Notas", "Nota") # NUEVO: Capturar las notas
+            notas = get_field_val(v, "Notas", "Nota")
+            medio_pago = get_field_val(v, "Medio de Pago", "Medio Pago")
 
-            # NUEVO: Lógica para extraer y calcular el monto del descuento
+            # Cálculo de descuento
             monto_descontado_pedido = 0.0
             if notas and "[Dto" in notas:
                 match_dto = re.search(r"\[Dto (\d+)%\]", notas)
                 if match_dto:
                     porcentaje_dto = float(match_dto.group(1))
                     if porcentaje_dto == 100:
-                        # Si fue 100% de regalo, el monto cobrado es 0. 
-                        # Debemos calcular el precio original simulado para saber cuánto "perdimos"
-                        # Lo calcularemos de forma aproximada usando un ticket promedio histórico o un costo base
-                        monto_descontado_pedido = cant * 120.0 # Aproximación de precio de venta
+                        monto_descontado_pedido = cant * 120.0
                     elif porcentaje_dto > 0 and monto > 0:
-                        # Regla de tres simple para saber el monto descontado
-                        # Si cobramos el 80% (20% OFF), entonces: Precio_Original = Monto_Cobrado / 0.8
                         precio_original = monto / (1 - (porcentaje_dto / 100))
                         monto_descontado_pedido = precio_original - monto
 
@@ -1277,7 +1278,18 @@ def obtener_balance():
                 costos_prod_mes += costo_pedido
                 pedidos_count_mes += 1
                 total_croiss_mes += cant
-                total_descuentos_mes += monto_descontado_pedido # NUEVO: Sumar al total del mes
+                total_descuentos_mes += monto_descontado_pedido
+
+                # NUEVO: Discriminación Web vs Manual
+                es_web = "[web]" in notas.lower() or "web" in medio_pago.lower()
+                if es_web:
+                    web_pedidos_mes += 1
+                    web_croiss_mes += cant
+                    web_monto_mes += monto
+                else:
+                    manual_pedidos_mes += 1
+                    manual_croiss_mes += cant
+                    manual_monto_mes += monto
 
                 if f_norm in flujo_diario_mes_dict:
                     flujo_diario_mes_dict[f_norm]["croissants"] += cant
@@ -1354,8 +1366,12 @@ def obtener_balance():
             "costos_produccion": round(costos_prod_mes, 2), "gastos_varios": round(gastos_mes, 2),
             "gastos_por_categoria": gastos_por_categoria, "ganancia_neta": round(ganancia_neta_mes, 2),
             "ticket_promedio": ticket_promedio, "total_croissants_mes": total_croiss_mes,
-            "total_descuentos": round(total_descuentos_mes, 2), # NUEVO: Devolver los descuentos al frontend
+            "total_descuentos": round(total_descuentos_mes, 2),
             "total_croissants_historico": total_croiss_historico,
+            "origen_ventas": {
+                "web": {"pedidos": web_pedidos_mes, "croissants": web_croiss_mes, "monto": round(web_monto_mes, 2)},
+                "manual": {"pedidos": manual_pedidos_mes, "croissants": manual_croiss_mes, "monto": round(manual_monto_mes, 2)}
+            },
             "flujo_diario_mes": flujo_diario_lista,
             "flujo_semanal_historico": flujo_semanal_lista,
             "proyeccion": {"es_mes_actual": es_mes_actual, "croissants_estimados": proy_croiss, "ingresos_estimados": proy_ingresos},

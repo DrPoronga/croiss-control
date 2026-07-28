@@ -434,6 +434,20 @@ async function cargarBalance() {
 			if (descuentosEl) {
 				descuentosEl.innerText = `-$${data.total_descuentos || 0}`;
 			}
+			if (data.origen_ventas) {
+                const web = data.origen_ventas.web || { pedidos: 0, croissants: 0, monto: 0 };
+                const manual = data.origen_ventas.manual || { pedidos: 0, croissants: 0, monto: 0 };
+
+                const elWebMonto = document.getElementById('bWebMonto');
+                const elWebDet = document.getElementById('bWebDetalle');
+                const elManMonto = document.getElementById('bManualMonto');
+                const elManDet = document.getElementById('bManualDetalle');
+
+                if (elWebMonto) elWebMonto.innerText = `$${web.monto}`;
+                if (elWebDet) elWebDet.innerText = `${web.pedidos} ped. (${web.croissants} un.)`;
+                if (elManMonto) elManMonto.innerText = `$${manual.monto}`;
+                if (elManDet) elManDet.innerText = `${manual.pedidos} ped. (${manual.croissants} un.)`;
+            }
             const gananciaEl = document.getElementById('bGanancia');
             gananciaEl.innerText = `$${data.ganancia_neta}`;
             gananciaEl.style.color = data.ganancia_neta < 0 ? "#ef4444" : "#16a34a";
