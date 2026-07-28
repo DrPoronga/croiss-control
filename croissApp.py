@@ -6,15 +6,11 @@ import socket
 import calendar
 import urllib.request
 import threading
-from datetime 
-import datetime, timedelta
-from flask 
-import Flask, jsonify, render_template, request, session, redirect, url_for
+from datetime import datetime, timedelta
+from flask import Flask, jsonify, render_template, request, session, redirect, url_for
 import gspread
-from google.oauth2.service_account 
-import Credentials
-from gspread.exceptions 
-import APIError
+from google.oauth2.service_account import Credentials
+from gspread.exceptions import APIError
 import math
 
 # ==========================================
