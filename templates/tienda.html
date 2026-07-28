@@ -5,39 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CROISS · Artesanos del Croissant 🥐</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=5">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=6">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        html { scroll-behavior: smooth; }
         body { background-color: #F9F3EE; min-height: 100vh; overflow-y: auto; }
-        .wizard-container { max-width: 480px; margin: 0 auto; padding: 16px 14px 30px 14px; }
-        
-        /* Ocultar contenedor paso 0 de recuadro blanco por defecto */
-        #step0.step-card {
-            background: transparent !important;
-            padding: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
+        .store-container { max-width: 500px; margin: 0 auto; padding: 12px 14px 40px 14px; }
 
-        /* HERO WEB PAGE STYLE (PASO 0) */
+        /* HERO HEADER (PORTADA) */
         .welcome-hero {
             position: relative;
             border-radius: 28px;
             overflow: hidden;
-            /* Fondo con imagen y degradado transparente elegante */
             background: linear-gradient(180deg, rgba(45, 30, 24, 0.45) 0%, rgba(45, 30, 24, 0.92) 100%), url("{{ url_for('static', filename='chef.jpg') }}") center 20% / cover no-repeat;
             color: #FFFFFF;
             padding: 36px 20px 28px 20px;
             text-align: center;
             box-shadow: 0 20px 45px rgba(45, 30, 24, 0.22);
             border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-
-        .hero-logo-img {
-            height: 75px;
-            width: auto;
-            margin-bottom: 12px;
-            filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.4));
+            margin-bottom: 24px;
         }
 
         .hero-badge {
@@ -57,15 +43,15 @@
         }
 
         .hero-title {
-            font-size: 1.65rem;
+            font-size: 1.7rem;
             font-weight: 800;
             color: #FFFFFF;
-            margin-bottom: 6px;
-            line-height: 1.25;
+            margin-bottom: 4px;
+            line-height: 1.2;
             text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         }
 
-        /* Tarjeta Translúcida de "Nuestra Historia" */
+        /* Glassmorphism Tarjeta de Historia */
         .story-glass-card {
             background: rgba(255, 255, 255, 0.12);
             backdrop-filter: blur(14px);
@@ -98,7 +84,7 @@
             margin: 0;
         }
 
-        /* Botones de Acción Web Hero */
+        /* Botones del Hero */
         .hero-actions-container {
             display: flex;
             flex-direction: column;
@@ -116,16 +102,10 @@
             border-radius: 16px;
             cursor: pointer;
             box-shadow: 0 8px 24px rgba(200, 109, 40, 0.45);
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
+            transition: transform 0.2s ease;
         }
 
-        .btn-hero-primary:active {
-            transform: scale(0.98);
-        }
+        .btn-hero-primary:active { transform: scale(0.98); }
 
         .btn-hero-secondary {
             width: 100%;
@@ -140,29 +120,35 @@
             border-radius: 16px;
             cursor: pointer;
             transition: all 0.2s ease;
+        }
+
+        .btn-hero-secondary:active { background: rgba(255, 255, 255, 0.25); transform: scale(0.98); }
+
+        /* TARJETAS DE SECCIONES VERTICALES */
+        .section-card {
+            background: #FFFFFF;
+            border-radius: 24px;
+            padding: 22px 18px;
+            margin-bottom: 20px;
+            box-shadow: 0 12px 32px rgba(45,30,24,0.05);
+            border: 1px solid rgba(45,30,24,0.08);
+        }
+
+        .section-title {
+            font-size: 1.18rem;
+            font-weight: 800;
+            color: var(--text-main);
+            margin-bottom: 4px;
             display: flex;
             align-items: center;
-            justify-content: center;
             gap: 8px;
         }
 
-        .btn-hero-secondary:active {
-            background: rgba(255, 255, 255, 0.25);
-            transform: scale(0.98);
+        .section-subtitle {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
         }
-
-        /* Barra de Progreso del Wizard */
-        .progress-bar-wizard { display: none; justify-content: space-between; margin-bottom: 24px; position: relative; }
-        .progress-bar-wizard::before { content: ''; position: absolute; top: 14px; left: 0; right: 0; height: 3px; background: #EFEAE6; z-index: 1; }
-        .progress-line-fill { position: absolute; top: 14px; left: 0; height: 3px; background: var(--accent); z-index: 1; transition: width 0.3s ease; }
-        .step-node { width: 30px; height: 30px; border-radius: 50%; background: #EFEAE6; color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; z-index: 2; position: relative; transition: all 0.3s ease; }
-        .step-node.active { background: var(--accent); color: white; transform: scale(1.15); box-shadow: 0 4px 12px rgba(200, 109, 40, 0.3); }
-        .step-node.completed { background: #2D1E18; color: white; }
-
-        /* Pasos del Wizard */
-        .step-card { display: none; background: white; border-radius: 24px; padding: 22px 18px; box-shadow: 0 12px 32px rgba(45,30,24,0.06); border: 1px solid rgba(45,30,24,0.08); }
-        .step-card.active { display: block; animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(15px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
         /* Tarjeta de Producto */
         .prod-card-shop { display: flex; align-items: center; justify-content: space-between; background: #FAF9F8; border-radius: 16px; padding: 14px; margin-bottom: 12px; border: 1px solid rgba(45,30,24,0.06); }
@@ -170,95 +156,91 @@
         .btn-qty { width: 32px; height: 32px; border-radius: 10px; border: none; background: #EFEAE6; color: var(--text-main); font-weight: 800; font-size: 1.1rem; cursor: pointer; }
         .btn-qty:active { transform: scale(0.92); }
 
-        /* Fechas Chips */
+        /* Fechas Grid */
         .dates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
         .date-chip { background: #FAF9F8; border: 1.5px solid var(--border-color); border-radius: 16px; padding: 12px; text-align: center; cursor: pointer; transition: all 0.2s; }
         .date-chip.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 800; }
         .date-chip.disabled { opacity: 0.4; cursor: not-allowed; background: #EFEAE6; }
 
-        .btn-next { width: 100%; background: linear-gradient(135deg, #2D1E18, #422D24); color: white; border: none; padding: 16px; font-size: 1rem; font-weight: 800; border-radius: 16px; margin-top: 18px; cursor: pointer; box-shadow: 0 6px 16px rgba(45,30,24,0.18); transition: transform 0.2s; }
-        .btn-next:active { transform: scale(0.98); }
-        .btn-prev { background: transparent; border: none; color: var(--text-muted); font-weight: 700; font-size: 0.88rem; padding: 10px; cursor: pointer; margin-top: 8px; width: 100%; }
+        /* Botón de Confirmación Principal */
+        .btn-confirm-order {
+            width: 100%;
+            background: linear-gradient(135deg, #16A34A, #15803D);
+            color: white;
+            border: none;
+            padding: 18px;
+            font-size: 1.05rem;
+            font-weight: 800;
+            border-radius: 18px;
+            cursor: pointer;
+            box-shadow: 0 8px 22px rgba(22, 163, 74, 0.3);
+            transition: transform 0.2s ease;
+        }
+        .btn-confirm-order:active { transform: scale(0.98); }
     </style>
 </head>
 <body>
 
-    <div class="wizard-container">
+    <div class="store-container" id="topHeader">
 
-        <!-- PASO 0: WELCOME LANDING PAGE -->
-        <div class="step-card active" id="step0">
-            <div class="welcome-hero">
-                <span class="hero-badge">Taller Artesanal</span>
-                <h1 class="hero-title">CROISS</h1>
-                <p style="font-size: 0.88rem; color: rgba(255,255,255,0.85); font-weight: 600; margin-bottom: 4px;">Artesanos del Croissant</p>
+        <!-- 0. HERO BIENVENIDA -->
+        <div class="welcome-hero">
+            <span class="hero-badge">Taller Artesanal</span>
+            <h1 class="hero-title">CROISS</h1>
+            <p style="font-size: 0.88rem; color: rgba(255,255,255,0.85); font-weight: 600; margin-bottom: 4px;">Artesanos del Croissant</p>
 
-                <!-- Historia con Efecto Transparencia (Glassmorphism) -->
-                <div class="story-glass-card">
-                    <div class="story-header">
-                        <span>✨</span> Nuestra Historia
-                    </div>
-                    <p class="story-p">
-                        Nacimos con una pasión: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante un proceso artesanal de fermentación lenta e ingredientes seleccionados, horneando cada lote para lograr esa capa crocante por fuera y suave por dentro.
-                    </p>
+            <!-- Nuestra Historia -->
+            <div class="story-glass-card">
+                <div class="story-header">
+                    <span>✨</span> Nuestra Historia
                 </div>
+                <p class="story-p">
+                    Nacimos con una pasión: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante un proceso artesanal de fermentación lenta e ingredientes seleccionados, horneando cada lote para lograr esa capa crocante por fuera y suave por dentro.
+                </p>
+            </div>
 
-                <!-- Botones Principales -->
-                <div class="hero-actions-container">
-                    <button type="button" class="btn-hero-primary" onclick="goToStep(1)">
-                        🥐 CREAR PEDIDO
-                    </button>
-                    <button type="button" class="btn-hero-secondary" onclick="verMenuPublico()">
-                        📜 MENÚ Y PRECIOS
-                    </button>
-                </div>
+            <!-- Botones Hero -->
+            <div class="hero-actions-container">
+                <button type="button" class="btn-hero-primary" onclick="scrollASeccion('sec-productos')">
+                    🥐 ARMAR MI PEDIDO
+                </button>
+                <button type="button" class="btn-hero-secondary" onclick="verMenuPublico()">
+                    📜 MENÚ Y PRECIOS
+                </button>
             </div>
         </div>
 
-        <!-- Barra de Progreso (Visible solo en pasos 1 a 4) -->
-        <div class="progress-bar-wizard" id="mainProgressBar">
-            <div class="progress-line-fill" id="progressFill" style="width: 0%;"></div>
-            <div class="step-node active" id="node1">1</div>
-            <div class="step-node" id="node2">2</div>
-            <div class="step-node" id="node3">3</div>
-            <div class="step-node" id="node4">4</div>
-        </div>
+        <!-- 1. SECCIÓN PRODUCTOS -->
+        <div class="section-card" id="sec-productos">
+            <h2 class="section-title"><span>1.</span> Elegí tus Croissants 🥐</h2>
+            <p class="section-subtitle">¡Cuantos más sumes, mejor precio conseguís por unidad!</p>
 
-        <!-- PASO 1: PRODUCTOS -->
-        <div class="step-card" id="step1">
-            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">1. Elegí tus Croissants 🥐</h3>
-            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">¡Cuantos más sumes, mejor precio conseguís!</p>
-            
             <div id="shopProductsList">Cargando menú delicioso...</div>
 
-            <div style="background: #FAF0EB; border: 1px dashed #F7DFC8; border-radius: 14px; padding: 12px; margin-top: 14px; text-align: center;">
-                <small style="color: var(--accent); font-weight: 700; display: block; font-size: 0.75rem;">SUBTOTAL TICKET</small>
-                <span id="shopSubtotalText" style="font-size: 1.4rem; font-weight: 800; color: #2D1E18;">$0</span>
-                <small id="shopPromoMsg" style="display: block; font-size: 0.7rem; color: #64748b; margin-top: 2px;">Agregá 3 o más para mejor precio por unidad</small>
+            <!-- Subtotal en Vivo -->
+            <div style="background: #FAF0EB; border: 1px dashed #F7DFC8; border-radius: 16px; padding: 14px; margin-top: 16px; text-align: center;">
+                <small style="color: var(--accent); font-weight: 800; display: block; font-size: 0.75rem; text-transform: uppercase;">SUBTOTAL ACTUAL</small>
+                <span id="shopSubtotalText" style="font-size: 1.5rem; font-weight: 800; color: #2D1E18;">$0</span>
+                <small id="shopPromoMsg" style="display: block; font-size: 0.72rem; color: #64748b; margin-top: 2px;">Agregá 3 o más para precio promocional</small>
             </div>
-
-            <button type="button" class="btn-next" onclick="nextStep(2)">Continuar a la Fecha ➔</button>
-            <button type="button" class="btn-prev" onclick="goToStep(0)">⬅️ Volver al Inicio</button>
         </div>
 
-        <!-- PASO 2: FECHA -->
-        <div class="step-card" id="step2">
-            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">2. Fecha Estimada 🗓️</h3>
-            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 12px;">Elegí el día en que querés recibir tus croissants.</p>
-            
+        <!-- 2. SECCIÓN FECHA -->
+        <div class="section-card" id="sec-fechas">
+            <h2 class="section-title"><span>2.</span> Fecha Estimada 🗓️</h2>
+            <p class="section-subtitle">Elegí el día en que querés recibir tus croissants frescos.</p>
+
             <div style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 12px; padding: 10px; font-size: 0.78rem; color: #166534; font-weight: 600; margin-bottom: 12px;">
-                💬 <strong>Nota:</strong> La zona exacta y horario de entrega los coordinamos directamente por WhatsApp tras confirmar tu pedido.
+                💬 <strong>Nota:</strong> La dirección exacta y horario los coordinamos por WhatsApp tras confirmar.
             </div>
 
             <div id="datesContainer" class="dates-grid">Cargando días con disponibilidad...</div>
-
-            <button type="button" class="btn-next" onclick="nextStep(3)">Paso Siguiente ➔</button>
-            <button type="button" class="btn-prev" onclick="prevStep(1)">⬅️ Volver a Productos</button>
         </div>
 
-        <!-- PASO 3: DATOS DEL CLIENTE -->
-        <div class="step-card" id="step3">
-            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">3. Tus Datos 📝</h3>
-            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">Para contactarte y avisarte cuando salgan del horno.</p>
+        <!-- 3. SECCIÓN DATOS CLIENTE -->
+        <div class="section-card" id="sec-datos">
+            <h2 class="section-title"><span>3.</span> Tus Datos 📝</h2>
+            <p class="section-subtitle">Para contactarte y avisarte cuando salgan del horno.</p>
 
             <div class="form-group">
                 <label>Nombre Completo *</label>
@@ -280,21 +262,22 @@
                 <label>Aclaraciones / Notas (Opcional)</label>
                 <input type="text" id="custNotas" placeholder="Ej: Es para un cumpleaños...">
             </div>
-
-            <button type="button" class="btn-next" onclick="nextStep(4)">Ver Resumen y Finalizar ➔</button>
-            <button type="button" class="btn-prev" onclick="prevStep(2)">⬅️ Volver a Fecha</button>
         </div>
 
-        <!-- PASO 4: RESUMEN -->
-        <div class="step-card" id="step4">
-            <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">4. Resumen de tu Orden 🛍️</h3>
-            <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">Revisá que todo esté correcto antes de enviar.</p>
+        <!-- 4. SECCIÓN RESUMEN Y FINALIZAR -->
+        <div class="section-card" id="sec-resumen">
+            <h2 class="section-title"><span>4.</span> Resumen de tu Orden 🛍️</h2>
+            <p class="section-subtitle">Revisá el detalle de tu pedido antes de enviarlo.</p>
 
-            <div id="orderSummaryBox" style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 16px; font-size: 0.88rem; margin-bottom: 16px;"></div>
+            <div id="orderSummaryBox" style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 16px; font-size: 0.88rem; margin-bottom: 18px;">
+                <p style="color: #94a3b8; text-align: center; margin: 0;">Seleccioná croissants para ver el resumen</p>
+            </div>
 
-            <button type="button" class="btn-next" style="background: linear-gradient(135deg, #16A34A, #15803D);" onclick="confirmarPedidoTienda()">Confirmar Pedido 🥐</button>
-            <button type="button" class="btn-prev" onclick="prevStep(3)">⬅️ Modificar Datos</button>
+            <button type="button" class="btn-confirm-order" onclick="confirmarPedidoTienda()">
+                Confirmar Pedido 🥐
+            </button>
         </div>
+
     </div>
 
     <!-- Script Lógica Tienda -->
@@ -303,7 +286,6 @@
         croissImagePreload.src = '/static/croissant.png';
         let croissAnimFrameId = null;
 
-        let currentStep = 0;
         let menuItems = [];
         let cart = {}; 
         let selectedDate = "";
@@ -313,6 +295,11 @@
             fetchCatalogo();
             fetchFechas();
         });
+
+        function scrollASeccion(idSeccion) {
+            const el = document.getElementById(idSeccion);
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
 
         // ANIMACIÓN CANVAS DEL CROISSANT COMIÉNDOSE
         function mostrarCroissLoader() {
@@ -521,6 +508,7 @@
             }
 
             renderDates();
+            buildSummary();
         }
 
         function renderDates() {
@@ -566,78 +554,11 @@
                     div.onclick = () => {
                         selectedDate = d.fecha;
                         renderDates();
+                        buildSummary();
                     };
                 }
                 container.appendChild(div);
             });
-        }
-
-        function nextStep(step) {
-            const calc = calculatePrices();
-            if(currentStep === 1 && calc.totalCroissants === 0) {
-                Swal.fire({
-                    title: 'Elegí tus croissants',
-                    text: 'Agregá al menos 1 croissant a tu pedido para avanzar.',
-                    icon: 'warning',
-                    confirmButtonText: 'Entendido',
-                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                });
-                return;
-            }
-            if(currentStep === 2 && !selectedDate) {
-                Swal.fire({
-                    title: 'Seleccioná la fecha',
-                    text: 'Por favor marcá el día que querés recibir tu pedido.',
-                    icon: 'warning',
-                    confirmButtonText: 'Entendido',
-                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                });
-                return;
-            }
-            if(currentStep === 3) {
-                const nom = document.getElementById('custNombre').value.trim();
-                const tel = document.getElementById('custTel').value.trim();
-                const email = document.getElementById('custEmail').value.trim();
-
-                if(!nom || !tel || !email) {
-                    Swal.fire({
-                        title: 'Campos Obligatorios',
-                        text: 'Por favor ingresá tu Nombre, Teléfono y Email para notificarte.',
-                        icon: 'warning',
-                        confirmButtonText: 'Entendido',
-                        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                    });
-                    return;
-                }
-                buildSummary();
-            }
-
-            goToStep(step);
-        }
-
-        function prevStep(step) { goToStep(step); }
-
-        function goToStep(step) {
-            document.querySelectorAll('.step-card').forEach(c => c.classList.remove('active'));
-            document.getElementById(`step${step}`).classList.add('active');
-
-            currentStep = step;
-            const barEl = document.getElementById('mainProgressBar');
-
-            if (step === 0) {
-                barEl.style.display = 'none';
-            } else {
-                barEl.style.display = 'flex';
-                const pct = ((step - 1) / 3) * 100;
-                document.getElementById('progressFill').style.width = `${pct}%`;
-
-                for(let i = 1; i <= 4; i++) {
-                    const node = document.getElementById(`node${i}`);
-                    if(i < step) { node.className = 'step-node completed'; node.innerText = '✓'; }
-                    else if(i === step) { node.className = 'step-node active'; node.innerText = i; }
-                    else { node.className = 'step-node'; node.innerText = i; }
-                }
-            }
         }
 
         function buildSummary() {
@@ -645,8 +566,11 @@
             const nom = document.getElementById('custNombre').value.trim();
             const tel = document.getElementById('custTel').value.trim();
             const email = document.getElementById('custEmail').value.trim();
-            const dir = document.getElementById('custDir').value.trim();
-            const notas = document.getElementById('custNotas').value.trim();
+
+            if (calc.totalCroissants === 0) {
+                document.getElementById('orderSummaryBox').innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Seleccioná croissants arriba para ver el resumen</p>`;
+                return;
+            }
 
             let itemsHtml = '';
             for(let k in cart) {
@@ -655,24 +579,21 @@
 
             document.getElementById('orderSummaryBox').innerHTML = `
                 <div style="border-bottom:1px dashed #E2D9D3; padding-bottom:8px; margin-bottom:8px;">
-                    <strong>Cliente:</strong> ${nom}<br>
-                    <strong>Teléfono:</strong> ${tel}<br>
-                    <strong>Email:</strong> ${email}<br>
-                    ${dir ? `<strong>Dirección:</strong> ${dir}<br>` : ''}
-                    <strong>Fecha Entrega:</strong> ${selectedDate}<br>
-                    ${notas ? `<strong>Aclaración:</strong> ${notas}` : ''}
+                    ${nom ? `<strong>Cliente:</strong> ${nom}<br>` : ''}
+                    ${tel ? `<strong>Contacto:</strong> ${tel}<br>` : ''}
+                    <strong>Fecha Entrega:</strong> ${selectedDate ? selectedDate : '<span style="color:#DC2626;">(Pendiente seleccionar)</span>'}<br>
                 </div>
                 <div>
                     <strong style="color:var(--accent);">Croissants Pedidos:</strong>
                     ${itemsHtml}
                 </div>
-                <div style="margin-top:12px; font-size:1.1rem; font-weight:800; text-align:right; color:#2D1E18;">
+                <div style="margin-top:12px; font-size:1.15rem; font-weight:800; text-align:right; color:#2D1E18;">
                     Total A Pagar: $${calc.totalMoney}
                 </div>
             `;
         }
 
-        // REINICIA LA TIENDA Y LLEVA DE VUELTA A LA WELCOME LANDING PAGE
+        // LIMPIA Y DESPLAZA DE VUELTA A LA PORTADA
         function reiniciarTienda() {
             cart = {};
             selectedDate = "";
@@ -683,11 +604,53 @@
             document.getElementById('custNotas').value = "";
             renderProducts();
             renderDates();
-            goToStep(0);
+            scrollASeccion('topHeader');
         }
 
         async function confirmarPedidoTienda() {
             const calc = calculatePrices();
+
+            // Validaciones con scroll automático si algo falta
+            if(calc.totalCroissants === 0) {
+                scrollASeccion('sec-productos');
+                Swal.fire({
+                    title: 'Elegí tus croissants',
+                    text: 'Agregá al menos 1 croissant a tu pedido antes de continuar.',
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                });
+                return;
+            }
+
+            if(!selectedDate) {
+                scrollASeccion('sec-fechas');
+                Swal.fire({
+                    title: 'Seleccioná la fecha',
+                    text: 'Por favor marcá el día que querés recibir tu pedido.',
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                });
+                return;
+            }
+
+            const nom = document.getElementById('custNombre').value.trim();
+            const tel = document.getElementById('custTel').value.trim();
+            const email = document.getElementById('custEmail').value.trim();
+
+            if(!nom || !tel || !email) {
+                scrollASeccion('sec-datos');
+                Swal.fire({
+                    title: 'Campos Obligatorios',
+                    text: 'Por favor ingresá tu Nombre, Teléfono y Email.',
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                });
+                return;
+            }
+
             let itemsArr = [];
             for(let k in cart) {
                 itemsArr.push({
@@ -698,9 +661,9 @@
             }
 
             const payload = {
-                cliente: document.getElementById('custNombre').value.trim(),
-                telefono: document.getElementById('custTel').value.trim(),
-                email: document.getElementById('custEmail').value.trim(),
+                cliente: nom,
+                telefono: tel,
+                email: email,
                 direccion: document.getElementById('custDir').value.trim(),
                 fecha_entrega: selectedDate,
                 notas: document.getElementById('custNotas').value.trim(),
@@ -735,7 +698,7 @@
                         customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
                     }).then(() => {
                         window.open(wpUrl, '_blank');
-                        reiniciarTienda(); // RETORNA AUTOMÁTICAMENTE AL INICIO
+                        reiniciarTienda(); // RETORNA SUAVEMENTE DE VUELTA A LA PORTADA
                     });
                 } else {
                     Swal.fire({
