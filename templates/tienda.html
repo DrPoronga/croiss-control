@@ -375,8 +375,8 @@
                 const data = await res.json();
 
                 if(data.status === 'exito') {
-                    const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
-                    const wpUrl = `https://wa.me/59899000000?text=${msgWp}`; // Reemplazar con tu número real de WP
+					const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
+					const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
 
                     Swal.fire({
                         title: '¡Pedido Recibido! 🥐',

@@ -26,6 +26,7 @@ ADMIN_PASS = os.environ.get("ADMIN_PASSWORD", "croisscamigera")
 
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "pedidos@croissuy.com")
+NUMERO_WHATSAPP = os.environ.get("NUMERO_WHATSAPP", "59899526301") 
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -572,19 +573,20 @@ def registrar_venta():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
-
 # ==========================================
 # RUTAS DE VISTA Y API CONGELADOS INDEPENDIENTES
 # ==========================================
 @app.route('/')
+def inicio():
+    return render_template('index.html')
 
 # ==========================================
 # RUTAS PÚBLICAS DE E-COMMERCE / TIENDA
 # ==========================================
 @app.route('/tienda')
 def tienda_publica():
-    return render_template('tienda.html')
-
+    return render_template('tienda.html', numero_whatsapp=NUMERO_WHATSAPP)
+    
 @app.route('/api/public/catalogo', methods=['GET'])
 def api_public_catalogo():
     try:
@@ -747,10 +749,7 @@ def api_public_crear_pedido():
         return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
-        
-def inicio():
-    return render_template('index.html')
+    
 
 def obtener_celda_congelados(sheet_stock):
     try:

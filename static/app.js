@@ -1873,7 +1873,15 @@ function verDetalleCliente(clienteObj) {
         let dirTexto = clienteObj.direccion ? `<br><span style="color:var(--text-main); font-weight:600;">Dir: ${clienteObj.direccion}</span>` : '';
         let mapsBtn = clienteObj.direccion ? ` <button type="button" class="btn-jalea-chip" style="margin-left:6px; font-size:0.7rem; padding: 2px 8px;" onclick="abrirGoogleMaps('${encodeURIComponent(clienteObj.direccion)}')">Abrir Maps</button>` : '';
 
-        let telLimpio = (clienteObj.telefono || '').replace(/\D/g, '');
+        // 🟢 NORMALIZACIÓN AUTOMÁTICA DE TELÉFONO (+598 Uruguay)
+        let telLimpio = (clienteObj.telefono || '').replace(/\D/g, ''); // Deja solo números
+        if (telLimpio.startsWith('0')) {
+            telLimpio = telLimpio.substring(1); // Quita el "0" inicial (ej: 099123456 -> 99123456)
+        }
+        if (telLimpio && !telLimpio.startsWith('598')) {
+            telLimpio = '598' + telLimpio; // Le agrega el +598 si no lo tiene (ej: 59899123456)
+        }
+
         let btnWhatsApp = '';
         if (telLimpio) {
             let msgText = encodeURIComponent(`¡Hola ${clienteObj.nombre}! Te escribimos de CROISS 🥐 ¿Cómo estás?`);
