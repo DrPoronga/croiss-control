@@ -576,9 +576,9 @@ def registrar_venta():
 # ==========================================
 # RUTAS DE VISTA Y API CONGELADOS INDEPENDIENTES
 # ==========================================
-@app.route('/')
-def inicio():
-    return render_template('index.html')
+@app.route('/tienda')
+def tienda_publica():
+    return render_template('tienda.html', numero_whatsapp=NUMERO_WHATSAPP)
 
 # ==========================================
 # RUTAS PÚBLICAS DE E-COMMERCE / TIENDA
