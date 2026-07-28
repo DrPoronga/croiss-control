@@ -918,7 +918,8 @@ function generarHtmlListaEdicion() {
         if (Array.isArray(catalogoProductos) && catalogoProductos.length > 0) {
             catalogoProductos.forEach(p => {
                 let name = obtenerNombreDesdeObjeto(p);
-                if (name && !name.toLowerCase().includes('congelado')) {
+                let nameLower = (name || '').toLowerCase();
+                if (name && !nameLower.includes('congelado') && !nameLower.includes('sobrevendido') && !nameLower.includes('masa')) {
                     let selected = name.toLowerCase().trim() === item.producto.toLowerCase().trim() ? 'selected' : '';
                     optionsHtml += `<option value="${name}" ${selected}>${name}</option>`;
                 }
@@ -989,13 +990,15 @@ function agregarItemEdicion() {
     if (Array.isArray(catalogoProductos) && catalogoProductos.length > 0) {
         let pValid = catalogoProductos.find(p => {
             let name = obtenerNombreDesdeObjeto(p);
-            return name && !name.toLowerCase().includes('congelado');
+            let nameLower = (name || '').toLowerCase();
+            return name && !nameLower.includes('congelado') && !nameLower.includes('sobrevendido') && !nameLower.includes('masa');
         });
         if(pValid) primerProducto = obtenerNombreDesdeObjeto(pValid);
     }
     itemsEdicionTemp.push({ cantidad: 1, producto: primerProducto, con_jalea: false });
     refrescarDomEdicion();
 }
+
 
 function abrirEdicionPedido(numFila) {
     if (!numFila) return;
@@ -2137,7 +2140,10 @@ function renderizarMenuYStock() {
     let productosRenderizados = 0;
     catalogoProductos.forEach(prod => {
         const nombreProd = obtenerNombreDesdeObjeto(prod);
-        if (!nombreProd || nombreProd.toLowerCase().includes('congelado') || nombreProd.toLowerCase().includes('sobrevendido')) return;
+        const nameLower = (nombreProd || '').toLowerCase();
+
+        // FILTRO CORREGIDO: Ignorar congelados, sobrevendidos y masas internas
+        if (!nombreProd || nameLower.includes('congelado') || nameLower.includes('sobrevendido') || nameLower.includes('masa')) return;
 
         productosRenderizados++;
         if (select) {
