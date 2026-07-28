@@ -540,18 +540,22 @@
             renderDates();
         }
 
-        // DESPLIEGA LA IMAGEN DE MENU.PNG DE LA CARPETA STATIC
+        // DESPLIEGA LA IMAGEN MENU.PNG DESDE LA CARPETA STATIC
 		function verMenuPublico() {
-			const htmlMenu = `
-				<div style="text-align:center; padding: 4px 0;">
-					<img src="{{ url_for('static', filename='menu.png') }}" alt="Menú CROISS" style="width:100%; max-width:100%; height:auto; border-radius:16px; box-shadow: 0 4px 15px rgba(0,0,0,0.12);">
-				</div>
-			`;
+			const imagenUrl = "{{ url_for('static', filename='menu.png') }}";
 
 			Swal.fire({
-				html: htmlMenu,
-				confirmButtonText: '¡Entendido!',
-				customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+				html: `
+					<div style="text-align:center; padding: 0; cursor:pointer;" onclick="Swal.close()">
+						<img src="${imagenUrl}" 
+							 alt="Menú CROISS" 
+							 style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);">
+					</div>
+				`,
+				showConfirmButton: false, // Elimina el botón "OK" automático
+				showCloseButton: false,    // Agrega una 'X' sutil arriba para cerrar
+				background: 'transparent',
+				customClass: { popup: 'croiss-swal-popup-transparent' }
 			});
 		}
         function renderProducts() {
