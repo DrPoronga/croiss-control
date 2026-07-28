@@ -1012,6 +1012,7 @@ def obtener_balance():
 
         ventas, gastos = get_clean_records(sheet_ventas), get_clean_records(sheet_gastos)
         ingresos_mes, costos_prod_mes, pedidos_count_mes, total_croiss_mes = 0.0, 0.0, 0, 0
+        total_descuentos_mes = 0.0 # NUEVO: Variable para sumar los descuentos
         total_croiss_historico, total_pedidos_historico, total_ingresos_historico = 0, 0, 0.0
         con_jalea_count, sin_jalea_count = 0, 0
         sabores_dict = {}
@@ -1043,6 +1044,24 @@ def obtener_balance():
             raw_cant = get_field_val(v, "Cantidad")
             cant = int(raw_cant) if raw_cant.isdigit() else 0
             desc_prod = get_field_val(v, "Producto")
+            notas = get_field_val(v, "Notas", "Nota") # NUEVO: Capturar las notas
+
+            # NUEVO: Lógica para extraer y calcular el monto del descuento
+            monto_descontado_pedido = 0.0
+            if notas and "[Dto" in notas:
+                match_dto = re.search(r"\[Dto (\d+)%\]", notas)
+                if match_dto:
+                    porcentaje_dto = float(match_dto.group(1))
+                    if porcentaje_dto == 100:
+                        # Si fue 100% de regalo, el monto cobrado es 0. 
+                        # Debemos calcular el precio original simulado para saber cuánto "perdimos"
+                        # Lo calcularemos de forma aproximada usando un ticket promedio histórico o un costo base
+                        monto_descontado_pedido = cant * 120.0 # Aproximación de precio de venta
+                    elif porcentaje_dto > 0 and monto > 0:
+                        # Regla de tres simple para saber el monto descontado
+                        # Si cobramos el 80% (20% OFF), entonces: Precio_Original = Monto_Cobrado / 0.8
+                        precio_original = monto / (1 - (porcentaje_dto / 100))
+                        monto_descontado_pedido = precio_original - monto
 
             datos_costo = calcular_costo_y_empaque_pedido(desc_prod, cant)
             costo_pedido = datos_costo["costo_total"]
@@ -1087,6 +1106,7 @@ def obtener_balance():
                 costos_prod_mes += costo_pedido
                 pedidos_count_mes += 1
                 total_croiss_mes += cant
+                total_descuentos_mes += monto_descontado_pedido # NUEVO: Sumar al total del mes
 
                 if f_norm in flujo_diario_mes_dict:
                     flujo_diario_mes_dict[f_norm]["croissants"] += cant
@@ -1163,6 +1183,7 @@ def obtener_balance():
             "costos_produccion": round(costos_prod_mes, 2), "gastos_varios": round(gastos_mes, 2),
             "gastos_por_categoria": gastos_por_categoria, "ganancia_neta": round(ganancia_neta_mes, 2),
             "ticket_promedio": ticket_promedio, "total_croissants_mes": total_croiss_mes,
+            "total_descuentos": round(total_descuentos_mes, 2), # NUEVO: Devolver los descuentos al frontend
             "total_croissants_historico": total_croiss_historico,
             "flujo_diario_mes": flujo_diario_lista,
             "flujo_semanal_historico": flujo_semanal_lista,
@@ -1173,7 +1194,7 @@ def obtener_balance():
         }), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/editar_pedido', methods=['POST'])
 def editar_pedido():
     try:

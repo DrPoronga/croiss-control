@@ -430,6 +430,10 @@ async function cargarBalance() {
             document.getElementById('bGastos').innerText = `$${data.gastos_varios}`;
             document.getElementById('bTicketPromedio').innerText = `$${data.ticket_promedio}`;
 
+			const descuentosEl = document.getElementById('bDescuentos');
+			if (descuentosEl) {
+				descuentosEl.innerText = `-$${data.total_descuentos || 0}`;
+			}
             const gananciaEl = document.getElementById('bGanancia');
             gananciaEl.innerText = `$${data.ganancia_neta}`;
             gananciaEl.style.color = data.ganancia_neta < 0 ? "#ef4444" : "#16a34a";
