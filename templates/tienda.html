@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CROISS · Artesanos del Croissant 🥐</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=7">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=8">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         html { scroll-behavior: smooth; }
@@ -14,6 +14,8 @@
             color: #2D1E18; 
             min-height: 100vh; 
             font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+            margin: 0;
+            padding: 0;
         }
 
         .web-site-wrapper {
@@ -25,16 +27,17 @@
         /* PORTADA / HERO WEB */
         .web-hero {
             position: relative;
-            padding: 40px 20px 36px 20px;
+            padding: 45px 20px 36px 20px;
             text-align: center;
             border-bottom: 1px solid rgba(45, 30, 24, 0.12);
-            margin-bottom: 40px;
+            margin-bottom: 36px;
+            overflow: hidden;
         }
 
         .web-hero-bg {
             position: absolute;
             top: 0; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(180deg, rgba(45, 30, 24, 0.6) 0%, rgba(45, 30, 24, 0.88) 100%), url("{{ url_for('static', filename='chef.jpg') }}") center 25% / cover no-repeat;
+            background: linear-gradient(180deg, rgba(45, 30, 24, 0.65) 0%, rgba(45, 30, 24, 0.92) 100%), url("{{ url_for('static', filename='chef.jpg') }}") center 25% / cover no-repeat;
             border-radius: 0 0 32px 32px;
             z-index: 0;
         }
@@ -45,13 +48,6 @@
             color: #FFFFFF;
         }
 
-        .hero-logo-img {
-            height: 70px;
-            width: auto;
-            margin-bottom: 14px;
-            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.3));
-        }
-
         .hero-tagline {
             font-size: 0.75rem;
             font-weight: 800;
@@ -59,13 +55,14 @@
             text-transform: uppercase;
             color: #E2A06E;
             margin-bottom: 6px;
+            display: block;
         }
 
         .hero-main-title {
-            font-size: 2.1rem;
+            font-size: 2.2rem;
             font-weight: 800;
             line-height: 1.15;
-            margin-bottom: 16px;
+            margin: 0 0 16px 0;
             color: #FFFFFF;
         }
 
@@ -114,13 +111,13 @@
         }
         .btn-web-outline:active { background: rgba(255, 255, 255, 0.15); }
 
-        /* SECCIONES CONTINUAS (SIN CUADROS) */
+        /* SECCIONES CONTINUAS DE LA WEB */
         .web-section {
-            margin-bottom: 48px;
+            margin-bottom: 40px;
         }
 
         .web-section-title {
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             font-weight: 800;
             color: #2D1E18;
             margin-bottom: 4px;
@@ -130,20 +127,20 @@
         .web-section-desc {
             font-size: 0.85rem;
             color: #7A6B63;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
 
-        /* MENÚ GASTRONÓMICO LÍNEA POR LÍNEA */
+        /* FILAS DEL MENÚ GASTRONÓMICO */
         .menu-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 16px 0;
+            padding: 14px 0;
             border-bottom: 1px solid rgba(45, 30, 24, 0.1);
         }
 
         .menu-item-info strong {
-            font-size: 1.02rem;
+            font-size: 0.98rem;
             font-weight: 700;
             color: #2D1E18;
             display: block;
@@ -199,9 +196,9 @@
             color: #2D1E18;
         }
 
-        /* BARRA SUBTOTAL PLANO */
+        /* BARRA DE SUBTOTAL PLANO */
         .subtotal-web-bar {
-            margin-top: 24px;
+            margin-top: 20px;
             padding: 16px 0;
             border-top: 2px solid #2D1E18;
             display: flex;
@@ -223,11 +220,11 @@
             color: #C86D28;
         }
 
-        /* FECHAS BANDERAS PLANAS */
+        /* SELECTOR DE FECHAS PLANO */
         .web-dates-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
+            gap: 10px;
         }
 
         .web-date-btn {
@@ -250,9 +247,9 @@
             background: #EFEAE6;
         }
 
-        /* FORMULARIO LINEAL MODERNO */
+        /* FORMULARIO EDITORIAL */
         .web-field {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .web-field label {
@@ -262,12 +259,12 @@
             text-transform: uppercase;
             letter-spacing: 0.8px;
             color: #7A6B63;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
 
         .web-field input {
             width: 100%;
-            padding: 14px 0;
+            padding: 12px 0;
             border: none;
             border-bottom: 1.5px solid #D8CFC8;
             background: transparent;
@@ -276,18 +273,19 @@
             color: #2D1E18;
             outline: none;
             border-radius: 0;
+            box-sizing: border-box;
             transition: border-color 0.2s;
         }
         .web-field input:focus {
             border-color: #C86D28;
         }
 
-        /* RESUMEN TICKET EDITORIAL */
+        /* RESUMEN FINAL TICKET */
         .summary-ticket-clean {
-            padding: 20px 0;
+            padding: 18px 0;
             border-top: 1px dashed #D8CFC8;
             border-bottom: 1px dashed #D8CFC8;
-            margin-bottom: 28px;
+            margin-bottom: 24px;
             font-size: 0.9rem;
             line-height: 1.6;
         }
@@ -319,7 +317,7 @@
             <h1 class="hero-main-title">CROISS</h1>
             
             <p class="hero-story-text">
-                Nacimos con una pasión: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante fermentación lenta e ingredientes seleccionados, horneando cada lote para lograr esa textura crocante e irresistible.
+                Nacimos con una pasión: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante fermentación lenta e ingredientes seleccionados, horneando cada lote para lograr esa textura crocante por fuera y suave por dentro.
             </p>
 
             <div class="hero-actions">
@@ -354,19 +352,19 @@
         <!-- SECCIÓN 2: FECHA -->
         <section class="web-section" id="sec-fechas">
             <h2 class="web-section-title">2. Fecha de Entrega</h2>
-            <p class="web-section-desc">Elegí el día en que querés recibir o retirar tu orden.</p>
+            <p class="web-section-desc">Elegí el día en que querés recibir tu orden (Pedidos con 48hs de anticipación).</p>
 
             <p style="font-size: 0.8rem; color: #166534; font-weight: 600; margin-bottom: 14px;">
-                💬 La zona exacta y el horario se coordinan por WhatsApp tras confirmar.
+                💬 La zona exacta y el horario se coordinan por WhatsApp tras confirmar tu pedido.
             </p>
 
-            <div id="datesContainer" class="web-dates-grid">Cargando fechas...</div>
+            <div id="datesContainer" class="web-dates-grid">Cargando fechas disponibles...</div>
         </section>
 
         <!-- SECCIÓN 3: DATOS -->
         <section class="web-section" id="sec-datos">
             <h2 class="web-section-title">3. Tus Datos</h2>
-            <p class="web-section-desc">Ingresá tu información para procesar el pedido.</p>
+            <p class="web-section-desc">Ingresá tu información para avisarte cuando salgan del horno.</p>
 
             <div class="web-field">
                 <label>Nombre Completo *</label>
@@ -406,13 +404,23 @@
 
     </div>
 
-    <!-- LÓGICA JAVASCRIPT DE LA TIENDA -->
+    <!-- LÓGICA JAVASCRIPT DE LA TIENDA Y CÁLCULOS SEGÚN PDF -->
     <script>
         const croissImagePreload = new Image();
         croissImagePreload.src = '/static/croissant.png';
         let croissAnimFrameId = null;
 
-        let menuItems = [];
+        // MENÚ SEGÚN EL PDF "Menú Croiss.pdf"
+        const defaultMenu = [
+            { nombre: "Croissant Clásico", relleno: "ninguno" },
+            { nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
+            { nombre: "Croissant c/ Jamón y Queso (+ $50)", relleno: "salado" },
+            { nombre: "Croisstzel (Sal del Himalaya)", relleno: "ninguno" },
+            { nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" },
+            { nombre: "Croisstzel c/ Jamón y Queso (+ $50)", relleno: "salado" }
+        ];
+
+        let menuItems = defaultMenu;
         let cart = {}; 
         let selectedDate = "";
         let datesCapacity = [];
@@ -508,49 +516,66 @@
             try {
                 const res = await fetch('/api/public/catalogo');
                 const data = await res.json();
-                if(data.status === 'exito') {
+                if(data.status === 'exito' && Array.isArray(data.productos) && data.productos.length > 0) {
                     menuItems = data.productos;
-                    renderProducts();
                 }
             } catch(e) { console.error(e); }
+            renderProducts();
         }
 
         async function fetchFechas() {
             try {
                 const res = await fetch('/api/public/fechas');
                 const data = await res.json();
-                if(data.status === 'exito') {
+                if(data.status === 'exito' && Array.isArray(data.fechas)) {
                     datesCapacity = data.fechas;
-                    renderDates();
                 }
             } catch(e) { console.error(e); }
+            renderDates();
         }
 
+        // DESPLIEGA EL MENÚ EXACTO DEL PDF
         function verMenuPublico() {
-            if(!menuItems || menuItems.length === 0) {
-                Swal.fire({
-                    title: 'Menú',
-                    text: 'Cargando lista de precios...',
-                    icon: 'info',
-                    confirmButtonText: 'Entendido',
-                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                });
-                return;
-            }
+            const htmlMenu = `
+                <div style="text-align:center; padding: 6px 0;">
+                    <h3 style="color:#C86D28; font-weight:800; font-size:1.3rem; margin:0 0 2px 0;">MENÚ CROISSANTS</h3>
+                    <p style="font-size:0.75rem; color:#7A6B63; margin-bottom:14px; font-weight:800; text-transform:uppercase;">ARTESANOS DEL CROISSANT</p>
 
-            let htmlMenu = '<div style="text-align:left; max-height:320px; overflow-y:auto; padding-right:4px;">';
-            menuItems.forEach(p => {
-                htmlMenu += `
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #EFEAE6;">
-                        <strong style="font-size:0.95rem; color:#2D1E18;">🥐 ${p.nombre}</strong>
-                        <span style="font-weight:800; color:#C86D28;">$${p.precio || 'Consultar'}</span>
+                    <div style="background:#FAF9F8; border:1px solid #EFEAE6; border-radius:16px; padding:14px; margin-bottom:14px; text-align:left;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <strong>CROISS INDIVIDUAL</strong>
+                            <span style="font-weight:800; color:#2D1E18;">$140</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-top:1px dashed #E2D9D3; padding-top:8px;">
+                            <div>
+                                <strong>CAJA X3</strong><br>
+                                <small style="color:#16A34A; font-weight:700;">$110 C/U (AHORRÁS $90)</small>
+                            </div>
+                            <span style="font-weight:800; color:#2D1E18; font-size:1.05rem;">$330</span>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; border-top:1px dashed #E2D9D3; padding-top:8px;">
+                            <div>
+                                <strong>CAJA X6</strong><br>
+                                <small style="color:#16A34A; font-weight:700;">$100 C/U (AHORRÁS $240)</small>
+                            </div>
+                            <span style="font-weight:800; color:#2D1E18; font-size:1.05rem;">$600</span>
+                        </div>
                     </div>
-                `;
-            });
-            htmlMenu += '</div><p style="font-size:0.75rem; color:#7A6B63; margin-top:12px; font-weight:600;">* Descuentos promocionales aplicados según cantidad.</p>';
+
+                    <div style="text-align:left; font-size:0.85rem; color:#2D1E18; margin-bottom:14px; padding:0 4px;">
+                        <p style="margin:0 0 8px 0;"><strong>ELEGÍ TU CROISS:</strong> Clásico | Con Jalea | Croisstzel (con sal gruesa del Himalaya)</p>
+                        <p style="margin:0;"><strong>AGREGÁ UN RELLENO (EXTRA POR UNIDAD):</strong><br>
+                        • Dulce de Leche: <strong>+$30</strong><br>
+                        • Jamón y Queso: <strong>+$50</strong></p>
+                    </div>
+
+                    <div style="background:#FAF0EB; border:1px dashed #F7DFC8; border-radius:12px; padding:8px; font-size:0.75rem; color:#C86D28; font-weight:800;">
+                        ⏰ PEDIDOS CON 48HS DE ANTICIPACIÓN · @CROISS.UY
+                    </div>
+                </div>
+            `;
 
             Swal.fire({
-                title: 'Nuestros Croissants',
                 html: htmlMenu,
                 confirmButtonText: '¡Entendido!',
                 customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
@@ -559,6 +584,7 @@
 
         function renderProducts() {
             const container = document.getElementById('shopProductsList');
+            if(!container) return;
             container.innerHTML = '';
 
             menuItems.forEach(p => {
@@ -571,12 +597,12 @@
                 div.innerHTML = `
                     <div class="menu-item-info">
                         <strong>${name}</strong>
-                        ${qty > 0 ? `<button type="button" class="btn-jalea-inline ${conJalea ? 'active' : ''}" onclick="toggleJaleaShop('${name}')">${conJalea ? 'Con Jalea' : 'Sin Jalea'}</button>` : ''}
+                        ${qty > 0 ? `<button type="button" class="btn-jalea-inline ${conJalea ? 'active' : ''}" onclick="toggleJaleaShop('${name.replace(/'/g, "\\'")}')">${conJalea ? 'Con Jalea' : 'Sin Jalea'}</button>` : ''}
                     </div>
                     <div class="menu-qty-selector">
-                        <button type="button" class="btn-qty-flat" onclick="updateQty('${name}', -1)">-</button>
+                        <button type="button" class="btn-qty-flat" onclick="updateQty('${name.replace(/'/g, "\\'")}', -1)">-</button>
                         <span class="qty-number">${qty}</span>
-                        <button type="button" class="btn-qty-flat" onclick="updateQty('${name}', 1)">+</button>
+                        <button type="button" class="btn-qty-flat" onclick="updateQty('${name.replace(/'/g, "\\'")}', 1)">+</button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -585,32 +611,45 @@
         }
 
         function updateQty(name, change) {
-            if(!cart[name]) cart[name] = { cantidad: 0, con_jalea: false };
-            cart[name].cantidad += change;
-            if(cart[name].cantidad <= 0) delete cart[name];
-            renderProducts();
-        }
-
-        function toggleJaleaShop(name) {
-            if(cart[name]) {
-                cart[name].con_jalea = !cart[name].con_jalea;
+            try {
+                if(!cart[name]) cart[name] = { cantidad: 0, con_jalea: false };
+                cart[name].cantidad += change;
+                if(cart[name].cantidad <= 0) delete cart[name];
                 renderProducts();
+            } catch(e) {
+                console.error("Error actualizando cantidad:", e);
             }
         }
 
+        function toggleJaleaShop(name) {
+            try {
+                if(cart[name]) {
+                    cart[name].con_jalea = !cart[name].con_jalea;
+                    renderProducts();
+                }
+            } catch(e) {
+                console.error("Error toggle jalea:", e);
+            }
+        }
+
+        // CÁLCULO DE PRECIOS EXACTO SEGÚN EL PDF
         function calculatePrices() {
             let totalCroissants = 0;
-            for(let k in cart) totalCroissants += cart[k].cantidad;
+            for(let k in cart) {
+                if(cart[k] && cart[k].cantidad) totalCroissants += cart[k].cantidad;
+            }
 
+            // Escala por Volumen
             let basePrice = 140;
             if(totalCroissants >= 6) basePrice = 100;
             else if(totalCroissants >= 3) basePrice = 110;
 
             let totalMoney = 0;
             for(let k in cart) {
+                if(!cart[k]) continue;
                 let nameLower = k.toLowerCase();
                 let extra = 0;
-                if(nameLower.includes('jamon') || nameLower.includes('queso')) extra = 50;
+                if(nameLower.includes('jamon') || nameLower.includes('queso') || nameLower.includes('salado')) extra = 50;
                 else if(nameLower.includes('dulce') || nameLower.includes('ddl')) extra = 30;
 
                 totalMoney += (basePrice + extra) * cart[k].cantidad;
@@ -619,22 +658,29 @@
         }
 
         function updateSubtotal() {
-            const calc = calculatePrices();
-            document.getElementById('shopSubtotalText').innerText = `$${calc.totalMoney}`;
-            
-            const msgEl = document.getElementById('shopPromoMsg');
-            if(calc.totalCroissants === 0) {
-                msgEl.innerText = 'Agregá croissants para continuar';
-            } else if(calc.totalCroissants < 3) {
-                msgEl.innerText = `Llevás ${calc.totalCroissants}. ¡Agregá ${3 - calc.totalCroissants} más para precio promo!`;
-            } else if(calc.totalCroissants < 6) {
-                msgEl.innerText = `¡Precio promo activado! Agregá ${6 - calc.totalCroissants} más para precio mayorista.`;
-            } else {
-                msgEl.innerText = '🎉 ¡Mejor precio mayorista activado!';
-            }
+            try {
+                const calc = calculatePrices();
+                const subtotalEl = document.getElementById('shopSubtotalText');
+                if(subtotalEl) subtotalEl.innerText = `$${calc.totalMoney}`;
+                
+                const msgEl = document.getElementById('shopPromoMsg');
+                if(msgEl) {
+                    if(calc.totalCroissants === 0) {
+                        msgEl.innerText = 'Agregá croissants para continuar';
+                    } else if(calc.totalCroissants < 3) {
+                        msgEl.innerText = `Llevás ${calc.totalCroissants}. ¡Agregá ${3 - calc.totalCroissants} más para precio promo ($110 c/u)!`;
+                    } else if(calc.totalCroissants < 6) {
+                        msgEl.innerText = `¡Precio promo activado ($110)! Agregá ${6 - calc.totalCroissants} más para precio mayorista ($100 c/u).`;
+                    } else {
+                        msgEl.innerText = '🎉 ¡Mejor precio mayorista activado ($100 c/u)!';
+                    }
+                }
 
-            renderDates();
-            buildSummary();
+                renderDates();
+                buildSummary();
+            } catch(e) {
+                console.error("Error al actualizar subtotal:", e);
+            }
         }
 
         function renderDates() {
@@ -645,7 +691,7 @@
             const calc = calculatePrices();
             const croissantsPedidos = calc.totalCroissants;
 
-            datesCapacity.forEach(d => {
+            (datesCapacity || []).forEach(d => {
                 const div = document.createElement('div');
                 const acumulado = d.ocupados || 0;
                 const disponible = 35 - acumulado;
@@ -689,20 +735,25 @@
 
         function buildSummary() {
             const calc = calculatePrices();
-            const nom = document.getElementById('custNombre').value.trim();
-            const tel = document.getElementById('custTel').value.trim();
+            const box = document.getElementById('orderSummaryBox');
+            if(!box) return;
+
+            const nom = (document.getElementById('custNombre')?.value || '').trim();
+            const tel = (document.getElementById('custTel')?.value || '').trim();
 
             if (calc.totalCroissants === 0) {
-                document.getElementById('orderSummaryBox').innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>`;
+                box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>`;
                 return;
             }
 
             let itemsHtml = '';
             for(let k in cart) {
-                itemsHtml += `<div>• ${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
+                if(cart[k] && cart[k].cantidad > 0) {
+                    itemsHtml += `<div>• ${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
+                }
             }
 
-            document.getElementById('orderSummaryBox').innerHTML = `
+            box.innerHTML = `
                 <div style="margin-bottom: 8px;">
                     ${nom ? `<strong>Cliente:</strong> ${nom}<br>` : ''}
                     ${tel ? `<strong>Contacto:</strong> ${tel}<br>` : ''}
@@ -718,15 +769,14 @@
             `;
         }
 
-        // REINICIA Y DESPLAZA AL INICIO DE LA WEB TRAS PEDIDO
         function reiniciarTienda() {
             cart = {};
             selectedDate = "";
-            document.getElementById('custNombre').value = "";
-            document.getElementById('custTel').value = "";
-            document.getElementById('custEmail').value = "";
-            document.getElementById('custDir').value = "";
-            document.getElementById('custNotas').value = "";
+            if(document.getElementById('custNombre')) document.getElementById('custNombre').value = "";
+            if(document.getElementById('custTel')) document.getElementById('custTel').value = "";
+            if(document.getElementById('custEmail')) document.getElementById('custEmail').value = "";
+            if(document.getElementById('custDir')) document.getElementById('custDir').value = "";
+            if(document.getElementById('custNotas')) document.getElementById('custNotas').value = "";
             renderProducts();
             renderDates();
             scrollToSection('topHeader');
@@ -759,9 +809,9 @@
                 return;
             }
 
-            const nom = document.getElementById('custNombre').value.trim();
-            const tel = document.getElementById('custTel').value.trim();
-            const email = document.getElementById('custEmail').value.trim();
+            const nom = (document.getElementById('custNombre')?.value || '').trim();
+            const tel = (document.getElementById('custTel')?.value || '').trim();
+            const email = (document.getElementById('custEmail')?.value || '').trim();
 
             if(!nom || !tel || !email) {
                 scrollToSection('sec-datos');
@@ -777,25 +827,27 @@
 
             let itemsArr = [];
             for(let k in cart) {
-                itemsArr.push({
-                    producto: k,
-                    cantidad: cart[k].cantidad,
-                    con_jalea: cart[k].con_jalea
-                });
+                if(cart[k] && cart[k].cantidad > 0) {
+                    itemsArr.push({
+                        producto: k,
+                        cantidad: cart[k].cantidad,
+                        con_jalea: cart[k].con_jalea
+                    });
+                }
             }
 
             const payload = {
                 cliente: nom,
                 telefono: tel,
                 email: email,
-                direccion: document.getElementById('custDir').value.trim(),
+                direccion: (document.getElementById('custDir')?.value || '').trim(),
                 fecha_entrega: selectedDate,
-                notas: document.getElementById('custNotas').value.trim(),
+                notas: (document.getElementById('custNotas')?.value || '').trim(),
                 items: itemsArr,
                 monto_total: calc.totalMoney
             };
 
-            // ANIMACIÓN DEL CROISSANT MORDIÉNDOSE
+            // MOSTRAR ANIMACIÓN DEL CROISSANT
             mostrarCroissLoader();
 
             try {
@@ -822,7 +874,7 @@
                         customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
                     }).then(() => {
                         window.open(wpUrl, '_blank');
-                        reiniciarTienda(); // RETORNA SUAVEMENTE A LA PORTADA
+                        reiniciarTienda();
                     });
                 } else {
                     Swal.fire({
