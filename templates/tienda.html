@@ -12,7 +12,7 @@
         .wizard-container { max-width: 480px; margin: 0 auto; padding: 20px 16px; }
         
         /* Barra de Progreso */
-        .progress-bar-wizard { display: flex; justify-content: space-between; margin-bottom: 24px; position: relative; }
+        .progress-bar-wizard { display: none; justify-content: space-between; margin-bottom: 24px; position: relative; }
         .progress-bar-wizard::before { content: ''; position: absolute; top: 14px; left: 0; right: 0; height: 3px; background: #EFEAE6; z-index: 1; }
         .progress-line-fill { position: absolute; top: 14px; left: 0; height: 3px; background: var(--accent); z-index: 1; transition: width 0.3s ease; }
         .step-node { width: 30px; height: 30px; border-radius: 50%; background: #EFEAE6; color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; z-index: 2; position: relative; transition: all 0.3s ease; }
@@ -36,8 +36,12 @@
         .date-chip.selected { border-color: var(--accent); background: var(--accent-light); color: var(--accent); font-weight: 800; }
         .date-chip.disabled { opacity: 0.4; cursor: not-allowed; background: #EFEAE6; }
 
-        .btn-next { width: 100%; background: linear-gradient(135deg, #2D1E18, #422D24); color: white; border: none; padding: 16px; font-size: 1rem; font-weight: 800; border-radius: 16px; margin-top: 18px; cursor: pointer; box-shadow: 0 6px 16px rgba(45,30,24,0.18); }
+        .btn-next { width: 100%; background: linear-gradient(135deg, #2D1E18, #422D24); color: white; border: none; padding: 16px; font-size: 1rem; font-weight: 800; border-radius: 16px; margin-top: 18px; cursor: pointer; box-shadow: 0 6px 16px rgba(45,30,24,0.18); transition: transform 0.2s; }
+        .btn-next:active { transform: scale(0.98); }
         .btn-prev { background: transparent; border: none; color: var(--text-muted); font-weight: 700; font-size: 0.88rem; padding: 10px; cursor: pointer; margin-top: 8px; width: 100%; }
+        
+        .btn-welcome-secondary { background: #EFEAE6; color: var(--text-main); border: none; padding: 16px; font-size: 1rem; font-weight: 800; border-radius: 16px; cursor: pointer; width: 100%; margin-top: 10px; transition: background 0.2s; }
+        .btn-welcome-secondary:active { background: #E2D9D3; }
     </style>
 </head>
 <body>
@@ -45,11 +49,11 @@
     <div class="wizard-container">
         <!-- Logo Header -->
         <div style="text-align: center; margin-bottom: 18px;">
-            <img src="{{ url_for('static', filename='logo.png') }}" alt="CROISS" style="height: 65px; width: auto;">
+            <img src="{{ url_for('static', filename='logo.png') }}" alt="CROISS" style="height: 75px; width: auto;">
         </div>
 
-        <!-- Barra de Progreso -->
-        <div class="progress-bar-wizard">
+        <!-- Barra de Progreso (visible a partir del paso 1) -->
+        <div class="progress-bar-wizard" id="mainProgressBar">
             <div class="progress-line-fill" id="progressFill" style="width: 0%;"></div>
             <div class="step-node active" id="node1">1</div>
             <div class="step-node" id="node2">2</div>
@@ -57,8 +61,27 @@
             <div class="step-node" id="node4">4</div>
         </div>
 
+        <!-- PASO 0: WELCOME PAGE -->
+        <div class="step-card active" id="step0">
+            <div style="text-align: center; padding: 10px 0;">
+                <h2 style="font-size: 1.4rem; font-weight: 800; color: var(--text-main); margin-bottom: 8px;">Artesanos del Croissant 🥐</h2>
+                <p style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 22px;">
+                    Elaboramos croissants hojaldrados 100% artesanales con ingredientes seleccionados. ¡Hacé tu pedido en minutos para recibir tu caja recién horneada!
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                    <button type="button" class="btn-next" style="margin-top:0; background: linear-gradient(135deg, #C86D28, #9A4D15);" onclick="goToStep(1)">
+                        🥐 CREAR PEDIDO
+                    </button>
+                    <button type="button" class="btn-welcome-secondary" onclick="verMenuPublico()">
+                        📜 MENÚ Y PRECIOS
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- PASO 1: PRODUCTOS -->
-        <div class="step-card active" id="step1">
+        <div class="step-card" id="step1">
             <h3 style="font-size: 1.2rem; font-weight: 800; color: var(--text-main); margin-bottom: 4px;">1. Elegí tus Croissants 🥐</h3>
             <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;">¡Cuantos más sumes, mejor precio conseguís!</p>
             
@@ -71,6 +94,7 @@
             </div>
 
             <button type="button" class="btn-next" onclick="nextStep(2)">Continuar a la Fecha ➔</button>
+            <button type="button" class="btn-prev" onclick="goToStep(0)">⬅️ Volver al Inicio</button>
         </div>
 
         <!-- PASO 2: FECHA -->
@@ -132,9 +156,14 @@
 
     <!-- Script Lógica Tienda -->
     <script>
-        let currentStep = 1;
+        // Precarga de la imagen del croissant para la animación mordida
+        const croissImagePreload = new Image();
+        croissImagePreload.src = '/static/croissant.png';
+        let croissAnimFrameId = null;
+
+        let currentStep = 0;
         let menuItems = [];
-        let cart = {}; // { "Nombre": { cantidad: X, con_jalea: false, precio: Y } }
+        let cart = {}; 
         let selectedDate = "";
         let datesCapacity = [];
 
@@ -142,6 +171,83 @@
             fetchCatalogo();
             fetchFechas();
         });
+
+        // ANIMACIÓN DEL CROISSANT MORDIÉNDOSE
+        function mostrarCroissLoader() {
+            if (!croissImagePreload.src) croissImagePreload.src = '/static/croissant.png';
+
+            Swal.fire({
+                html: `<div class="croiss-canvas-container"><canvas id="croissBiteCanvas" width="180" height="140"></canvas></div>`,
+                showConfirmButton: false,
+                allowOutsideClick: false,
+                background: 'transparent',
+                customClass: { popup: 'croiss-swal-popup-transparent' },
+                didOpen: () => {
+                    const popup = Swal.getPopup();
+                    if (popup) popup.setAttribute('data-is-loader', 'true');
+                    iniciarAnimacionCanvasCroissant();
+                },
+                willClose: () => {
+                    if (croissAnimFrameId) cancelAnimationFrame(croissAnimFrameId);
+                }
+            });
+        }
+
+        function iniciarAnimacionCanvasCroissant() {
+            const canvas = document.getElementById('croissBiteCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const startTime = Date.now();
+            const duration = 2200;
+
+            const bites = [
+                { t: 0.15, x: 145, y: 38, r: 22, shake: 'chomp-shake-1' },
+                { t: 0.35, x: 122, y: 50, r: 26, shake: 'chomp-shake-2' },
+                { t: 0.55, x: 92,  y: 68, r: 30, shake: 'chomp-shake-3' },
+                { t: 0.75, x: 60,  y: 84, r: 28, shake: 'chomp-shake-4' },
+                { t: 0.90, x: 28,  y: 98, r: 38, shake: 'chomp-shake-5' }
+            ];
+
+            function recortarMordidaDentadura(cx, cy, radius) {
+                ctx.globalCompositeOperation = 'destination-out';
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+                ctx.fill();
+
+                for (let i = 0; i < 5; i++) {
+                    const angle = (Math.PI / 3) + (i * (Math.PI / 4.2));
+                    const tx = cx + Math.cos(angle) * (radius - 2);
+                    const ty = cy + Math.sin(angle) * (radius - 2);
+                    ctx.beginPath();
+                    ctx.arc(tx, ty, radius * 0.28, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            function render() {
+                const elapsed = (Date.now() - startTime) % duration;
+                const progress = elapsed / duration;
+
+                ctx.globalCompositeOperation = 'source-over';
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                if (croissImagePreload.complete && croissImagePreload.naturalWidth !== 0) {
+                    ctx.drawImage(croissImagePreload, 10, 10, 160, 120);
+                    let currentShake = '';
+                    for (let b of bites) {
+                        if (progress >= b.t) {
+                            recortarMordidaDentadura(b.x, b.y, b.r);
+                            if (progress >= b.t && progress < b.t + 0.10) {
+                                currentShake = b.shake;
+                            }
+                        }
+                    }
+                    canvas.className = currentShake;
+                }
+                croissAnimFrameId = requestAnimationFrame(render);
+            }
+            render();
+        }
 
         async function fetchCatalogo() {
             try {
@@ -163,6 +269,31 @@
                     renderDates();
                 }
             } catch(e) { console.error(e); }
+        }
+
+        function verMenuPublico() {
+            if(!menuItems || menuItems.length === 0) {
+                Swal.fire('Menú', 'Cargando lista de precios...', 'info');
+                return;
+            }
+
+            let htmlMenu = '<div style="text-align:left; max-height:300px; overflow-y:auto; padding-right:4px;">';
+            menuItems.forEach(p => {
+                htmlMenu += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #EFEAE6;">
+                        <strong style="font-size:0.95rem; color:#2D1E18;">🥐 ${p.nombre}</strong>
+                        <span style="font-weight:800; color:#C86D28;">$${p.precio || 'Consultar'}</span>
+                    </div>
+                `;
+            });
+            htmlMenu += '</div><p style="font-size:0.75rem; color:#7A6B63; margin-top:12px;">* Precios promocionales disponibles al llevar 3 o más unidades.</p>';
+
+            Swal.fire({
+                title: 'Nuestros Croissants',
+                html: htmlMenu,
+                confirmButtonText: '¡Entendido!',
+                customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+            });
         }
 
         function renderProducts() {
@@ -241,7 +372,6 @@
                 msgEl.innerText = '🎉 ¡Mejor precio mayorista activado ($100)!';
             }
 
-            // Recalcular disponibilidad de fechas según la cantidad elegida
             renderDates();
         }
 
@@ -262,7 +392,6 @@
                 const esInsuficiente = !esLleno && (croissantsPedidos > disponible);
                 let isSel = d.fecha === selectedDate;
 
-                // Si la fecha seleccionada dejó de tener cupo suficiente (porque agregaron más croissants), se desmarca
                 if (isSel && (esLleno || esInsuficiente)) {
                     selectedDate = "";
                     isSel = false;
@@ -298,11 +427,23 @@
         function nextStep(step) {
             const calc = calculatePrices();
             if(currentStep === 1 && calc.totalCroissants === 0) {
-                Swal.fire('Elegí tus croissants', 'Agregá al menos 1 croissant a tu pedido.', 'warning');
+                Swal.fire({
+                    title: 'Elegí tus croissants',
+                    text: 'Agregá al menos 1 croissant a tu pedido para avanzar.',
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                });
                 return;
             }
             if(currentStep === 2 && !selectedDate) {
-                Swal.fire('Seleccioná la fecha', 'Por favor marcá el día que querés recibir tu pedido.', 'warning');
+                Swal.fire({
+                    title: 'Seleccioná la fecha',
+                    text: 'Por favor marcá el día que querés recibir tu pedido.',
+                    icon: 'warning',
+                    confirmButtonText: 'Entendido',
+                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                });
                 return;
             }
             if(currentStep === 3) {
@@ -311,7 +452,13 @@
                 const email = document.getElementById('custEmail').value.trim();
 
                 if(!nom || !tel || !email) {
-                    Swal.fire('Campos Obligatorios', 'Por favor ingresá tu Nombre, Teléfono y Email para notificarte.', 'warning');
+                    Swal.fire({
+                        title: 'Campos Obligatorios',
+                        text: 'Por favor ingresá tu Nombre, Teléfono y Email para notificarte.',
+                        icon: 'warning',
+                        confirmButtonText: 'Entendido',
+                        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                    });
                     return;
                 }
                 buildSummary();
@@ -327,14 +474,21 @@
             document.getElementById(`step${step}`).classList.add('active');
 
             currentStep = step;
-            const pct = ((step - 1) / 3) * 100;
-            document.getElementById('progressFill').style.width = `${pct}%`;
+            const barEl = document.getElementById('mainProgressBar');
 
-            for(let i = 1; i <= 4; i++) {
-                const node = document.getElementById(`node${i}`);
-                if(i < step) { node.className = 'step-node completed'; node.innerText = '✓'; }
-                else if(i === step) { node.className = 'step-node active'; node.innerText = i; }
-                else { node.className = 'step-node'; node.innerText = i; }
+            if (step === 0) {
+                barEl.style.display = 'none';
+            } else {
+                barEl.style.display = 'flex';
+                const pct = ((step - 1) / 3) * 100;
+                document.getElementById('progressFill').style.width = `${pct}%`;
+
+                for(let i = 1; i <= 4; i++) {
+                    const node = document.getElementById(`node${i}`);
+                    if(i < step) { node.className = 'step-node completed'; node.innerText = '✓'; }
+                    else if(i === step) { node.className = 'step-node active'; node.innerText = i; }
+                    else { node.className = 'step-node'; node.innerText = i; }
+                }
             }
         }
 
@@ -370,6 +524,20 @@
             `;
         }
 
+        // LIMPIA Y RETORNA A LA WELCOME PAGE TRAS COMPLETAR EL PEDIDO
+        function reiniciarTienda() {
+            cart = {};
+            selectedDate = "";
+            document.getElementById('custNombre').value = "";
+            document.getElementById('custTel').value = "";
+            document.getElementById('custEmail').value = "";
+            document.getElementById('custDir').value = "";
+            document.getElementById('custNotas').value = "";
+            renderProducts();
+            renderDates();
+            goToStep(0);
+        }
+
         async function confirmarPedidoTienda() {
             const calc = calculatePrices();
             let itemsArr = [];
@@ -392,7 +560,8 @@
                 monto_total: calc.totalMoney
             };
 
-            Swal.fire({ title: 'Procesando tu orden...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            // USA LA ANIMACIÓN DEL CROISSANT MORDIÉNDOSE
+            mostrarCroissLoader();
 
             try {
                 const res = await fetch('/api/public/crear_pedido', {
@@ -403,8 +572,8 @@
                 const data = await res.json();
 
                 if(data.status === 'exito') {
-					const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
-					const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
+                    const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
+                    const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
 
                     Swal.fire({
                         title: '¡Pedido Recibido! 🥐',
@@ -414,15 +583,29 @@
                         `,
                         icon: 'success',
                         confirmButtonText: '💬 Confirmar por WhatsApp',
-                        customClass: { confirmButton: 'croiss-swal-confirm' }
+                        allowOutsideClick: false,
+                        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
                     }).then(() => {
-                        window.location.href = wpUrl;
+                        window.open(wpUrl, '_blank');
+                        reiniciarTienda(); // LLEVA AL USUARIO DE VUELTA AL INICIO
                     });
                 } else {
-                    Swal.fire('Atención', data.mensaje, 'error');
+                    Swal.fire({
+                        title: 'Atención',
+                        text: data.mensaje,
+                        icon: 'error',
+                        confirmButtonText: 'Entendido',
+                        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                    });
                 }
             } catch(e) {
-                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error');
+                Swal.fire({
+                    title: 'Error',
+                    text: 'No se pudo conectar con el servidor',
+                    icon: 'error',
+                    confirmButtonText: 'Entendido',
+                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                });
             }
         }
     </script>
