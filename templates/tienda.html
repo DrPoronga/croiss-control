@@ -52,7 +52,7 @@
             <img src="{{ url_for('static', filename='logo.png') }}" alt="CROISS" style="height: 75px; width: auto;">
         </div>
 
-        <!-- Barra de Progreso (visible a partir del paso 1) -->
+        <!-- Barra de Progreso (visible desde el Paso 1) -->
         <div class="progress-bar-wizard" id="mainProgressBar">
             <div class="progress-line-fill" id="progressFill" style="width: 0%;"></div>
             <div class="step-node active" id="node1">1</div>
@@ -156,7 +156,6 @@
 
     <!-- Script Lógica Tienda -->
     <script>
-        // Precarga de la imagen del croissant para la animación mordida
         const croissImagePreload = new Image();
         croissImagePreload.src = '/static/croissant.png';
         let croissAnimFrameId = null;
@@ -172,7 +171,7 @@
             fetchFechas();
         });
 
-        // ANIMACIÓN DEL CROISSANT MORDIÉNDOSE
+        // ANIMACIÓN CANVAS DEL CROISSANT COMIÉNDOSE
         function mostrarCroissLoader() {
             if (!croissImagePreload.src) croissImagePreload.src = '/static/croissant.png';
 
@@ -273,7 +272,13 @@
 
         function verMenuPublico() {
             if(!menuItems || menuItems.length === 0) {
-                Swal.fire('Menú', 'Cargando lista de precios...', 'info');
+                Swal.fire({
+                    title: 'Menú',
+                    text: 'Cargando lista de precios...',
+                    icon: 'info',
+                    confirmButtonText: 'Entendido',
+                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+                });
                 return;
             }
 
@@ -524,7 +529,7 @@
             `;
         }
 
-        // LIMPIA Y RETORNA A LA WELCOME PAGE TRAS COMPLETAR EL PEDIDO
+        // LIMPIA Y REINICIA LA TIENDA REGRESANDO AL PASO 0
         function reiniciarTienda() {
             cart = {};
             selectedDate = "";
@@ -560,7 +565,7 @@
                 monto_total: calc.totalMoney
             };
 
-            // USA LA ANIMACIÓN DEL CROISSANT MORDIÉNDOSE
+            // ACTIVA LA ANIMACIÓN DEL CROISSANT MORDIÉNDOSE
             mostrarCroissLoader();
 
             try {
@@ -587,7 +592,7 @@
                         customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
                     }).then(() => {
                         window.open(wpUrl, '_blank');
-                        reiniciarTienda(); // LLEVA AL USUARIO DE VUELTA AL INICIO
+                        reiniciarTienda(); // LLEVA AL USUARIO DE VUELTA A LA WELCOME PAGE Y RETIRA LOS DATOS DEL FORMULARIO
                     });
                 } else {
                     Swal.fire({
