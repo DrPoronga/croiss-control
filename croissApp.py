@@ -573,12 +573,6 @@ def registrar_venta():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
-# ==========================================
-# RUTAS DE VISTA Y API CONGELADOS INDEPENDIENTES
-# ==========================================
-@app.route('/tienda')
-def tienda_publica():
-    return render_template('tienda.html', numero_whatsapp=NUMERO_WHATSAPP)
 
 # ==========================================
 # RUTAS PÚBLICAS DE E-COMMERCE / TIENDA
