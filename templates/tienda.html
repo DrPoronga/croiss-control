@@ -540,54 +540,20 @@
             renderDates();
         }
 
-        // DESPLIEGA EL MENÚ EXACTO DEL PDF
-        function verMenuPublico() {
-            const htmlMenu = `
-                <div style="text-align:center; padding: 6px 0;">
-                    <h3 style="color:#C86D28; font-weight:800; font-size:1.3rem; margin:0 0 2px 0;">MENÚ CROISSANTS</h3>
-                    <p style="font-size:0.75rem; color:#7A6B63; margin-bottom:14px; font-weight:800; text-transform:uppercase;">ARTESANOS DEL CROISSANT</p>
+        // DESPLIEGA LA IMAGEN DE MENU.PNG DE LA CARPETA STATIC
+		function verMenuPublico() {
+			const htmlMenu = `
+				<div style="text-align:center; padding: 4px 0;">
+					<img src="{{ url_for('static', filename='menu.png') }}" alt="Menú CROISS" style="width:100%; max-width:100%; height:auto; border-radius:16px; box-shadow: 0 4px 15px rgba(0,0,0,0.12);">
+				</div>
+			`;
 
-                    <div style="background:#FAF9F8; border:1px solid #EFEAE6; border-radius:16px; padding:14px; margin-bottom:14px; text-align:left;">
-                        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-                            <strong>CROISS INDIVIDUAL</strong>
-                            <span style="font-weight:800; color:#2D1E18;">$140</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; margin-bottom:10px; border-top:1px dashed #E2D9D3; padding-top:8px;">
-                            <div>
-                                <strong>CAJA X3</strong><br>
-                                <small style="color:#16A34A; font-weight:700;">$110 C/U (AHORRÁS $90)</small>
-                            </div>
-                            <span style="font-weight:800; color:#2D1E18; font-size:1.05rem;">$330</span>
-                        </div>
-                        <div style="display:flex; justify-content:space-between; border-top:1px dashed #E2D9D3; padding-top:8px;">
-                            <div>
-                                <strong>CAJA X6</strong><br>
-                                <small style="color:#16A34A; font-weight:700;">$100 C/U (AHORRÁS $240)</small>
-                            </div>
-                            <span style="font-weight:800; color:#2D1E18; font-size:1.05rem;">$600</span>
-                        </div>
-                    </div>
-
-                    <div style="text-align:left; font-size:0.85rem; color:#2D1E18; margin-bottom:14px; padding:0 4px;">
-                        <p style="margin:0 0 8px 0;"><strong>ELEGÍ TU CROISS:</strong> Clásico | Con Jalea | Croisstzel (con sal gruesa del Himalaya)</p>
-                        <p style="margin:0;"><strong>AGREGÁ UN RELLENO (EXTRA POR UNIDAD):</strong><br>
-                        • Dulce de Leche: <strong>+$30</strong><br>
-                        • Jamón y Queso: <strong>+$50</strong></p>
-                    </div>
-
-                    <div style="background:#FAF0EB; border:1px dashed #F7DFC8; border-radius:12px; padding:8px; font-size:0.75rem; color:#C86D28; font-weight:800;">
-                        ⏰ PEDIDOS CON 48HS DE ANTICIPACIÓN · @CROISS.UY
-                    </div>
-                </div>
-            `;
-
-            Swal.fire({
-                html: htmlMenu,
-                confirmButtonText: '¡Entendido!',
-                customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-            });
-        }
-
+			Swal.fire({
+				html: htmlMenu,
+				confirmButtonText: '¡Entendido!',
+				customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+			});
+		}
         function renderProducts() {
             const container = document.getElementById('shopProductsList');
             if(!container) return;
