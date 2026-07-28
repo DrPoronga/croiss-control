@@ -134,8 +134,10 @@ function eliminarDelCarrito(index) {
 function renderizarCarrito() {
     const listEl = document.getElementById('cartList');
     const totalEl = document.getElementById('cartTotal');
+    const descuentoSelect = document.getElementById('vDescuento');
+    const descuentoPorcentaje = descuentoSelect ? (parseFloat(descuentoSelect.value) || 0) : 0;
 
-    if(carrito.length === 0) {
+    if (carrito.length === 0) {
         listEl.innerHTML = '<p style="color: #94a3b8; text-align: center;">El ticket está vacío</p>';
         totalEl.innerText = '0';
         return;
@@ -149,7 +151,7 @@ function renderizarCarrito() {
     const precioBaseNormales = calcularPrecioBase(totalCroissantsNormales);
 
     listEl.innerHTML = '';
-    let totalGeneral = 0;
+    let totalGeneralBruto = 0;
 
     carrito.forEach((item, index) => {
         const esPop = item.producto.toLowerCase().includes('pop');
@@ -174,7 +176,7 @@ function renderizarCarrito() {
         item.precio_unitario = precioUnitario;
         item.subtotal = subtotal;
 
-        totalGeneral += subtotal;
+        totalGeneralBruto += subtotal;
 
         const claseJalea = item.con_jalea ? 'active' : '';
         const textoJalea = item.con_jalea ? 'Con Jalea' : 'Sin Jalea';
@@ -197,7 +199,19 @@ function renderizarCarrito() {
         listEl.appendChild(div);
     });
 
-    totalEl.innerText = totalGeneral;
+    // Cálculo final con Descuento aplicado
+    const montoDescuento = Math.round(totalGeneralBruto * (descuentoPorcentaje / 100));
+    const totalFinal = Math.max(0, totalGeneralBruto - montoDescuento);
+
+    if (descuentoPorcentaje > 0) {
+        totalEl.innerHTML = `
+            <span style="text-decoration: line-through; color: #94a3b8; font-size: 0.9rem; margin-right: 6px;">$${totalGeneralBruto}</span>
+            <span style="color: #16a34a; font-size: 1.3rem; font-weight: 800;">$${totalFinal}</span>
+            <small style="font-size: 0.75rem; color: #16a34a; font-weight: 700; display: block;">(-${descuentoPorcentaje}% aplicado)</small>
+        `;
+    } else {
+        totalEl.innerText = totalFinal;
+    }
 }
 
 function actualizarMedioPagoSegunEstado() {
@@ -2237,6 +2251,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            const descuentoSelect = document.getElementById('vDescuento');
+            const descuentoPorcentaje = descuentoSelect ? (parseFloat(descuentoSelect.value) || 0) : 0;
+
+            const totalBruto = carrito.reduce((acc, i) => acc + (i.precio_unitario * i.cantidad), 0);
+            const montoFinalNeto = Math.max(0, Math.round(totalBruto * (1 - (descuentoPorcentaje / 100))));
+
             const tInicio = Date.now();
             mostrarCroissLoader();
 
@@ -2248,7 +2268,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 email: getInputValueSafe('vEmailCliente'),
                 direccion: getInputValueSafe('vDireccionCliente'),
                 items: carrito,
-                monto_total: carrito.reduce((acc, i) => acc + (i.precio_unitario * i.cantidad), 0),
+                monto_total: montoFinalNeto,
+                descuento: descuentoPorcentaje,
                 estado: getInputValueSafe('vEstado', 'Pendiente'),
                 medio_pago: getInputValueSafe('vMedio', 'Efectivo'),
                 notas: getInputValueSafe('vNotasCliente')
@@ -2268,6 +2289,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     formFinalizarPedido.reset();
                     if(document.getElementById('vFecha')) document.getElementById('vFecha').value = hoy;
                     if(document.getElementById('vFechaEntrega')) document.getElementById('vFechaEntrega').value = hoy;
+                    if(document.getElementById('vDescuento')) document.getElementById('vDescuento').value = '0';
 
                     let msjExito = payload.email ? 'Se envió el correo de confirmación al cliente.' : 'El pedido se guardó correctamente en la agenda.';
                     
@@ -2299,7 +2321,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
     const formGasto = document.getElementById('formGasto');
     if (formGasto) {
         formGasto.addEventListener('submit', async (e) => {

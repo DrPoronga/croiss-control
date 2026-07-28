@@ -6,11 +6,15 @@ import socket
 import calendar
 import urllib.request
 import threading
-from datetime import datetime, timedelta
-from flask import Flask, jsonify, render_template, request, session, redirect, url_for
+from datetime 
+import datetime, timedelta
+from flask 
+import Flask, jsonify, render_template, request, session, redirect, url_for
 import gspread
-from google.oauth2.service_account import Credentials
-from gspread.exceptions import APIError
+from google.oauth2.service_account 
+import Credentials
+from gspread.exceptions 
+import APIError
 import math
 
 # ==========================================
@@ -33,6 +37,18 @@ SCOPES = [
 ]
 
 SPREADSHEET_ID = "1-HZ19zxOZWJXizFSrhb5m6OKJJWQ_207SuRqdLVNWWE"
+
+# ==========================================
+# CONFIGURACIÓN DE COSTOS DE PRODUCCIÓN Y EMPAQUES
+# ==========================================
+COSTOS_PRODUCCION = {
+    "croissant_base": 24.10,
+    "extra_salado": 25.75,  # Jamón / Queso
+    "extra_dulce": 16.80,   # Dulce de Leche
+    "caja_x6": 36.0,
+    "caja_x3": 27.0,
+    "caja_x1": 18.0
+}
 
 # ==========================================
 # HELPER DE PROTECCIÓN Y REINTENTO ANTE 429
@@ -352,14 +368,17 @@ def sincronizar_cliente(nombre, email, telefono, direccion):
     except Exception as e:
         print(f"Aviso sincronizando cliente: {e}", flush=True)
 
+
 # ==========================================
-# CÁLCULO DE COSTO Y EMPAQUES
+# CÁLCULO DE COSTO Y EMPAQUES (OPTIMIZADO)
 # ==========================================
 def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     if total_croissants <= 0:
         return {"costo_base": 0.0, "costo_empaque": 0.0, "costo_total": 0.0, "cajas_grande": 0, "cajas_mediana": 0, "cajas_chica": 0, "papel": 0}
     
     costo_croissants = 0.0
+    c_base = COSTOS_PRODUCCION["croissant_base"]
+
     if desc_producto:
         partes = str(desc_producto).split(",")
         croissants_procesados = 0
@@ -375,38 +394,36 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
                 c_item = 1
                 sabor_item = sin_jalea_str.lower()
             
-            c_unit = 24.10
+            c_unit = c_base
             if "jamon" in sabor_item or "jamón" in sabor_item or "queso" in sabor_item:
-                c_unit += 25.75
+                c_unit += COSTOS_PRODUCCION["extra_salado"]
             elif "dulce" in sabor_item or "ddl" in sabor_item:
-                c_unit += 16.80
+                c_unit += COSTOS_PRODUCCION["extra_dulce"]
             
             costo_croissants += (c_unit * c_item)
             croissants_procesados += c_item
             
         if croissants_procesados < total_croissants:
             faltantes = total_croissants - croissants_procesados
-            costo_croissants += (faltantes * 24.10)
+            costo_croissants += (faltantes * c_base)
     else:
-        costo_croissants = total_croissants * 24.10
+        costo_croissants = total_croissants * c_base
 
-    # ==========================================
-    # LÓGICA DE CAJAS CORREGIDA
-    # ==========================================
+    # Lógica de empaques
     cajas_grande = total_croissants // 6
     sobrante = total_croissants % 6
     cajas_mediana = 0
     cajas_chica = 0
     
-    # Sobrantes de 1, 2 o 3 entran en 1 Caja de 3
     if sobrante in (1, 2, 3):
         cajas_mediana = 1
-    # Sobrantes de 4 o 5 requieren 1 Caja de 6 adicional
     elif sobrante in (4, 5):
         cajas_grande += 1
         
     papel = cajas_grande + cajas_mediana + cajas_chica
-    costo_empaque = (cajas_grande * 36.0) + (cajas_mediana * 27.0) + (cajas_chica * 18.0)
+    costo_empaque = (cajas_grande * COSTOS_PRODUCCION["caja_x6"]) + \
+                    (cajas_mediana * COSTOS_PRODUCCION["caja_x3"]) + \
+                    (cajas_chica * COSTOS_PRODUCCION["caja_x1"])
     
     return {
         "costo_base": round(costo_croissants, 2),
@@ -417,7 +434,7 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
         "cajas_chica": cajas_chica,
         "papel": papel
     }
-    
+
 def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False):
     alertas = []
     try:
@@ -454,8 +471,15 @@ def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False
         aplicar_cambio("x1", cajas_x1)
         aplicar_cambio("papel", papel)
 
-        for row_idx, n_stock in modificaciones.items():
-            ejecutar_con_reintento(sheet_insumos.update_cell, row_idx, 2, n_stock)
+        # OPTIMIZACIÓN: Batch update para actualizar todas las celdas en 1 sola llamada
+        if modificaciones:
+            batch_updates = []
+            for row_idx, n_stock in modificaciones.items():
+                batch_updates.append({
+                    'range': f'B{row_idx}',
+                    'values': [[n_stock]]
+                })
+            ejecutar_con_reintento(sheet_insumos.batch_update, batch_updates)
 
         for ins, stock in nombres_alertas.items():
             alertas.append(f"Solo quedan {stock} unidades de {ins}")
@@ -464,6 +488,94 @@ def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False
         print(f"Aviso modificando empaque/stock: {e}", flush=True)
 
     return alertas
+
+@app.route('/api/venta', methods=['POST'])
+def registrar_venta():
+    try:
+        datos = request.json or {}
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+        sheet_stock = conectar_sheet("Productos_Stock")
+        
+        items = datos.get("items", [])
+        total_unidades = sum(int(item.get("cantidad", 1)) for item in items)
+        
+        c_cong, c_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
+        capacidad_total = st_cong + (st_masas * 10)
+
+        if total_unidades > capacidad_total:
+            return jsonify({
+                "status": "error",
+                "mensaje": f"🚫 Capacidad insuficiente. Tienes {st_cong} croiss congelados + {st_masas} masa(s) (Capacidad total: {capacidad_total}) e intentas vender {total_unidades}."
+            }), 400
+
+        if total_unidades <= st_cong:
+            st_cong -= total_unidades
+        else:
+            restante = total_unidades - st_cong
+            st_cong = 0
+            masas_a_romper = math.ceil(restante / 10.0)
+            st_masas -= masas_a_romper
+            st_cong += (masas_a_romper * 10) - restante
+
+        # OPTIMIZACIÓN: Batch update para actualizar congelados y masas en 1 sola llamada
+        batch_stock = []
+        if c_cong:
+            batch_stock.append({'range': f'D{c_cong.row}', 'values': [[st_cong]]})
+        if c_masas:
+            batch_stock.append({'range': f'D{c_masas.row}', 'values': [[st_masas]]})
+        if batch_stock:
+            ejecutar_con_reintento(sheet_stock.batch_update, batch_stock)
+
+        registros = get_clean_records(sheet_ventas)
+        nuevo_id = f"V-{len(registros) + 1:04d}"
+        resumen_productos = []
+        
+        for item in items:
+            prod_nombre = item.get("producto")
+            cant = int(item.get("cantidad", 1))
+            jalea_str = " (Con Jalea)" if item.get("con_jalea") else ""
+            resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
+
+        descripcion_final = ", ".join(resumen_productos)
+        alertas_empaque = modificar_stock_empaque(descripcion_final, total_unidades, es_devolucion=False)
+
+        cliente_nombre = datos.get("cliente", "Consumidor Final")
+        email_cliente = str(datos.get("email", "")).strip()
+        telefono_cliente = str(datos.get("telefono", "")).strip()
+        direccion_cliente = str(datos.get("direccion", "")).strip()
+        fecha_entrega = datos.get("fecha_entrega", datos.get("fecha"))
+        monto_total = datos.get("monto_total", 0)
+        estado_pedido = datos.get("estado", "Pendiente")
+        notas_cliente = str(datos.get("notas", "")).strip()
+
+        # MANEJO DE DESCUENTOS: Registrar etiqueta en notas
+        descuento_pct = float(datos.get("descuento", 0))
+        if descuento_pct > 0:
+            tag_dto = f"[Dto {int(descuento_pct) if descuento_pct.is_integer() else descuento_pct}%]"
+            notas_cliente = f"{tag_dto} {notas_cliente}".strip()
+        
+        nueva_fila = [
+            nuevo_id, datos.get("fecha"), fecha_entrega, cliente_nombre,
+            descripcion_final, total_unidades, monto_total, estado_pedido,
+            datos.get("medio_pago", "-"), email_cliente, telefono_cliente,
+            direccion_cliente, "Pendiente", notas_cliente
+        ]
+        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
+
+        if email_cliente:
+            try:
+                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
+                enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
+            except Exception: pass
+
+        try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)
+        except Exception: pass
+
+        return jsonify({"status": "exito", "mensaje": "Pedido registrado correctamente", "id": nuevo_id, "alertas": alertas_empaque}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 
 # ==========================================
 # RUTAS DE VISTA Y API CONGELADOS INDEPENDIENTES
@@ -611,80 +723,6 @@ def fijar_stock_congelados():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-@app.route('/api/venta', methods=['POST'])
-def registrar_venta():
-    try:
-        datos = request.json or {}
-        sheet_ventas = conectar_sheet("Ventas")
-        asegurar_encabezados_ventas(sheet_ventas)
-        sheet_stock = conectar_sheet("Productos_Stock")
-        
-        items = datos.get("items", [])
-        total_unidades = sum(int(item.get("cantidad", 1)) for item in items)
-        
-        c_cong, c_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
-        capacidad_total = st_cong + (st_masas * 10)
-
-        if total_unidades > capacidad_total:
-            return jsonify({
-                "status": "error",
-                "mensaje": f"🚫 Capacidad insuficiente. Tienes {st_cong} croiss congelados + {st_masas} masa(s) (Capacidad total: {capacidad_total}) e intentas vender {total_unidades}."
-            }), 400
-
-        if total_unidades <= st_cong:
-            st_cong -= total_unidades
-        else:
-            restante = total_unidades - st_cong
-            st_cong = 0
-            masas_a_romper = math.ceil(restante / 10.0)
-            st_masas -= masas_a_romper
-            st_cong += (masas_a_romper * 10) - restante
-
-        if c_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_cong.row, col_stock, st_cong)
-        if c_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_masas.row, col_stock, st_masas)
-
-        registros = get_clean_records(sheet_ventas)
-        nuevo_id = f"V-{len(registros) + 1:04d}"
-        resumen_productos = []
-        
-        for item in items:
-            prod_nombre = item.get("producto")
-            cant = int(item.get("cantidad", 1))
-            jalea_str = " (Con Jalea)" if item.get("con_jalea") else ""
-            resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
-
-        descripcion_final = ", ".join(resumen_productos)
-        alertas_empaque = modificar_stock_empaque(descripcion_final, total_unidades, es_devolucion=False)
-
-        cliente_nombre = datos.get("cliente", "Consumidor Final")
-        email_cliente = str(datos.get("email", "")).strip()
-        telefono_cliente = str(datos.get("telefono", "")).strip()
-        direccion_cliente = str(datos.get("direccion", "")).strip()
-        fecha_entrega = datos.get("fecha_entrega", datos.get("fecha"))
-        monto_total = datos.get("monto_total", 0)
-        estado_pedido = datos.get("estado", "Pendiente")
-        notas_cliente = str(datos.get("notas", "")).strip()
-        
-        nueva_fila = [
-            nuevo_id, datos.get("fecha"), fecha_entrega, cliente_nombre,
-            descripcion_final, total_unidades, monto_total, estado_pedido,
-            datos.get("medio_pago", "-"), email_cliente, telefono_cliente,
-            direccion_cliente, "Pendiente", notas_cliente
-        ]
-        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
-
-        if email_cliente:
-            try:
-                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
-                enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
-            except Exception: pass
-
-        try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)
-        except Exception: pass
-
-        return jsonify({"status": "exito", "mensaje": "Pedido registrado correctamente", "id": nuevo_id, "alertas": alertas_empaque}), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/eliminar_venta', methods=['POST'])
 def eliminar_venta():
