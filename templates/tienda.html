@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CROISS · Artesanos del Croissant 🥐</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=9">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* DESBLOQUEO DE SCROLL OBLIGATORIO PARA TIENDA */
+        /* DESBLOQUEO DE SCROLL OBLIGATORIO */
         html, body { 
             height: auto !important;
             min-height: 100vh !important;
@@ -115,9 +115,9 @@
         }
         .btn-web-outline:active { background: rgba(255, 255, 255, 0.15); }
 
-        /* SECCIONES CONTINUAS DE LA WEB */
+        /* SECCIONES DE LA WEB */
         .web-section {
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
 
         .web-section-title {
@@ -132,6 +132,43 @@
             font-size: 0.85rem;
             color: #7A6B63;
             margin-bottom: 20px;
+        }
+
+        /* ANIMACIÓN DE ENTRADA DESDE LOS LATERALES (SCROLL REVEAL) */
+        .reveal-on-scroll {
+            opacity: 0;
+            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease-out;
+            will-change: transform, opacity;
+        }
+
+        .reveal-left {
+            transform: translateX(-70px);
+        }
+
+        .reveal-right {
+            transform: translateX(70px);
+        }
+
+        .reveal-on-scroll.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* TARJETAS DE IMÁGENES LATERALES */
+        .scroll-photo-card {
+            margin: 32px 0;
+            border-radius: 22px;
+            overflow: hidden;
+            box-shadow: 0 12px 30px rgba(45, 30, 24, 0.12);
+            border: 1px solid rgba(45, 30, 24, 0.08);
+            background: #EFEAE6;
+        }
+
+        .scroll-photo-card img {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            display: block;
         }
 
         /* FILAS DEL MENÚ GASTRONÓMICO */
@@ -326,7 +363,7 @@
 
             <div class="hero-actions">
                 <button type="button" class="btn-web-main" onclick="scrollToSection('sec-menu')">
-                    Comienza tu Pedido
+                    Crea tu Pedido
                 </button>
                 <button type="button" class="btn-web-outline" onclick="verMenuPublico()">
                     Menú
@@ -353,6 +390,13 @@
             </div>
         </section>
 
+        <!-- IMAGEN 1: CROISS1 (DESLIZA DESDE LA IZQUIERDA) -->
+        <div class="scroll-photo-card reveal-on-scroll reveal-left">
+            <img src="{{ url_for('static', filename='croiss1.png') }}" 
+                 alt="Croissant Artesanal CROISS"
+                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss1.jpg') }}';">
+        </div>
+
         <!-- SECCIÓN 2: FECHA -->
         <section class="web-section" id="sec-fechas">
             <h2 class="web-section-title">2. Fecha de Entrega</h2>
@@ -364,6 +408,13 @@
 
             <div id="datesContainer" class="web-dates-grid">Cargando fechas disponibles...</div>
         </section>
+
+        <!-- IMAGEN 2: CROISS2 (DESLIZA DESDE LA DERECHA) -->
+        <div class="scroll-photo-card reveal-on-scroll reveal-right">
+            <img src="{{ url_for('static', filename='croiss2.png') }}" 
+                 alt="Variedad CROISS"
+                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss2.jpg') }}';">
+        </div>
 
         <!-- SECCIÓN 3: DATOS -->
         <section class="web-section" id="sec-datos">
@@ -392,6 +443,13 @@
             </div>
         </section>
 
+        <!-- IMAGEN 3: CROISS3 (DESLIZA DESDE LA IZQUIERDA) -->
+        <div class="scroll-photo-card reveal-on-scroll reveal-left">
+            <img src="{{ url_for('static', filename='croiss3.png') }}" 
+                 alt="Caja CROISS"
+                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss3.jpg') }}';">
+        </div>
+
         <!-- SECCIÓN 4: CONFIRMACIÓN -->
         <section class="web-section" id="sec-resumen">
             <h2 class="web-section-title">4. Resumen Final</h2>
@@ -408,13 +466,13 @@
 
     </div>
 
-    <!-- LÓGICA JAVASCRIPT DE LA TIENDA Y CÁLCULOS SEGÚN PDF -->
+    <!-- LÓGICA JAVASCRIPT Y ANIMACIONES -->
     <script>
         const croissImagePreload = new Image();
         croissImagePreload.src = '/static/croissant.png';
         let croissAnimFrameId = null;
 
-        // MENÚ SEGÚN EL PDF "Menú Croiss.pdf"
+        // MENÚ SEGÚN EL PDF "Menú Croiss.pdf"[cite: 6]
         const defaultMenu = [
             { nombre: "Croissant Clásico", relleno: "ninguno" },
             { nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
@@ -432,7 +490,25 @@
         document.addEventListener('DOMContentLoaded', () => {
             fetchCatalogo();
             fetchFechas();
+            iniciarObservadorScroll();
         });
+
+        // DETECTOR DE SCROLL PARA ENTRADA/SALIDA LATERAL
+        function iniciarObservadorScroll() {
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    } else {
+                        entry.target.classList.remove('visible');
+                    }
+                });
+            }, {
+                threshold: 0.15
+            });
+
+            document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+        }
 
         function scrollToSection(idSeccion) {
             const el = document.getElementById(idSeccion);
@@ -441,7 +517,7 @@
             }
         }
 
-        // ANIMACIÓN CANVAS DEL CROISSANT MORDIÉNDOSE
+        // ANIMACIÓN CANVAS DEL CROISSANT MORDIÉNDOSE[cite: 2]
         function mostrarCroissLoader() {
             if (!croissImagePreload.src) croissImagePreload.src = '/static/croissant.png';
 
@@ -540,23 +616,23 @@
             renderDates();
         }
 
-        // DESPLIEGA LA IMAGEN MENU.PNG DESDE LA CARPETA STATIC
-		function verMenuPublico() {
-			Swal.fire({
-				html: `
-					<div style="text-align:center; padding: 0; cursor:pointer;" onclick="Swal.close()">
-						<img src="/static/menu.png" 
-							 alt="Menú CROISS" 
-							 style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);"
-							 onerror="alert('Error: La imagen no está en la carpeta static con el nombre menu.png');">
-					</div>
-				`,
-				showConfirmButton: false,
-				showCloseButton: false,
-				background: 'transparent',
-				customClass: { popup: 'croiss-swal-popup-transparent' }
-			});
-		}
+        // MOSTRAR LA IMAGEN MENU.PNG SIN BOTONES[cite: 1, 6]
+        function verMenuPublico() {
+            Swal.fire({
+                html: `
+                    <div style="text-align:center; padding: 0; cursor:pointer;" onclick="Swal.close()">
+                        <img src="/static/menu.png" 
+                             alt="Menú CROISS" 
+                             style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);">
+                    </div>
+                `,
+                showConfirmButton: false,
+                showCloseButton: true,
+                background: 'transparent',
+                customClass: { popup: 'croiss-swal-popup-transparent' }
+            });
+        }
+
         function renderProducts() {
             const container = document.getElementById('shopProductsList');
             if(!container) return;
@@ -607,25 +683,25 @@
             }
         }
 
-        // CÁLCULO DE PRECIOS EXACTO SEGÚN EL PDF
+        // CÁLCULO DE PRECIOS EXACTO SEGÚN EL PDF[cite: 6]
         function calculatePrices() {
             let totalCroissants = 0;
             for(let k in cart) {
                 if(cart[k] && cart[k].cantidad) totalCroissants += cart[k].cantidad;
             }
 
-            // Escala por Volumen
-            let basePrice = 140;
-            if(totalCroissants >= 6) basePrice = 100;
-            else if(totalCroissants >= 3) basePrice = 110;
+            // Escala por Volumen[cite: 6]
+            let basePrice = 140; // Individual[cite: 6]
+            if(totalCroissants >= 6) basePrice = 100; // Caja x6 ($100 c/u)[cite: 6]
+            else if(totalCroissants >= 3) basePrice = 110; // Caja x3 ($110 c/u)[cite: 6]
 
             let totalMoney = 0;
             for(let k in cart) {
                 if(!cart[k]) continue;
                 let nameLower = k.toLowerCase();
                 let extra = 0;
-                if(nameLower.includes('jamon') || nameLower.includes('queso') || nameLower.includes('salado')) extra = 50;
-                else if(nameLower.includes('dulce') || nameLower.includes('ddl')) extra = 30;
+                if(nameLower.includes('jamon') || nameLower.includes('queso') || nameLower.includes('salado')) extra = 50; // Extra +$50[cite: 6]
+                else if(nameLower.includes('dulce') || nameLower.includes('ddl')) extra = 30; // Extra +$30[cite: 6]
 
                 totalMoney += (basePrice + extra) * cart[k].cantidad;
             }
@@ -822,7 +898,7 @@
                 monto_total: calc.totalMoney
             };
 
-            // MOSTRAR ANIMACIÓN DEL CROISSANT
+            // MOSTRAR ANIMACIÓN DEL CROISSANT[cite: 2]
             mostrarCroissLoader();
 
             try {
