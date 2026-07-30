@@ -2677,7 +2677,7 @@ function abrirPlacaGanador() {
                 </div>
 
                 <div class="footer-brand">
-                    🥐 @croissuy · Taller Artesanal
+                    @croiss.uy
                 </div>
             </div>
         </body>
