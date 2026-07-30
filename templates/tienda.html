@@ -825,17 +825,36 @@
         }
 
         function reiniciarTienda() {
-            cart = {};
-            selectedDate = "";
-            if(document.getElementById('custNombre')) document.getElementById('custNombre').value = "";
-            if(document.getElementById('custTel')) document.getElementById('custTel').value = "";
-            if(document.getElementById('custEmail')) document.getElementById('custEmail').value = "";
-            if(document.getElementById('custDir')) document.getElementById('custDir').value = "";
-            if(document.getElementById('custNotas')) document.getElementById('custNotas').value = "";
-            renderProducts();
-            renderDates();
-            scrollToSection('topHeader');
-        }
+			// 1. Vaciamos el carrito y la fecha
+			cart = {};
+			selectedDate = "";
+			
+			// 2. Limpiamos todos los datos personales
+			if(document.getElementById('custNombre')) document.getElementById('custNombre').value = "";
+			if(document.getElementById('custTel')) document.getElementById('custTel').value = "";
+			if(document.getElementById('custEmail')) document.getElementById('custEmail').value = "";
+			if(document.getElementById('custDir')) document.getElementById('custDir').value = "";
+			if(document.getElementById('custNotas')) document.getElementById('custNotas').value = "";
+			
+			// 3. Limpiamos los datos del módulo de Regalo
+			if(document.getElementById('chkEsRegalo')) {
+				document.getElementById('chkEsRegalo').checked = false;
+				toggleOpcionRegalo(); // Oculta los campos de destinatario y cartita
+			}
+			if(document.getElementById('custRegaloDestinatario')) document.getElementById('custRegaloDestinatario').value = "";
+			if(document.getElementById('custRegaloMensaje')) document.getElementById('custRegaloMensaje').value = "";
+
+			// 4. Refrescamos los subtotales, contadores y botones de fechas
+			renderProducts();
+			renderDates();
+			
+			// 5. VOLVER AL PASO 1 (Esto soluciona el problema de usabilidad)
+			// Usamos un pequeño delay para que la transición visual sea suave
+			setTimeout(() => {
+				irAlPaso(1);
+				scrollToSection('topHeader');
+			}, 300);
+		}
 
         let currentStep = 1;
 
