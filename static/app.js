@@ -1211,6 +1211,9 @@ async function cargarCuentas() {
                     contPago.innerHTML = '<p style="font-size:0.85rem; color:#16a34a; font-weight:600;">Excelente! Nadie te debe dinero.</p>';
                 } else {
                     data.pendientes_pago.forEach(p => {
+                        // Limpiamos comillas simples del nombre por si acaso para evitar errores en JS
+                        const clienteClean = p.cliente.replace(/'/g, "\\'");
+                        
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
                         div.innerHTML = `
@@ -1220,8 +1223,11 @@ async function cargarCuentas() {
                                 <span style="font-size:0.9rem; font-weight:800; color:#dc2626;">Monto: $${p.monto}</span>
                             </div>
                             <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-                                <button class="btn-pagar-ahora" onclick="marcarComoPagado(${p.fila}, '${p.cliente}')">Marcar Pagado</button>
-                                <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${p.fila}, '${p.cliente}')">Cancelar</button>
+                                <button class="btn-pagar-ahora" onclick="marcarComoPagado(${p.fila}, '${clienteClean}')">Marcar Pagado</button>
+                                <div style="display:flex; gap:6px;">
+                                    <button type="button" class="btn-jalea-chip" style="background:#FEF3C7; color:#B45309; border-color:#FDE68A; font-size:0.72rem; padding: 4px 8px; margin: 0;" onclick="enviarRecordatorioPago(${p.fila}, '${clienteClean}')">📩 Recordar</button>
+                                    <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${p.fila}, '${clienteClean}')">Cancelar</button>
+                                </div>
                             </div>
                         `;
                         contPago.appendChild(div);
@@ -1240,6 +1246,8 @@ async function cargarCuentas() {
                         const badgeTexto = esPagado ? 'Pagado' : 'Debe';
                         const btnMaps = e.direccion ? `<button type="button" class="btn-jalea-chip" style="padding: 4px 8px; font-size: 0.72rem; margin-top:0;" onclick="abrirGoogleMaps('${encodeURIComponent(e.direccion)}')">Ver Mapa</button>` : '';
 
+                        const clienteClean = e.cliente.replace(/'/g, "\\'");
+
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
                         div.innerHTML = `
@@ -1252,8 +1260,8 @@ async function cargarCuentas() {
                                 <span class="agenda-badge ${badgeClase}">${badgeTexto}</span>
                                 ${btnMaps}
                                 <div style="display:flex; gap:6px; margin-top:2px;">
-                                    <button class="btn-jalea-chip active" style="padding: 6px 10px; font-size: 0.75rem;" onclick="notificarEntrega(${e.fila}, '${e.cliente}')">Entregado</button>
-                                    <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${e.fila}, '${e.cliente}')">X</button>
+                                    <button class="btn-jalea-chip active" style="padding: 6px 10px; font-size: 0.75rem;" onclick="notificarEntrega(${e.fila}, '${clienteClean}')">Entregado</button>
+                                    <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${e.fila}, '${clienteClean}')">X</button>
                                 </div>
                             </div>
                         `;
