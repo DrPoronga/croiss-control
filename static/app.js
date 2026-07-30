@@ -2433,3 +2433,233 @@ async function enviarRecordatorioPago(numFila, clienteNombre) {
         }
     });
 }
+
+// ==========================================
+// PLACA DE INSTAGRAM PARA EL GANADOR DEL MES
+// ==========================================
+function abrirPlacaGanador() {
+    const ranking = datosClientesGlobal.ranking || [];
+    if (!ranking || ranking.length === 0) {
+        Swal.fire('Sin Datos', 'Aún no hay compras registradas en este período para generar la placa.', 'warning');
+        return;
+    }
+
+    const top1 = ranking[0] ? ranking[0].nombre : 'Sin ganador';
+    const top2 = ranking[1] ? ranking[1].nombre : '-';
+    const top3 = ranking[2] ? ranking[2].nombre : '-';
+
+    // Obtener el mes y año seleccionado en el filtro
+    const inputMes = document.getElementById('cMesFilter');
+    let mesTexto = 'DEL MES';
+    if (inputMes && inputMes.value) {
+        const [anio, mesNum] = inputMes.value.split('-');
+        const mesesNombres = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SETIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
+        const idx = parseInt(mesNum, 10) - 1;
+        if (mesesNombres[idx]) {
+            mesTexto = `${mesesNombres[idx]} ${anio}`;
+        }
+    }
+
+    const win = window.open('', '_blank');
+    if (!win) {
+        Swal.fire('Atención', 'Tu navegador bloqueó la apertura de la pestaña. Permite las ventanas emergentes para ver la placa.', 'warning');
+        return;
+    }
+
+    win.document.write(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>EL GANADOR · CROISS</title>
+            <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800;900&display=swap" rel="stylesheet">
+            <style>
+                * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Plus Jakarta Sans', -apple-system, sans-serif; }
+                body {
+                    background-color: #120C0A;
+                    color: #FFFFFF;
+                    display: flex;
+                    justify-content: center;
+                    align-items: center;
+                    min-height: 100vh;
+                    padding: 20px;
+                }
+                .story-card {
+                    width: 100%;
+                    max-width: 410px;
+                    height: 730px;
+                    background: linear-gradient(180deg, #2D1E18 0%, #140D0A 100%);
+                    border-radius: 36px;
+                    border: 1.5px solid rgba(200, 109, 40, 0.4);
+                    box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+                    padding: 45px 24px 35px 24px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between;
+                    align-items: center;
+                    text-align: center;
+                    position: relative;
+                    overflow: hidden;
+                }
+                /* Resplandor cálido de fondo */
+                .bg-glow {
+                    position: absolute;
+                    top: -40px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    width: 300px;
+                    height: 300px;
+                    background: radial-gradient(circle, rgba(200,109,40,0.35) 0%, rgba(0,0,0,0) 70%);
+                    pointer-events: none;
+                }
+                .brand-header { z-index: 1; }
+                .brand-logo {
+                    font-size: 2.3rem;
+                    font-weight: 900;
+                    letter-spacing: 6px;
+                    color: #FFFFFF;
+                    text-transform: uppercase;
+                }
+                .brand-sub {
+                    font-size: 0.75rem;
+                    letter-spacing: 3px;
+                    color: #E2A06E;
+                    text-transform: uppercase;
+                    margin-top: 4px;
+                    font-weight: 600;
+                }
+                .award-title-box { z-index: 1; }
+                .tag-mes {
+                    background: rgba(200, 109, 40, 0.2);
+                    color: #E2A06E;
+                    border: 1px solid rgba(200, 109, 40, 0.4);
+                    padding: 6px 18px;
+                    border-radius: 20px;
+                    font-size: 0.75rem;
+                    font-weight: 800;
+                    letter-spacing: 2px;
+                    text-transform: uppercase;
+                    display: inline-block;
+                    margin-bottom: 12px;
+                }
+                .main-title {
+                    font-size: 2rem;
+                    font-weight: 900;
+                    color: #FFFFFF;
+                    line-height: 1.1;
+                    letter-spacing: 1px;
+                }
+                /* PODIO */
+                .winners-container {
+                    width: 100%;
+                    z-index: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .winner-box-1 {
+                    background: linear-gradient(135deg, #C86D28 0%, #9A4D15 100%);
+                    border-radius: 22px;
+                    padding: 22px 16px;
+                    box-shadow: 0 12px 30px rgba(200, 109, 40, 0.4);
+                    border: 1.5px solid rgba(255, 255, 255, 0.3);
+                }
+                .winner-box-1 .crown { font-size: 2rem; display: block; margin-bottom: 2px; }
+                .winner-box-1 .label {
+                    font-size: 0.7rem;
+                    font-weight: 800;
+                    text-transform: uppercase;
+                    letter-spacing: 2px;
+                    color: rgba(255,255,255,0.85);
+                }
+                .winner-box-1 .name {
+                    font-size: 1.45rem;
+                    font-weight: 900;
+                    color: #FFFFFF;
+                    margin-top: 4px;
+                    word-break: break-word;
+                }
+                .runner-ups {
+                    display: flex;
+                    gap: 10px;
+                    width: 100%;
+                }
+                .runner-box {
+                    flex: 1;
+                    background: rgba(255, 255, 255, 0.06);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    border-radius: 18px;
+                    padding: 14px 10px;
+                }
+                .runner-box .icon { font-size: 1.2rem; display: block; margin-bottom: 2px; }
+                .runner-box .label {
+                    font-size: 0.62rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    color: #A09088;
+                }
+                .runner-box .name {
+                    font-size: 0.9rem;
+                    font-weight: 800;
+                    color: #FFFFFF;
+                    margin-top: 4px;
+                    word-break: break-word;
+                }
+                .footer-brand {
+                    z-index: 1;
+                    font-size: 0.8rem;
+                    color: #A09088;
+                    font-weight: 700;
+                    letter-spacing: 1px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="story-card">
+                <div class="bg-glow"></div>
+                
+                <div class="brand-header">
+                    <div class="brand-logo">CROISS</div>
+                    <div class="brand-sub">Artesanos del Croissant</div>
+                </div>
+
+                <div class="award-title-box">
+                    <span class="tag-mes">${mesTexto}</span>
+                    <h1 class="main-title">EL GANADOR</h1>
+                </div>
+
+                <div class="winners-container">
+                    <!-- 1ER PUESTO -->
+                    <div class="winner-box-1">
+                        <span class="crown">👑</span>
+                        <span class="label">1° Puesto</span>
+                        <div class="name">${top1}</div>
+                    </div>
+
+                    <!-- 2DO Y 3ER PUESTO -->
+                    <div class="runner-ups">
+                        <div class="runner-box">
+                            <span class="icon">🥈</span>
+                            <span class="label">2° Puesto</span>
+                            <div class="name">${top2}</div>
+                        </div>
+                        <div class="runner-box">
+                            <span class="icon">🥉</span>
+                            <span class="label">3° Puesto</span>
+                            <div class="name">${top3}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="footer-brand">
+                    🥐 @croissuy · Taller Artesanal
+                </div>
+            </div>
+        </body>
+        </html>
+    `);
+    win.document.close();
+}
+
