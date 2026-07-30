@@ -28,6 +28,8 @@ let chartDiasInstance = null;
 let chartFlujoPrincipalInstance = null;
 let datosFlujoGlobal = { diario: [], semanal: [] };
 let modoFlujoActual = 'diario';
+let rankingMesActualGlobal = [];
+let ganadoresHistoricosGlobal = [];
 
 // ==========================================
 // HELPER DE ANIMACIÓN Y TIEMPOS
@@ -415,6 +417,9 @@ async function cargarBalance() {
         cerrarCroissLoaderSeguro();
 
         if(data.status === 'exito') {
+            rankingMesActualGlobal = data.ranking_mes_actual || [];
+            ganadoresHistoricosGlobal = data.ganadores_por_mes || [];
+
             datosFlujoGlobal.diario = data.flujo_diario_mes || [];
             datosFlujoGlobal.semanal = data.flujo_semanal_historico || [];
             
@@ -430,11 +435,11 @@ async function cargarBalance() {
             document.getElementById('bGastos').innerText = `$${data.gastos_varios}`;
             document.getElementById('bTicketPromedio').innerText = `$${data.ticket_promedio}`;
 
-			const descuentosEl = document.getElementById('bDescuentos');
-			if (descuentosEl) {
-				descuentosEl.innerText = `-$${data.total_descuentos || 0}`;
-			}
-			if (data.origen_ventas) {
+            const descuentosEl = document.getElementById('bDescuentos');
+            if (descuentosEl) {
+                descuentosEl.innerText = `-$${data.total_descuentos || 0}`;
+            }
+            if (data.origen_ventas) {
                 const web = data.origen_ventas.web || { pedidos: 0, croissants: 0, monto: 0 };
                 const manual = data.origen_ventas.manual || { pedidos: 0, croissants: 0, monto: 0 };
 
@@ -466,6 +471,7 @@ async function cargarBalance() {
                 txtIng.innerText = `Total final del período cerrado`;
             }
 
+            // TARJETAS INTERACTIVAS: LÍDER DEL MES & LÍDER HISTÓRICO
             const contTop = document.getElementById('boxTopClientesBalance');
             if (contTop && data.top_clientes) {
                 const topM = data.top_clientes.mes;
@@ -473,15 +479,17 @@ async function cargarBalance() {
 
                 contTop.innerHTML = `
                     <div style="display:flex; gap:10px; margin-bottom:16px;">
-                        <div style="flex:1; background:#FAF0EB; border:1px solid #F7DFC8; border-radius:14px; padding:12px;">
+                        <div onclick="verModalClientesMes()" style="flex:1; background:#FAF0EB; border:1px solid #F7DFC8; border-radius:14px; padding:12px; cursor:pointer; transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                             <small style="color:var(--accent); font-weight:800; text-transform:uppercase; font-size:0.68rem;">👑 LÍDER DEL MES</small>
                             <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${topM ? topM.nombre : 'Sin ventas'}</div>
                             <small style="color:#64748b;">${topM ? topM.croissants : 0} croiss. ($${topM ? topM.gastado : 0})</small>
+                            <div style="font-size:0.68rem; color:var(--accent); font-weight:700; margin-top:6px;">🔍 Toca para ver lista completa</div>
                         </div>
-                        <div style="flex:1; background:#F0FDF4; border:1px solid #DCFCE7; border-radius:14px; padding:12px;">
+                        <div onclick="verModalGanadoresHistoricos()" style="flex:1; background:#F0FDF4; border:1px solid #DCFCE7; border-radius:14px; padding:12px; cursor:pointer; transition:transform 0.15s ease;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                             <small style="color:#16A34A; font-weight:800; text-transform:uppercase; font-size:0.68rem;">🏆 LÍDER HISTÓRICO</small>
                             <div style="font-weight:800; font-size:0.95rem; color:#2D1E18; margin-top:2px;">${topH ? topH.nombre : 'Sin ventas'}</div>
                             <small style="color:#16A34A; font-weight:700;">${topH ? topH.croissants : 0} croiss. ($${topH ? topH.gastado : 0})</small>
+                            <div style="font-size:0.68rem; color:#16A34A; font-weight:700; margin-top:6px;">🔍 Ver ganadores por mes</div>
                         </div>
                     </div>
                 `;
@@ -543,6 +551,82 @@ async function cargarBalance() {
         cerrarCroissLoaderSeguro();
         console.error("Error al cargar balance:", err);
     }
+}
+
+// FUNCIONES PARA MOSTRAR LOS MODALES AL HACER CLIC
+function verModalClientesMes() {
+    if (!rankingMesActualGlobal || rankingMesActualGlobal.length === 0) {
+        Swal.fire('Sin Compras', 'No hay compras registradas en este período.', 'info');
+        return;
+    }
+
+    let htmlLista = '';
+    const medallas = ['🥇', '🥈', '🥉'];
+    rankingMesActualGlobal.forEach((c, idx) => {
+        const medalla = medallas[idx] || `#${idx + 1}`;
+        htmlLista += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#FAF9F8; border:1px solid var(--border-color); border-radius:12px; margin-bottom:6px; text-align:left;">
+                <div>
+                    <span style="font-size:0.95rem; margin-right:4px;">${medalla}</span>
+                    <strong style="color:var(--text-main); font-size:0.9rem;">${c.nombre}</strong>
+                    <div style="font-size:0.75rem; color:var(--text-muted);">${c.pedidos || 1} pedido(s)</div>
+                </div>
+                <div style="text-align:right;">
+                    <strong style="color:var(--accent); font-size:0.95rem;">${c.croissants} un.</strong>
+                    <div style="font-size:0.75rem; color:#16A34A; font-weight:700;">$${c.gastado}</div>
+                </div>
+            </div>
+        `;
+    });
+
+    Swal.fire({
+        title: '🥐 Ranking de Compras del Mes',
+        html: `
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">Compradores del mes seleccionado:</p>
+            <div style="max-height:320px; overflow-y:auto; padding-right:4px;">
+                ${htmlLista}
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'Cerrar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+    });
+}
+
+function verModalGanadoresHistoricos() {
+    if (!ganadoresHistoricosGlobal || ganadoresHistoricosGlobal.length === 0) {
+        Swal.fire('Sin Datos', 'Aún no hay historial de ventas suficiente.', 'info');
+        return;
+    }
+
+    let htmlLista = '';
+    ganadoresHistoricosGlobal.forEach(g => {
+        htmlLista += `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#F0FDF4; border:1px solid #DCFCE7; border-radius:12px; margin-bottom:6px; text-align:left;">
+                <div>
+                    <span style="font-size:0.72rem; font-weight:800; color:#166534; text-transform:uppercase; display:block;">📅 ${g.mes_key}</span>
+                    <strong style="color:var(--text-main); font-size:0.95rem;">👑 ${g.ganador}</strong>
+                </div>
+                <div style="text-align:right;">
+                    <strong style="color:#15803D; font-size:0.95rem;">${g.croissants} croiss.</strong>
+                    <div style="font-size:0.75rem; color:#16A34A; font-weight:700;">$${g.gastado}</div>
+                </div>
+            </div>
+        `;
+    });
+
+    Swal.fire({
+        title: '🏆 Ganadores de Cada Mes',
+        html: `
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:12px;">Cliente N° 1 de cada mes histórico:</p>
+            <div style="max-height:320px; overflow-y:auto; padding-right:4px;">
+                ${htmlLista}
+            </div>
+        `,
+        showConfirmButton: true,
+        confirmButtonText: 'Cerrar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+    });
 }
 
 function renderizarGraficoGastosCategoria(gastosCat) {
