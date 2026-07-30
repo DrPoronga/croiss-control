@@ -1033,14 +1033,24 @@
 							title: '¡Pedido Recibido! 🥐',
 							html: `
 								<p style="font-size:0.88rem; color:var(--text-muted);">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
-								<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">Tocá el botón para coordinar por WhatsApp:</p>
+								<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">¿Querés coordinar los detalles por WhatsApp ahora?</p>
 							`,
 							icon: 'success',
-							confirmButtonText: '💬 Confirmar por WhatsApp',
+							showCancelButton: true,
+							confirmButtonText: '💬 Sí, ir a WhatsApp',
+							cancelButtonText: 'No por ahora',
 							allowOutsideClick: false,
-							customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-						}).then(() => {
-							window.open(wpUrl, '_blank');
+							customClass: { 
+								popup: 'croiss-swal-popup', 
+								confirmButton: 'croiss-swal-confirm',
+								cancelButton: 'croiss-swal-cancel'
+							}
+						}).then((result) => {
+							// SOLO ABRE WHATSAPP SI PRESIONÓ "SÍ"
+							if (result.isConfirmed) {
+								window.open(wpUrl, '_blank');
+							}
+							// EN CUALQUIER CASO REINICIA Y VUELVE AL PASO 1
 							reiniciarTienda();
 						});
 					} else {
