@@ -693,15 +693,27 @@
 
             menuItems.forEach(p => {
                 const name = p.nombre;
+                const nameLower = name.toLowerCase();
                 const qty = cart[name] ? cart[name].cantidad : 0;
                 const conJalea = cart[name] ? cart[name].con_jalea : false;
+
+                // Carteles de ahorro automáticos para Pop Croiss
+                let badgeAhorro = '';
+                if (nameLower.includes('pop')) {
+                    if (nameLower.includes('24')) {
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Te ahorrás $80!</small>';
+                    } else if (nameLower.includes('36')) {
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">🎉 ¡Te ahorrás $210! (Opción Fiesta)</small>';
+                    }
+                }
 
                 const div = document.createElement('div');
                 div.className = 'menu-row';
                 div.innerHTML = `
                     <div class="menu-item-info">
                         <strong>${name}</strong>
-                        ${qty > 0 ? `<button type="button" class="btn-jalea-inline ${conJalea ? 'active' : ''}" onclick="toggleJaleaShop('${name.replace(/'/g, "\\'")}')">${conJalea ? 'Con Jalea' : 'Sin Jalea'}</button>` : ''}
+                        ${badgeAhorro}
+                        ${(qty > 0 && !nameLower.includes('pop')) ? `<button type="button" class="btn-jalea-inline ${conJalea ? 'active' : ''}" onclick="toggleJaleaShop('${name.replace(/'/g, "\\'")}')">${conJalea ? 'Con Jalea' : 'Sin Jalea'}</button>` : ''}
                     </div>
                     <div class="menu-qty-selector">
                         <button type="button" class="btn-qty-flat" onclick="updateQty('${name.replace(/'/g, "\\'")}', -1)">-</button>
@@ -736,27 +748,44 @@
             }
         }
 
-        // CÁLCULO DE PRECIOS EXACTO SEGÚN EL PDF[cite: 6]
+        // CÁLCULO DE PRECIOS UNIFICADO (CROISSANTS TRADICIONALES + POP CROISS)
         function calculatePrices() {
-            let totalCroissants = 0;
+            let totalCroissantsNormales = 0;
+            
+            // 1. Contamos solo los croissants normales para la escala por volumen
             for(let k in cart) {
-                if(cart[k] && cart[k].cantidad) totalCroissants += cart[k].cantidad;
+                if(cart[k] && cart[k].cantidad && !k.toLowerCase().includes('pop')) {
+                    totalCroissantsNormales += cart[k].cantidad;
+                }
             }
 
-            // Escala por Volumen[cite: 6]
-            let basePrice = 140; // Individual[cite: 6]
-            if(totalCroissants >= 6) basePrice = 100; // Caja x6 ($100 c/u)[cite: 6]
-            else if(totalCroissants >= 3) basePrice = 110; // Caja x3 ($110 c/u)[cite: 6]
+            // Escala por Volumen para croissants tradicionales
+            let basePrice = 140; // Individual
+            if(totalCroissantsNormales >= 6) basePrice = 100; // Caja x6
+            else if(totalCroissantsNormales >= 3) basePrice = 110; // Caja x3
 
             let totalMoney = 0;
-            for(let k in cart) {
-                if(!cart[k]) continue;
-                let nameLower = k.toLowerCase();
-                let extra = 0;
-                if(nameLower.includes('jamon') || nameLower.includes('queso') || nameLower.includes('salado')) extra = 50; // Extra +$50[cite: 6]
-                else if(nameLower.includes('dulce') || nameLower.includes('ddl')) extra = 30; // Extra +$30[cite: 6]
+            let totalCroissants = 0;
 
-                totalMoney += (basePrice + extra) * cart[k].cantidad;
+            // 2. Sumamos los totales discriminando Pop vs Normales
+            for(let k in cart) {
+                if(!cart[k] || cart[k].cantidad <= 0) continue;
+                let kLower = k.toLowerCase();
+                totalCroissants += cart[k].cantidad;
+
+                if (kLower.includes('pop')) {
+                    // Si es Pop Croiss, toma su precio fijo de la caja
+                    let prodMatch = menuItems.find(p => p.nombre && p.nombre.toLowerCase() === kLower);
+                    let precioFijo = prodMatch && prodMatch.precio ? prodMatch.precio : 0;
+                    totalMoney += precioFijo * cart[k].cantidad;
+                } else {
+                    // Si es croissant normal, aplica escala + extras de relleno
+                    let extra = 0;
+                    if(kLower.includes('jamon') || kLower.includes('queso') || kLower.includes('salado')) extra = 50;
+                    else if(kLower.includes('dulce') || kLower.includes('ddl')) extra = 30;
+
+                    totalMoney += (basePrice + extra) * cart[k].cantidad;
+                }
             }
             return { totalCroissants, totalMoney, basePrice };
         }
