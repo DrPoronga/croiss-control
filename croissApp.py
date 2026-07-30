@@ -42,7 +42,7 @@ COSTOS_PRODUCCION = {
     "croissant_base": 24.10,
     "extra_salado": 25.75,  # Jamón / Queso
     "extra_dulce": 16.80,   # Dulce de Leche
-    "caja_x6": 36.0,
+    "caja_x6": 41.0,
     "caja_x3": 27.0,
     "caja_x1": 18.0
 }
@@ -1242,7 +1242,6 @@ def obtener_balance():
         ingresos_mes, costos_prod_mes, pedidos_count_mes, total_croiss_mes = 0.0, 0.0, 0, 0
         total_descuentos_mes = 0.0
         
-        # NUEVO: Contadores para separar Web vs Manual
         web_pedidos_mes, web_croiss_mes, web_monto_mes = 0, 0, 0.0
         manual_pedidos_mes, manual_croiss_mes, manual_monto_mes = 0, 0, 0.0
 
@@ -1253,6 +1252,7 @@ def obtener_balance():
         nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
 
         historico_dict, clientes_mes_dict, clientes_historico_dict = {}, {}, {}
+        clientes_por_mes_dict = {} # Guarda compradores por cada mes histórico
 
         try:
             anio_f, mes_f = int(mes_filtro.split("-")[0]), int(mes_filtro.split("-")[1])
@@ -1280,7 +1280,6 @@ def obtener_balance():
             notas = get_field_val(v, "Notas", "Nota")
             medio_pago = get_field_val(v, "Medio de Pago", "Medio Pago")
 
-            # Cálculo de descuento
             monto_descontado_pedido = 0.0
             if notas and "[Dto" in notas:
                 match_dto = re.search(r"\[Dto (\d+)%\]", notas)
@@ -1317,6 +1316,15 @@ def obtener_balance():
             cli_nombre = get_field_val(v, "Cliente").strip()
             if cli_nombre and cli_nombre.lower() != "consumidor final":
                 c_key = cli_nombre.lower()
+
+                # Registro histórico de clientes por cada mes específico
+                if key_mes not in clientes_por_mes_dict:
+                    clientes_por_mes_dict[key_mes] = {}
+                if c_key not in clientes_por_mes_dict[key_mes]:
+                    clientes_por_mes_dict[key_mes][c_key] = {"nombre": cli_nombre, "croissants": 0, "gastado": 0.0}
+                clientes_por_mes_dict[key_mes][c_key]["croissants"] += cant
+                clientes_por_mes_dict[key_mes][c_key]["gastado"] += monto
+
                 if c_key not in clientes_historico_dict:
                     clientes_historico_dict[c_key] = {"nombre": cli_nombre, "croissants": 0, "gastado": 0.0, "pedidos": 0}
                 clientes_historico_dict[c_key]["croissants"] += cant
@@ -1337,7 +1345,6 @@ def obtener_balance():
                 total_croiss_mes += cant
                 total_descuentos_mes += monto_descontado_pedido
 
-                # NUEVO: Discriminación Web vs Manual
                 es_web = "[web]" in notas.lower() or "web" in medio_pago.lower()
                 if es_web:
                     web_pedidos_mes += 1
@@ -1412,6 +1419,24 @@ def obtener_balance():
         top_mes = max(clientes_mes_dict.values(), key=lambda x: x["croissants"]) if clientes_mes_dict else None
         top_historico = max(clientes_historico_dict.values(), key=lambda x: x["croissants"]) if clientes_historico_dict else None
 
+        # Construir lista de ganadores por cada mes histórico
+        ganadores_por_mes = []
+        for m_key, dict_clis in clientes_por_mes_dict.items():
+            if dict_clis:
+                top_cli = max(dict_clis.values(), key=lambda x: x["croissants"])
+                ganadores_por_mes.append({
+                    "mes_key": m_key,
+                    "ganador": top_cli["nombre"],
+                    "croissants": top_cli["croissants"],
+                    "gastado": round(top_cli["gastado"], 2)
+                })
+        ganadores_por_mes.sort(key=lambda x: x["mes_key"], reverse=True)
+
+        # Construir lista ordenada de todos los clientes del mes filtrado
+        ranking_mes_actual = list(clientes_mes_dict.values())
+        ranking_mes_actual.sort(key=lambda x: (x["croissants"], x["gastado"]), reverse=True)
+        for c in ranking_mes_actual: c["gastado"] = round(c["gastado"], 2)
+
         ranking_sabores = [{"sabor": sab, "cantidad": vals["cantidad"], "porcentaje": round((vals["cantidad"] / total_croiss_mes * 100), 1) if total_croiss_mes > 0 else 0} for sab, vals in sabores_dict.items()]
         lista_historica = [{"mes_key": m_key, "ingresos": round(v["ingresos"], 2), "gastos_totales": round(v["costos"] + v["gastos"], 2), "ganancia_neta": round(v["ingresos"] - (v["costos"] + v["gastos"]), 2), "pedidos": v["pedidos"], "croissants": v["croissants"]} for m_key, v in sorted(historico_dict.items())]
 
@@ -1433,6 +1458,8 @@ def obtener_balance():
             "flujo_semanal_historico": flujo_semanal_lista,
             "proyeccion": {"es_mes_actual": es_mes_actual, "croissants_estimados": proy_croiss, "ingresos_estimados": proy_ingresos},
             "top_clientes": {"mes": top_mes, "historico": top_historico},
+            "ranking_mes_actual": ranking_mes_actual,
+            "ganadores_por_mes": ganadores_por_mes,
             "stats_jalea": {"con_jalea": con_jalea_count, "sin_jalea": sin_jalea_count, "porcentaje": round((con_jalea_count / (con_jalea_count + sin_jalea_count) * 100), 1) if (con_jalea_count + sin_jalea_count) > 0 else 0},
             "ranking_sabores": ranking_sabores, "dias_semana": dias_semana_count, "historico_meses": lista_historica
         }), 200
