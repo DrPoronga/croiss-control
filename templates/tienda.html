@@ -358,6 +358,36 @@
             transition: transform 0.2s ease;
         }
         .btn-submit-order-final:active { transform: scale(0.98); }
+		
+		/* SELECTOR DOBLE DE JALEA (SIN JALEA / CON JALEA) */
+		.jalea-toggle-group {
+			display: inline-flex;
+			background: #EFEAE6;
+			border-radius: 12px;
+			padding: 2px;
+			margin-top: 6px;
+			border: 1px solid #D8CFC8;
+		}
+
+		.btn-jalea-pill {
+			border: none;
+			background: transparent;
+			padding: 4px 10px;
+			font-size: 0.72rem;
+			font-weight: 700;
+			color: #7A6B63;
+			border-radius: 10px;
+			cursor: pointer;
+			transition: all 0.2s ease;
+		}
+
+		.btn-jalea-pill.active {
+			background: #FFFFFF;
+			color: #C86D28;
+			box-shadow: 0 2px 6px rgba(45, 30, 24, 0.12);
+		}
+
+
     </style>
 </head>
 <body>
@@ -686,55 +716,7 @@
             });
         }
 
-       function renderProducts() {
-            const container = document.getElementById('shopProductsList');
-            if(!container) return;
-            container.innerHTML = '';
-
-            // 🔴 INTERRUPTOR: Poné `false` para ocultarlos / `true` para lanzarlos a la venta
-            const MOSTRAR_POP = false; 
-
-            menuItems.forEach(p => {
-                const name = p.nombre;
-                const nameLower = name.toLowerCase();
-                const qty = cart[name] ? cart[name].cantidad : 0;
-                const conJalea = cart[name] ? cart[name].con_jalea : false;
-
-                // Si la función de mostrar está apagada y el producto es un POP, no lo dibuja
-                if (!MOSTRAR_POP && nameLower.includes('pop')) {
-                    return;
-                }
-
-                // Carteles de ahorro automáticos para Pop Croiss (Corregidos los cierres de IF)
-                let badgeAhorro = '';
-                if (nameLower.includes('pop')) {
-                    if (nameLower.includes('12')) {
-                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">No comparto, todos para mí 🤫</small>';
-                    } else if (nameLower.includes('24')) {
-                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Te ahorrás $80! (Capaz que comparto uno o dos...)</small>';
-                    } else if (nameLower.includes('36')) {
-                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Te ahorrás $210! (Opción Picada "Me la juego con el equipo")</small>';
-                    }
-                }
-
-                const div = document.createElement('div');
-                div.className = 'menu-row';
-                div.innerHTML = `
-                    <div class="menu-item-info">
-                        <strong>${name}</strong>
-                        ${badgeAhorro}
-                        ${(qty > 0 && !nameLower.includes('pop')) ? `<button type="button" class="btn-jalea-inline ${conJalea ? 'active' : ''}" onclick="toggleJaleaShop('${name.replace(/'/g, "\\'")}')">${conJalea ? 'Con Jalea' : 'Sin Jalea'}</button>` : ''}
-                    </div>
-                    <div class="menu-qty-selector">
-                        <button type="button" class="btn-qty-flat" onclick="updateQty('${name.replace(/'/g, "\\'")}', -1)">-</button>
-                        <span class="qty-number">${qty}</span>
-                        <button type="button" class="btn-qty-flat" onclick="updateQty('${name.replace(/'/g, "\\'")}', 1)">+</button>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-            updateSubtotal();
-        }
+       
 
         function updateQty(name, change) {
             try {
@@ -747,16 +729,73 @@
             }
         }
 
-        function toggleJaleaShop(name) {
-            try {
-                if(cart[name]) {
-                    cart[name].con_jalea = !cart[name].con_jalea;
-                    renderProducts();
-                }
-            } catch(e) {
-                console.error("Error toggle jalea:", e);
-            }
-        }
+        // NUEVA FUNCIÓN: Establece explícitamente true o false
+		function setJaleaShop(name, conJaleaVal) {
+			try {
+				if (!cart[name]) {
+					cart[name] = { cantidad: 0, con_jalea: conJaleaVal };
+				} else {
+					cart[name].con_jalea = conJaleaVal;
+				}
+				renderProducts();
+			} catch(e) {
+				console.error("Error cambiando jalea:", e);
+			}
+		}
+
+		function renderProducts() {
+			const container = document.getElementById('shopProductsList');
+			if(!container) return;
+			container.innerHTML = '';
+
+			const MOSTRAR_POP = false; 
+
+			menuItems.forEach(p => {
+				if (!p || !p.nombre) return;
+				const name = p.nombre;
+				const nameLower = name.toLowerCase();
+				const qty = cart[name] ? cart[name].cantidad : 0;
+				const conJalea = cart[name] ? cart[name].con_jalea : false;
+
+				if (!MOSTRAR_POP && nameLower.includes('pop')) return;
+
+				let badgeAhorro = '';
+				if (nameLower.includes('pop')) {
+					if (nameLower.includes('12')) {
+						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">No comparto, todos para mí 🤫</small>';
+					} else if (nameLower.includes('24')) {
+						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Te ahorrás $80! (Capaz que comparto uno o dos...)</small>';
+					} else if (nameLower.includes('36')) {
+						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Te ahorrás $210! (Opción Picada "Me la juego con el equipo")</small>';
+					}
+				}
+
+				// Selector doble visible cuando el cliente añade al menos 1 unidad
+				const selectorJaleaHtml = (qty > 0 && !nameLower.includes('pop')) ? `
+					<div class="jalea-toggle-group">
+						<button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop('${name.replace(/'/g, "\\'")}', false)">Sin Jalea</button>
+						<button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop('${name.replace(/'/g, "\\'")}', true)">Con Jalea 🍯</button>
+					</div>
+				` : '';
+
+				const div = document.createElement('div');
+				div.className = 'menu-row';
+				div.innerHTML = `
+					<div class="menu-item-info">
+						<strong>${name}</strong>
+						${badgeAhorro}
+						${selectorJaleaHtml}
+					</div>
+					<div class="menu-qty-selector">
+						<button type="button" class="btn-qty-flat" onclick="updateQty('${name.replace(/'/g, "\\'")}', -1)">-</button>
+						<span class="qty-number">${qty}</span>
+						<button type="button" class="btn-qty-flat" onclick="updateQty('${name.replace(/'/g, "\\'")}', 1)">+</button>
+					</div>
+				`;
+				container.appendChild(div);
+			});
+			updateSubtotal();
+		}
 
         // CÁLCULO DE PRECIOS UNIFICADO (CROISSANTS TRADICIONALES + POP CROISS)
         function calculatePrices() {
