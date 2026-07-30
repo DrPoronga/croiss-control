@@ -686,10 +686,13 @@
             });
         }
 
-        function renderProducts() {
+       function renderProducts() {
             const container = document.getElementById('shopProductsList');
             if(!container) return;
             container.innerHTML = '';
+
+            // 🔴 INTERRUPTOR: Poné `false` para ocultarlos / `true` para lanzarlos a la venta
+            const MOSTRAR_POP = true; 
 
             menuItems.forEach(p => {
                 const name = p.nombre;
@@ -697,12 +700,17 @@
                 const qty = cart[name] ? cart[name].cantidad : 0;
                 const conJalea = cart[name] ? cart[name].con_jalea : false;
 
-                // Carteles de ahorro automáticos para Pop Croiss
+                // Si la función de mostrar está apagada y el producto es un POP, no lo dibuja
+                if (!MOSTRAR_POP && nameLower.includes('pop')) {
+                    return;
+                }
+
+                // Carteles de ahorro automáticos para Pop Croiss (Corregidos los cierres de IF)
                 let badgeAhorro = '';
                 if (nameLower.includes('pop')) {
-					if (nameLower.includes('12')) {
-                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">No comparto todos para mi</small>';
-                    if (nameLower.includes('24')) {
+                    if (nameLower.includes('12')) {
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">No comparto, todos para mí 🤫</small>';
+                    } else if (nameLower.includes('24')) {
                         badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Te ahorrás $80! (Capaz que comparto uno o dos...)</small>';
                     } else if (nameLower.includes('36')) {
                         badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Te ahorrás $210! (Opción Picada "Me la juego con el equipo")</small>';
