@@ -374,9 +374,14 @@
 
     <div class="web-site-wrapper">
 
-        <!-- SECCIÓN 1: MENÚ -->
-        <section class="web-section" id="sec-menu">
-            <h2 class="web-section-title">1. Elegí tus Croissants</h2>
+    <!-- PASO 1: MENÚ -->
+    <section class="web-step-card" id="step-card-1">
+        <div class="web-step-header" id="step-header-1" onclick="irAlPaso(1)">
+            <span class="step-badge" id="step-badge-1">Paso 1</span>
+            <h2 class="web-section-title">Elegí tus Croissants</h2>
+        </div>
+        
+        <div class="web-step-body" id="step-body-1" style="display: block;">
             <p class="web-section-desc">Seleccioná las variedades para tu caja recién horneada.</p>
 
             <div id="shopProductsList">Cargando menú...</div>
@@ -388,38 +393,47 @@
                 </div>
                 <span class="amount" id="shopSubtotalText">$0</span>
             </div>
-        </section>
 
-        <!-- IMAGEN 1: CROISS1 (DESLIZA DESDE LA IZQUIERDA) -->
-        <div class="scroll-photo-card reveal-on-scroll reveal-left">
-            <img src="{{ url_for('static', filename='croiss1.png') }}" 
-                 alt="Croissant Artesanal CROISS"
-                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss1.jpg') }}';">
+            <button type="button" class="btn-step-next" onclick="irAlPaso(2)">Siguiente: Fecha de Entrega ➔</button>
+        </div>
+    </section>
+
+    <!-- IMAGEN 1 DECORATIVA -->
+    <div class="scroll-photo-card reveal-on-scroll reveal-left">
+        <img src="{{ url_for('static', filename='croiss1.png') }}" alt="Croissant CROISS" onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss1.jpg') }}';">
+    </div>
+
+    <!-- PASO 2: FECHA DE ENTREGA -->
+    <section class="web-step-card" id="step-card-2">
+        <div class="web-step-header" id="step-header-2" onclick="irAlPaso(2)">
+            <span class="step-badge" id="step-badge-2">Paso 2</span>
+            <h2 class="web-section-title">Fecha de Entrega</h2>
         </div>
 
-        <!-- SECCIÓN 2: FECHA -->
-        <section class="web-section" id="sec-fechas">
-            <h2 class="web-section-title">2. Fecha de Entrega</h2>
-            <p class="web-section-desc">Elegí el día en que querés recibir tu orden (Pedidos con 48hs de anticipación).</p>
-
-            <p style="font-size: 0.8rem; color: #166534; font-weight: 600; margin-bottom: 14px;">
-                💬 La zona exacta y el horario se coordinan por WhatsApp tras confirmar tu pedido.
-            </p>
+        <div class="web-step-body" id="step-body-2" style="display: none;">
+            <p class="web-section-desc">Elegí el día en que querés recibir tu orden.</p>
+            <p style="font-size: 0.8rem; color: #166534; font-weight: 600; margin-bottom: 14px;">💬 La zona y el horario exacto se coordinan por WhatsApp.</p>
 
             <div id="datesContainer" class="web-dates-grid">Cargando fechas disponibles...</div>
-        </section>
 
-        <!-- IMAGEN 2: CROISS2 (DESLIZA DESDE LA DERECHA) -->
-        <div class="scroll-photo-card reveal-on-scroll reveal-right">
-            <img src="{{ url_for('static', filename='croiss2.png') }}" 
-                 alt="Variedad CROISS"
-                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss2.jpg') }}';">
+            <button type="button" class="btn-step-next" onclick="irAlPaso(3)">Siguiente: Tus Datos ➔</button>
+        </div>
+    </section>
+
+    <!-- IMAGEN 2 DECORATIVA -->
+    <div class="scroll-photo-card reveal-on-scroll reveal-right">
+        <img src="{{ url_for('static', filename='croiss2.png') }}" alt="Variedad CROISS" onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss2.jpg') }}';">
+    </div>
+
+    <!-- PASO 3: TUS DATOS + OPCIÓN DE REGALO -->
+    <section class="web-step-card" id="step-card-3">
+        <div class="web-step-header" id="step-header-3" onclick="irAlPaso(3)">
+            <span class="step-badge" id="step-badge-3">Paso 3</span>
+            <h2 class="web-section-title">Tus Datos & Detalles</h2>
         </div>
 
-        <!-- SECCIÓN 3: DATOS -->
-        <section class="web-section" id="sec-datos">
-            <h2 class="web-section-title">3. Tus Datos</h2>
-            <p class="web-section-desc">Ingresá tu información para avisarte cuando salgan del horno.</p>
+        <div class="web-step-body" id="step-body-3" style="display: none;">
+            <p class="web-section-desc">Ingresá tu información de contacto.</p>
 
             <div class="web-field">
                 <label>Nombre Completo *</label>
@@ -437,22 +451,47 @@
                 <label>Dirección / Barrio (Opcional)</label>
                 <input type="text" id="custDir" placeholder="Ej: Pocitos, Calle Falsa 123">
             </div>
-            <div class="web-field">
-                <label>Notas / Aclaraciones (Opcional)</label>
-                <input type="text" id="custNotas" placeholder="Ej: Es para un regalo...">
-            </div>
-        </section>
 
-        <!-- IMAGEN 3: CROISS3 (DESLIZA DESDE LA IZQUIERDA) -->
-        <div class="scroll-photo-card reveal-on-scroll reveal-left">
-            <img src="{{ url_for('static', filename='croiss3.png') }}" 
-                 alt="Caja CROISS"
-                 onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss3.jpg') }}';">
+            <!-- MÓDULO DE REGALO -->
+            <div style="background: #FAF0EB; border: 1px dashed #C86D28; border-radius: 16px; padding: 14px; margin: 18px 0;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 800; font-size: 0.95rem; color: #2D1E18; margin: 0;">
+                    <input type="checkbox" id="chkEsRegalo" onchange="toggleOpcionRegalo()" style="width: 20px; height: 20px; accent-color: #C86D28;">
+                    🎁 ¿Es para regalo?
+                </label>
+                <div id="boxRegaloCampos" style="display: none; margin-top: 14px; border-top: 1px dashed #E2D9D3; padding-top: 12px;">
+                    <div class="web-field">
+                        <label>Nombre de quien recibe 💌</label>
+                        <input type="text" id="custRegaloDestinatario" placeholder="Ej: Valentina">
+                    </div>
+                    <div class="web-field">
+                        <label>Mensaje para la tarjetita / cartita 📝</label>
+                        <textarea id="custRegaloMensaje" rows="3" placeholder="Ej: ¡Feliz cumple Valen! Espero que disfrutes mucho este regalito dulce..." style="width: 100%; padding: 12px; border: 1.5px solid #D8CFC8; border-radius: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box; outline: none; background: #FFFFFF;"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="web-field">
+                <label>Notas / Aclaraciones Adicionales (Opcional)</label>
+                <input type="text" id="custNotas" placeholder="Ej: Entregar de mañana, golpear portón negro...">
+            </div>
+
+            <button type="button" class="btn-step-next" onclick="irAlPaso(4)">Siguiente: Confirmación ➔</button>
+        </div>
+    </section>
+
+    <!-- IMAGEN 3 DECORATIVA -->
+    <div class="scroll-photo-card reveal-on-scroll reveal-left">
+        <img src="{{ url_for('static', filename='croiss3.png') }}" alt="Caja CROISS" onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss3.jpg') }}';">
+    </div>
+
+    <!-- PASO 4: CONFIRMACIÓN Y RESUMEN FINAL -->
+    <section class="web-step-card" id="step-card-4">
+        <div class="web-step-header" id="step-header-4" onclick="irAlPaso(4)">
+            <span class="step-badge" id="step-badge-4">Paso 4</span>
+            <h2 class="web-section-title">Resumen & Confirmación</h2>
         </div>
 
-        <!-- SECCIÓN 4: CONFIRMACIÓN -->
-        <section class="web-section" id="sec-resumen">
-            <h2 class="web-section-title">4. Resumen Final</h2>
+        <div class="web-step-body" id="step-body-4" style="display: none;">
             <p class="web-section-desc">Verificá los detalles de tu orden antes de confirmar.</p>
 
             <div class="summary-ticket-clean" id="orderSummaryBox">
@@ -462,9 +501,10 @@
             <button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
                 Confirmar Pedido 🥐
             </button>
-        </section>
+        </div>
+    </section>
 
-    </div>
+</div>
 
     <!-- LÓGICA JAVASCRIPT Y ANIMACIONES -->
     <script>
@@ -784,42 +824,6 @@
             });
         }
 
-        function buildSummary() {
-            const calc = calculatePrices();
-            const box = document.getElementById('orderSummaryBox');
-            if(!box) return;
-
-            const nom = (document.getElementById('custNombre')?.value || '').trim();
-            const tel = (document.getElementById('custTel')?.value || '').trim();
-
-            if (calc.totalCroissants === 0) {
-                box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>`;
-                return;
-            }
-
-            let itemsHtml = '';
-            for(let k in cart) {
-                if(cart[k] && cart[k].cantidad > 0) {
-                    itemsHtml += `<div>• ${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
-                }
-            }
-
-            box.innerHTML = `
-                <div style="margin-bottom: 8px;">
-                    ${nom ? `<strong>Cliente:</strong> ${nom}<br>` : ''}
-                    ${tel ? `<strong>Contacto:</strong> ${tel}<br>` : ''}
-                    <strong>Fecha Entrega:</strong> ${selectedDate ? selectedDate : '<span style="color:#DC2626;">(Seleccionar arriba)</span>'}<br>
-                </div>
-                <div style="margin-top: 8px;">
-                    <strong style="color:#C86D28;">Items:</strong>
-                    ${itemsHtml}
-                </div>
-                <div style="margin-top:12px; font-size:1.2rem; font-weight:800; text-align:right; color:#2D1E18;">
-                    Total A Pagar: $${calc.totalMoney}
-                </div>
-            `;
-        }
-
         function reiniciarTienda() {
             cart = {};
             selectedDate = "";
@@ -833,119 +837,201 @@
             scrollToSection('topHeader');
         }
 
-        async function confirmarPedidoTienda() {
-            const calc = calculatePrices();
+        let currentStep = 1;
 
-            if(calc.totalCroissants === 0) {
-                scrollToSection('sec-menu');
-                Swal.fire({
-                    title: 'Elegí tus croissants',
-                    text: 'Agregá al menos 1 croissant a tu pedido antes de continuar.',
-                    icon: 'warning',
-                    confirmButtonText: 'Entendido',
-                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                });
-                return;
-            }
+			// CONTROL DEL ACORDEÓN PASO A PASO
+			function irAlPaso(paso) {
+				const calc = calculatePrices();
 
-            if(!selectedDate) {
-                scrollToSection('sec-fechas');
-                Swal.fire({
-                    title: 'Seleccioná la fecha',
-                    text: 'Por favor marcá el día que querés recibir tu pedido.',
-                    icon: 'warning',
-                    confirmButtonText: 'Entendido',
-                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                });
-                return;
-            }
+				// Validaciones progresivas
+				if (paso > 1 && calc.totalCroissants === 0) {
+					Swal.fire({ title: 'Elegí tus croissants', text: 'Agregá al menos 1 croissant a tu pedido antes de continuar.', icon: 'warning', confirmButtonText: 'Entendido' });
+					return;
+				}
 
-            const nom = (document.getElementById('custNombre')?.value || '').trim();
-            const tel = (document.getElementById('custTel')?.value || '').trim();
-            const email = (document.getElementById('custEmail')?.value || '').trim();
+				if (paso > 2 && !selectedDate) {
+					Swal.fire({ title: 'Seleccioná la fecha', text: 'Por favor marcá el día de entrega antes de continuar.', icon: 'warning', confirmButtonText: 'Entendido' });
+					return;
+				}
 
-            if(!nom || !tel || !email) {
-                scrollToSection('sec-datos');
-                Swal.fire({
-                    title: 'Campos Obligatorios',
-                    text: 'Por favor ingresá tu Nombre, Teléfono y Email.',
-                    icon: 'warning',
-                    confirmButtonText: 'Entendido',
-                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                });
-                return;
-            }
+				if (paso > 3) {
+					const nom = (document.getElementById('custNombre')?.value || '').trim();
+					const tel = (document.getElementById('custTel')?.value || '').trim();
+					const email = (document.getElementById('custEmail')?.value || '').trim();
 
-            let itemsArr = [];
-            for(let k in cart) {
-                if(cart[k] && cart[k].cantidad > 0) {
-                    itemsArr.push({
-                        producto: k,
-                        cantidad: cart[k].cantidad,
-                        con_jalea: cart[k].con_jalea
-                    });
-                }
-            }
+					if (!nom || !tel || !email) {
+						Swal.fire({ title: 'Campos Obligatorios', text: 'Por favor completá Nombre, Teléfono y Email.', icon: 'warning', confirmButtonText: 'Entendido' });
+						return;
+					}
+				}
 
-            const payload = {
-                cliente: nom,
-                telefono: tel,
-                email: email,
-                direccion: (document.getElementById('custDir')?.value || '').trim(),
-                fecha_entrega: selectedDate,
-                notas: (document.getElementById('custNotas')?.value || '').trim(),
-                items: itemsArr,
-                monto_total: calc.totalMoney
-            };
+				currentStep = paso;
 
-            // MOSTRAR ANIMACIÓN DEL CROISSANT[cite: 2]
-            mostrarCroissLoader();
+				// Desplegar/Ocultar secciones
+				for (let i = 1; i <= 4; i++) {
+					const body = document.getElementById(`step-body-${i}`);
+					const badge = document.getElementById(`step-badge-${i}`);
+					if (body) {
+						if (i === paso) {
+							body.style.display = 'block';
+							if (badge) badge.classList.add('step-active');
+						} else {
+							body.style.display = 'none';
+							if (badge) badge.classList.remove('step-active');
+						}
+					}
+				}
 
-            try {
-                const res = await fetch('/api/public/crear_pedido', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
+				// Scroll al encabezado del paso activo
+				const stepHeader = document.getElementById(`step-header-${paso}`);
+				if (stepHeader) {
+					stepHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
 
-                if(data.status === 'exito') {
-                    const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
-                    const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
+				if (paso === 4) {
+					buildSummary();
+				}
+			}
 
-                    Swal.fire({
-                        title: '¡Pedido Recibido! 🥐',
-                        html: `
-                            <p style="font-size:0.88rem; color:var(--text-muted);">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
-                            <p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">Tocá el botón para coordinar por WhatsApp:</p>
-                        `,
-                        icon: 'success',
-                        confirmButtonText: '💬 Confirmar por WhatsApp',
-                        allowOutsideClick: false,
-                        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                    }).then(() => {
-                        window.open(wpUrl, '_blank');
-                        reiniciarTienda();
-                    });
-                } else {
-                    Swal.fire({
-                        title: 'Atención',
-                        text: data.mensaje,
-                        icon: 'error',
-                        confirmButtonText: 'Entendido',
-                        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                    });
-                }
-            } catch(e) {
-                Swal.fire({
-                    title: 'Error',
-                    text: 'No se pudo conectar con el servidor',
-                    icon: 'error',
-                    confirmButtonText: 'Entendido',
-                    customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
-                });
-            }
-        }
+			// MOSTRAR/OCULTAR MÓDULO REGALO
+			function toggleOpcionRegalo() {
+				const chk = document.getElementById('chkEsRegalo');
+				const box = document.getElementById('boxRegaloCampos');
+				if (box) {
+					box.style.display = (chk && chk.checked) ? 'block' : 'none';
+				}
+			}
+
+			// ACTUALIZACIÓN DEL RESUMEN CON OPCIÓN DE REGALO
+			function buildSummary() {
+				const calc = calculatePrices();
+				const box = document.getElementById('orderSummaryBox');
+				if(!box) return;
+
+				const nom = (document.getElementById('custNombre')?.value || '').trim();
+				const tel = (document.getElementById('custTel')?.value || '').trim();
+				const esRegalo = document.getElementById('chkEsRegalo')?.checked;
+				const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
+				const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
+
+				if (calc.totalCroissants === 0) {
+					box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>`;
+					return;
+				}
+
+				let itemsHtml = '';
+				for(let k in cart) {
+					if(cart[k] && cart[k].cantidad > 0) {
+						itemsHtml += `<div>• ${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
+					}
+				}
+
+				let bloqueRegaloHtml = '';
+				if (esRegalo) {
+					bloqueRegaloHtml = `
+						<div style="background:#FAF0EB; border:1px dashed #C86D28; border-radius:12px; padding:10px; margin:10px 0;">
+							<strong style="color:#C86D28;">🎁 ¡Pedido para Regalo!</strong><br>
+							${destinatario ? `<strong>Para:</strong> ${destinatario}<br>` : ''}
+							${mensajeRegalo ? `<strong>Mensaje:</strong> "<em>${mensajeRegalo}</em>"` : ''}
+						</div>
+					`;
+				}
+
+				box.innerHTML = `
+					<div style="margin-bottom: 8px;">
+						${nom ? `<strong>Cliente:</strong> ${nom}<br>` : ''}
+						${tel ? `<strong>Contacto:</strong> ${tel}<br>` : ''}
+						<strong>Fecha Entrega:</strong> ${selectedDate ? selectedDate : '<span style="color:#DC2626;">(Seleccionar arriba)</span>'}<br>
+					</div>
+					${bloqueRegaloHtml}
+					<div style="margin-top: 8px;">
+						<strong style="color:#C86D28;">Items:</strong>
+						${itemsHtml}
+					</div>
+					<div style="margin-top:12px; font-size:1.2rem; font-weight:800; text-align:right; color:#2D1E18;">
+						Total A Pagar: $${calc.totalMoney}
+					</div>
+				`;
+			}
+
+			// CONFIRMACIÓN FINAL DEL PEDIDO
+			async function confirmarPedidoTienda() {
+				const calc = calculatePrices();
+				const nom = (document.getElementById('custNombre')?.value || '').trim();
+				const tel = (document.getElementById('custTel')?.value || '').trim();
+				const email = (document.getElementById('custEmail')?.value || '').trim();
+
+				let notasCliente = (document.getElementById('custNotas')?.value || '').trim();
+				const esRegalo = document.getElementById('chkEsRegalo')?.checked;
+
+				if (esRegalo) {
+					const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
+					const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
+					let tagRegalo = `[ES PARA REGALO 🎁]`;
+					if (destinatario) tagRegalo += ` Para: ${destinatario}.`;
+					if (mensajeRegalo) tagRegalo += ` Cartita: "${mensajeRegalo}".`;
+					
+					notasCliente = `${tagRegalo} ${notasCliente}`.trim();
+				}
+
+				let itemsArr = [];
+				for(let k in cart) {
+					if(cart[k] && cart[k].cantidad > 0) {
+						itemsArr.push({
+							producto: k,
+							cantidad: cart[k].cantidad,
+							con_jalea: cart[k].con_jalea
+						});
+					}
+				}
+
+				const payload = {
+					cliente: nom,
+					telefono: tel,
+					email: email,
+					direccion: (document.getElementById('custDir')?.value || '').trim(),
+					fecha_entrega: selectedDate,
+					notas: notasCliente,
+					items: itemsArr,
+					monto_total: calc.totalMoney
+				};
+
+				mostrarCroissLoader();
+
+				try {
+					const res = await fetch('/api/public/crear_pedido', {
+						method: 'POST',
+						headers: {'Content-Type': 'application/json'},
+						body: JSON.stringify(payload)
+					});
+					const data = await res.json();
+
+					if(data.status === 'exito') {
+						const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
+						const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
+
+						Swal.fire({
+							title: '¡Pedido Recibido! 🥐',
+							html: `
+								<p style="font-size:0.88rem; color:var(--text-muted);">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
+								<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">Tocá el botón para coordinar por WhatsApp:</p>
+							`,
+							icon: 'success',
+							confirmButtonText: '💬 Confirmar por WhatsApp',
+							allowOutsideClick: false,
+							customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+						}).then(() => {
+							window.open(wpUrl, '_blank');
+							reiniciarTienda();
+						});
+					} else {
+						Swal.fire({ title: 'Atención', text: data.mensaje, icon: 'error', confirmButtonText: 'Entendido' });
+					}
+				} catch(e) {
+					Swal.fire({ title: 'Error', text: 'No se pudo conectar con el servidor', icon: 'error', confirmButtonText: 'Entendido' });
+				}
+			}
+		
     </script>
 </body>
 </html>

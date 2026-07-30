@@ -372,7 +372,63 @@ def sincronizar_cliente(nombre, email, telefono, direccion):
     except Exception as e:
         print(f"Aviso sincronizando cliente: {e}", flush=True)
 
+# ==========================================
+# PLANTILLA Y ENDPOINT: RECORDATORIO DE PAGO
+# ==========================================
+def plantilla_email_recordatorio_pago(cliente, items_str, fecha_entrega):
+    cuerpo = f"""
+    <h2 style="color: #2D1E18; font-size: 18px; font-weight: 800; margin: 0 0 12px 0; text-align: center;">¡Hola, {cliente}! 🥐</h2>
+    <p style="margin: 0 0 18px 0; color: #7A6B63; text-align: center;">Te escribimos de <strong>CROISS</strong> para recordarte que tenés un pedido programado para el <strong>{fecha_entrega}</strong> que aún figura pendiente de pago.</p>
 
+    <div style="background-color: #FFFBEB; border: 1px solid #FDE68A; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
+      <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 13px;">
+        <tr>
+          <td style="padding-bottom: 8px; color: #7A6B63; font-weight: 600;">Detalle del Pedido:</td>
+          <td style="padding-bottom: 8px; text-align: right; font-weight: 700; color: #2D1E18;">{items_str}</td>
+        </tr>
+        <tr>
+          <td style="color: #7A6B63; font-weight: 600;">Estado de Pago:</td>
+          <td style="text-align: right; color: #DC2626; font-weight: 800;">PENDIENTE DE PAGO</td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="margin: 0 0 12px 0; font-size: 13px; color: #7A6B63; text-align: center;">Te pedimos que realices el pago o nos envíes el comprobante para confirmar el horneado de tus croissants a tiempo.</p>
+    <p style="margin: 0; font-size: 12px; color: #7A6B63; text-align: center;">Si ya realizaste la transferencia, podés responder directamente a este correo o escribirnos por WhatsApp. ¡Muchas gracias!</p>
+    """
+    return _base_email_template("Recordatorio de Pago", "#D97706", cuerpo)
+
+@app.route('/api/recordatorio_pago', methods=['POST'])
+def enviar_recordatorio_pago():
+    try:
+        datos = request.json or {}
+        num_fila = datos.get("fila")
+        sheet_ventas = conectar_sheet("Ventas")
+        row_data = sheet_ventas.row_values(int(num_fila))
+        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
+        
+        col_cli, col_email, col_prod, col_fecha = 4, 10, 5, 3
+        for i, h in enumerate(headers, start=1):
+            if "cliente" in h: col_cli = i
+            elif "email" in h or "correo" in h: col_email = i
+            elif "producto" in h: col_prod = i
+            elif "fecha entrega" in h: col_fecha = i
+
+        cliente_nom = row_data[col_cli - 1] if col_cli - 1 < len(row_data) else "Cliente"
+        email_cli = row_data[col_email - 1] if col_email - 1 < len(row_data) else ""
+        prod_desc = row_data[col_prod - 1] if col_prod - 1 < len(row_data) else ""
+        fecha_ent = row_data[col_fecha - 1] if col_fecha - 1 < len(row_data) else ""
+
+        if not email_cli or "@" not in email_cli:
+            return jsonify({"status": "error", "mensaje": "El cliente no tiene un email válido registrado."}), 400
+
+        html = plantilla_email_recordatorio_pago(cliente_nom, prod_desc, fecha_ent)
+        enviar_email_async(email_cli, f"Recordatorio de pago pendiente - Pedido CROISS", html)
+
+        return jsonify({"status": "exito", "mensaje": f"Recordatorio enviado a {email_cli}"}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 # ==========================================
 # CÁLCULO DE COSTO Y EMPAQUES (OPTIMIZADO)
 # ==========================================

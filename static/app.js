@@ -813,7 +813,11 @@ async function cargarAgenda() {
                     dia.pedidos.forEach(p => {
                         const esPagado = (p.estado || '').toLowerCase() === 'pagado';
                         const badgePago = esPagado ? '<span style="color:#16a34a; font-weight:700;">Pagado</span>' : '<span style="color:#dc2626; font-weight:700;">Pendiente</span>';
+                        
                         const btnMaps = p.direccion ? `<button type="button" class="btn-jalea-chip" style="font-size:0.72rem; padding: 3px 8px;" onclick="abrirGoogleMaps('${encodeURIComponent(p.direccion)}')">Maps</button>` : '';
+                        
+                        // NUEVO BOTÓN: Recordatorio de pago para clientes que aún deben (Punto 1)
+                        const btnRecordatorio = (!esPagado && p.email) ? `<button type="button" class="btn-jalea-chip" style="background:#FEF3C7; color:#B45309; border-color:#FDE68A; font-size:0.72rem; padding: 3px 8px;" onclick="enviarRecordatorioPago(${p.fila}, '${p.cliente}')">📩 Recordar Pago</button>` : '';
 
                         let infoContacto = [];
                         if (p.telefono) infoContacto.push(`Tel: ${p.telefono}`);
@@ -843,6 +847,7 @@ async function cargarAgenda() {
                                 <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #E2D9D3; display:flex; justify-content:space-between; align-items:center;">
                                     <span style="font-size:0.85rem; color:#334155; font-weight:600;">${p.descripcion}</span>
                                     <div style="display:flex; gap:6px; align-items:center;">
+                                        ${btnRecordatorio}
                                         ${btnMaps}
                                         <button type="button" class="btn-jalea-chip active" style="font-size:0.72rem; padding: 3px 8px;" onclick="abrirEdicionPedido(${p.fila})">Editar</button>
                                     </div>
@@ -2394,3 +2399,29 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarStock();
     toggleCamposMateriaPrima();
 });
+
+async function enviarRecordatorioPago(numFila, clienteNombre) {
+    Swal.fire({
+        title: `¿Enviar recordatorio de pago?`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted);">Se le enviará un correo a <strong style="color:var(--text-main);">${clienteNombre}</strong> recordando que su pedido está pendiente de pago.</p>`,
+        showCancelButton: true, confirmButtonText: 'Sí, enviar mail', cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const res = await fetch('/api/recordatorio_pago', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ fila: numFila })
+                });
+                const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Recordatorio Enviado', data.mensaje);
+                } else { Swal.fire('Atención', data.mensaje, 'warning'); }
+            } catch (err) { Swal.fire('Error', 'No se pudo enviar el correo', 'error'); }
+        }
+    });
+}

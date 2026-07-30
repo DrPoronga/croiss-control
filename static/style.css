@@ -874,3 +874,58 @@ body.modo-privado .cifra-sensible {
     pointer-events: none !important;
     transition: filter 0.15s ease-in-out;
 }
+
+/* PASO A PASO - ACORDEÓN TIENDA */
+.web-step-card {
+    background: #FFFFFF;
+    border-radius: 20px;
+    border: 1px solid rgba(45, 30, 24, 0.12);
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(45, 30, 24, 0.04);
+}
+
+.web-step-header {
+    padding: 16px 20px;
+    background: #FAF9F8;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    border-bottom: 1px solid rgba(45, 30, 24, 0.08);
+}
+
+.step-badge {
+    background: #EFEAE6;
+    color: #7A6B63;
+    font-size: 0.75rem;
+    font-weight: 800;
+    padding: 4px 10px;
+    border-radius: 12px;
+    text-transform: uppercase;
+}
+
+.step-badge.step-active {
+    background: #C86D28;
+    color: #FFFFFF;
+}
+
+.web-step-body {
+    padding: 20px;
+}
+
+.btn-step-next {
+    width: 100%;
+    background: #2D1E18;
+    color: #FFFFFF;
+    border: none;
+    padding: 14px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    border-radius: 25px;
+    cursor: pointer;
+    margin-top: 18px;
+    transition: transform 0.15s ease;
+}
+.btn-step-next:active { transform: scale(0.98); }
+
