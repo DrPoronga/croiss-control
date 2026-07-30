@@ -654,7 +654,7 @@ def api_public_catalogo():
         for prod in productos:
             nombre = get_field_val(prod, "Nombre", "Producto", "Croissant")
             name_lower = nombre.lower()
-            if not nombre or any(k in name_lower for k in ["congelado", "sobrevendido", "masa"]):
+            if not nombre or any(k in name_lower for k in ["congelado", "sobrevendido", "masa", "Pop"]):
                 continue
             
             raw_precio = get_field_val(prod, "Precio Venta", "Precio", "precio")
