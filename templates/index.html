@@ -407,6 +407,14 @@
     						<div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
 								<input type="month" id="cMesFilter" onchange="cargarClientes()" style="width: 140px; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; border: 1.5px solid var(--border-color); background: #FAF9F8; outline: none; cursor: pointer; text-align: center;">
 							</div>
+							
+							<div onclick="abrirPlacaGanador()" style="background: linear-gradient(135deg, #C86D28, #9A4D15); color: white; padding: 22px 18px; border-radius: 20px; text-align: center; box-shadow: 0 8px 20px rgba(200, 109, 40, 0.25); margin-bottom: 20px; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+								<small style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 12px; display: inline-block; margin-bottom: 6px;">Cliente del Mes</small>
+								<h2 id="topNombre" style="font-size: 1.8rem; font-weight: 800; margin: 4px 0;">Cargando...</h2>
+								<p id="topDetalle" style="font-size: 0.82rem; opacity: 0.9; margin-bottom: 0;">Procesando ventas...</p>
+								<div style="margin-top: 10px; font-size: 0.72rem; font-weight: 800; background: rgba(0,0,0,0.25); padding: 5px 12px; border-radius: 10px; display: inline-block;">📸 Toca aquí para ver la Placa de Instagram</div>
+							</div>
+
 
 							<div style="background: linear-gradient(135deg, #C86D28, #9A4D15); color: white; padding: 22px 18px; border-radius: 20px; text-align: center; box-shadow: 0 8px 20px rgba(200, 109, 40, 0.25); margin-bottom: 20px;">
 								<small style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 12px; display: inline-block; margin-bottom: 6px;">Cliente del Mes</small>
