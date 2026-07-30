@@ -2437,6 +2437,9 @@ async function enviarRecordatorioPago(numFila, clienteNombre) {
 // ==========================================
 // PLACA DE INSTAGRAM PARA EL GANADOR DEL MES
 // ==========================================
+// ==========================================
+// PLACA DE INSTAGRAM PARA EL GANADOR DEL MES
+// ==========================================
 function abrirPlacaGanador() {
     const ranking = datosClientesGlobal.ranking || [];
     if (!ranking || ranking.length === 0) {
@@ -2484,6 +2487,27 @@ function abrirPlacaGanador() {
                     align-items: center;
                     min-height: 100vh;
                     padding: 20px;
+                    position: relative;
+                }
+                /* Botón flotante para salir fácilmente */
+                .btn-close-plaque {
+                    position: fixed;
+                    top: 15px;
+                    right: 15px;
+                    background: rgba(255, 255, 255, 0.15);
+                    color: #FFFFFF;
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    padding: 8px 18px;
+                    border-radius: 20px;
+                    font-weight: 700;
+                    font-size: 0.85rem;
+                    cursor: pointer;
+                    backdrop-filter: blur(8px);
+                    z-index: 999;
+                    transition: background 0.2s;
+                }
+                .btn-close-plaque:active {
+                    background: rgba(255, 255, 255, 0.3);
                 }
                 .story-card {
                     width: 100%;
@@ -2502,7 +2526,6 @@ function abrirPlacaGanador() {
                     position: relative;
                     overflow: hidden;
                 }
-                /* Resplandor cálido de fondo */
                 .bg-glow {
                     position: absolute;
                     top: -40px;
@@ -2550,7 +2573,6 @@ function abrirPlacaGanador() {
                     line-height: 1.1;
                     letter-spacing: 1px;
                 }
-                /* PODIO */
                 .winners-container {
                     width: 100%;
                     z-index: 1;
@@ -2617,6 +2639,9 @@ function abrirPlacaGanador() {
             </style>
         </head>
         <body>
+            <!-- BOTÓN DE CIERRE -->
+            <button class="btn-close-plaque" onclick="window.close()">✕ Cerrar Placa</button>
+
             <div class="story-card">
                 <div class="bg-glow"></div>
                 
@@ -2631,14 +2656,12 @@ function abrirPlacaGanador() {
                 </div>
 
                 <div class="winners-container">
-                    <!-- 1ER PUESTO -->
                     <div class="winner-box-1">
                         <span class="crown">👑</span>
                         <span class="label">1° Puesto</span>
                         <div class="name">${top1}</div>
                     </div>
 
-                    <!-- 2DO Y 3ER PUESTO -->
                     <div class="runner-ups">
                         <div class="runner-box">
                             <span class="icon">🥈</span>
@@ -2662,4 +2685,3 @@ function abrirPlacaGanador() {
     `);
     win.document.close();
 }
-
