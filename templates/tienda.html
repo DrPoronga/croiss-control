@@ -8,27 +8,33 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* SCROLL Y RESET NORMAL (PC + MÓVIL) */
-        html { 
-            scroll-behavior: smooth;
-            overflow-x: hidden;
-            overflow-y: auto;
-        }
-        body { 
-            min-height: 100vh;
+        /* DESBLOQUEO TOTAL DE SCROLL PARA PC (RUEDA DEL MOUSE) Y MÓVIL */
+        html, body { 
+            height: auto !important;
+            min-height: 100vh !important;
+            overflow-x: hidden !important;
+            overflow-y: auto !important;
             background-color: #F9F3EE !important; 
             color: #2D1E18 !important; 
             font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
             margin: 0 !important;
             padding: 0 !important;
-            overflow-x: hidden;
+            scroll-behavior: smooth;
+            overscroll-behavior-y: contain;
+        }
+
+        /* EVITA QUE SWEETALERT2 BLOQUEE EL MOUSE EN COMPUTADORAS */
+        html.swal2-shown, 
+        body.swal2-shown {
+            overflow-y: auto !important;
+            height: auto !important;
         }
 		
 		/* ==========================================
-		   ESTÉTIKA UNIFICADA DE POP-UPS (SWEETALERT2)
+		   ESTÉTICA UNIFICADA DE POP-UPS (SWEETALERT2)
 		   ========================================== */
 
-		/* Aplica fondo blanco SOLO a los popups normales (NO al loader transparente) */
+		/* Fondo blanco SOLO a los popups normales */
 		.swal2-popup:not(.croiss-swal-popup-transparent) {
 			border-radius: 28px !important;
 			padding: 24px 20px !important;
@@ -37,7 +43,7 @@
 			box-shadow: 0 20px 50px rgba(45, 30, 24, 0.18) !important;
 		}
 
-		/* Asegura transparencia absoluta para la animación del croissant */
+		/* Transparencia absoluta para la animación del croissant */
 		.croiss-swal-popup-transparent,
         .croiss-swal-popup-transparent .swal2-popup {
 			background: transparent !important;
