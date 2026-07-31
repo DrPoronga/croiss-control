@@ -1335,36 +1335,35 @@ async function cargarCuentas() {
                         const esPagado = e.estado.toLowerCase() === 'pagado';
                         const badgeClase = esPagado ? 'badge-ok' : 'badge-full';
                         const badgeTexto = esPagado ? 'Pagado' : 'Debe';
-                        const btnMaps = e.direccion ? `<button type="button" class="btn-jalea-chip" style="padding: 4px 8px; font-size: 0.72rem; margin-top:0;" onclick="abrirGoogleMaps('${encodeURIComponent(e.direccion)}')">Ver Mapa</button>` : '';
-
                         const clienteClean = e.cliente.replace(/'/g, "\\'");
 
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
+                        // Alineamos arriba para que si el pedido es largo quede prolijo
+                        div.style.alignItems = 'flex-start'; 
                         
                         // Si ya está en camino, mostramos un avisito
                         const avisoEnCamino = (e.entrega && e.entrega.toLowerCase() === 'en camino') 
-                            ? `<br><small style="color:#2563EB; font-weight:800;">🛵 ¡El pedido ya salió!</small>` : '';
+                            ? `<div style="color:#2563EB; font-weight:800; font-size:0.75rem; margin-top:6px;">🛵 ¡El pedido ya salió!</div>` : '';
 
+                        // Grilla 2x2 para los botones y limpieza de texto (solo pedido y cantidad)
                         div.innerHTML = `
-                            <div>
-                                <strong>${e.fecha_entrega} - ${e.cliente}</strong><br>
-                                <span style="font-size:0.85rem; color:#334155;">${e.producto} (${e.cantidad} un.)</span>
-                                ${e.direccion ? `<br><small style="color:#64748b;">Dir: ${e.direccion}</small>` : ''}
+                            <div style="flex: 1; padding-right: 12px;">
+                                <strong style="color: var(--text-main); font-size: 0.95rem;">${e.fecha_entrega}</strong><br>
+                                <strong style="color: var(--text-main); font-size: 0.9rem;">${e.cliente}</strong><br>
+                                <span style="font-size:0.82rem; color:#475569; margin-top:2px; display:inline-block;">${e.producto} (${e.cantidad} un.)</span>
                                 ${avisoEnCamino}
                             </div>
-                            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
-                                <span class="agenda-badge ${badgeClase}">${badgeTexto}</span>
-                                ${btnMaps}
-                                <div style="display:flex; gap:6px; margin-top:2px;">
-                                    <button type="button" class="btn-jalea-chip" style="background:#DBEAFE; color:#1D4ED8; border-color:#BFDBFE; padding: 6px 10px; font-size: 0.75rem;" onclick="marcarEnCamino(${e.fila}, '${clienteClean}')">🛵 En camino</button>
-                                    <button type="button" class="btn-jalea-chip active" style="padding: 6px 10px; font-size: 0.75rem;" onclick="notificarEntrega(${e.fila}, '${clienteClean}')">Entregado</button>
-                                    <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${e.fila}, '${clienteClean}')">X</button>
-                                </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 170px; flex-shrink: 0;">
+                                <div class="agenda-badge ${badgeClase}" style="display:flex; align-items:center; justify-content:center; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; text-align:center;">${badgeTexto}</div>
+                                <button type="button" class="btn-remove" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; box-sizing:border-box;" onclick="eliminarPedido(${e.fila}, '${clienteClean}')">Eliminar</button>
+                                
+                                <button type="button" class="btn-jalea-chip" style="margin:0; padding:6px 4px; font-size:0.75rem; background:#DBEAFE; color:#1D4ED8; border-color:#BFDBFE; border-radius:10px; width:100%; box-sizing:border-box;" onclick="marcarEnCamino(${e.fila}, '${clienteClean}')">🛵 Camino</button>
+                                <button type="button" class="btn-jalea-chip active" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; box-sizing:border-box;" onclick="notificarEntrega(${e.fila}, '${clienteClean}')">Entregado</button>
                             </div>
                         `;
                         contEntrega.appendChild(div);
-                    }); // <--- AQUÍ SE AGREGA EL CIERRE QUE FALTABA
+                    });
                 }
             }
         }
