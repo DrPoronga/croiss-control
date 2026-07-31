@@ -20,6 +20,7 @@
             margin: 0 !important;
             padding: 0 !important;
             scroll-behavior: smooth;
+            overscroll-behavior-y: contain; /* Para el deslizar hacia abajo */
         }
 		
 		/* ==========================================
@@ -52,8 +53,15 @@
 		}
 
 		/* ELIMINACIÓN ESTRICTA DEL TERCER BOTÓN DE "NO" / DENY */
-		.swal2-deny {
+		.swal2-deny, button.swal2-deny {
 			display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+            width: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
 		}
 
 		/* Contenedor de botones */
@@ -145,10 +153,10 @@
 
         .hero-subtitle {
             font-size: 0.95rem;
-            font-weight: 300; /* Grosor fino y delicado */
+            font-weight: 300;
             letter-spacing: 3px;
             text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.9); /* Blanco suave elegante */
+            color: rgba(255, 255, 255, 0.9);
             margin-bottom: 22px;
             display: block;
         }
@@ -457,8 +465,6 @@
 			color: #C86D28;
 			box-shadow: 0 2px 6px rgba(45, 30, 24, 0.12);
 		}
-
-
     </style>
 </head>
 <body>
@@ -599,34 +605,34 @@
     </div>
 
     <!-- PASO 4: CONFIRMACIÓN Y RESUMEN FINAL -->
-		<section class="web-step-card" id="step-card-4">
-			<div class="web-step-header" id="step-header-4" onclick="irAlPaso(4)">
-				<span class="step-badge" id="step-badge-4">Paso 4</span>
-				<h2 class="web-section-title">Resumen & Confirmación</h2>
+	<section class="web-step-card" id="step-card-4">
+		<div class="web-step-header" id="step-header-4" onclick="irAlPaso(4)">
+			<span class="step-badge" id="step-badge-4">Paso 4</span>
+			<h2 class="web-section-title">Resumen & Confirmación</h2>
+		</div>
+
+		<div class="web-step-body" id="step-body-4" style="display: none;">
+			<p class="web-section-desc">Verificá los detalles de tu compra antes de confirmar.</p>
+
+			<!-- BANNER INFORMATIVO ENVÍO WHATSAPP -->
+			<div style="background: #F0FDF4; border: 1.5px solid #22C55E; border-radius: 16px; padding: 14px; margin-bottom: 18px; text-align: center;">
+				<span style="font-size: 0.88rem; font-weight: 800; color: #15803D; display: block;">
+					💬 TENÉ EN CUENTA
+				</span>
+				<span style="font-size: 0.82rem; color: #166534; font-weight: 600; display: block; margin-top: 2px;">
+					El envío y sus detalles se confirmarán 100% a través de WhatsApp.
+				</span>
 			</div>
 
-			<div class="web-step-body" id="step-body-4" style="display: none;">
-				<p class="web-section-desc">Verificá los detalles de tu compra antes de confirmar.</p>
-
-				<!-- BANNER INFORMATIVO ENVÍO WHATSAPP -->
-				<div style="background: #F0FDF4; border: 1.5px solid #22C55E; border-radius: 16px; padding: 14px; margin-bottom: 18px; text-align: center;">
-					<span style="font-size: 0.88rem; font-weight: 800; color: #15803D; display: block;">
-						💬 TENÉ EN CUENTA
-					</span>
-					<span style="font-size: 0.82rem; color: #166534; font-weight: 600; display: block; margin-top: 2px;">
-						El envío y sus detalles se confirmarán 100% a través de WhatsApp.
-					</span>
-				</div>
-
-				<div class="summary-ticket-clean" id="orderSummaryBox">
-					<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>
-				</div>
-
-				<button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
-					Confirmar Pedido 🥐
-				</button>
+			<div class="summary-ticket-clean" id="orderSummaryBox">
+				<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>
 			</div>
-		</section>
+
+			<button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
+				Confirmar Pedido 🥐
+			</button>
+		</div>
+	</section>
 
 </div>
 
@@ -680,7 +686,7 @@
             }
         }
 		
-        // ANIMACIÓN CANVAS DEL CROISSANT MORDIÉNDOSE[cite: 2]
+        // ANIMACIÓN CANVAS DEL CROISSANT MORDIÉNDOSE
         function mostrarCroissLoader() {
             if (!croissImagePreload.src) croissImagePreload.src = '/static/croissant.png';
 
@@ -772,7 +778,7 @@
 							} else if (nombreLimpio.toLowerCase().includes('dulce') || nombreLimpio.toLowerCase().includes('ddl')) {
 								nombreLimpio = "Croisstzel c/ Dulce de Leche (+ $30)";
 							} else {
-								nombreLimpio = "Croisstzel ( Tu Croiss Clásico pero con pequeñas piedras de sal por encima)";
+								nombreLimpio = "Croisstzel (Tu Croiss Clásico pero con pequeñas piedras de sal por encima)";
 							}
 						}
 						
@@ -794,7 +800,7 @@
             renderDates();
         }
 
-        // MOSTRAR LA IMAGEN MENU.PNG SIN BOTONES[cite: 1, 6]
+        // MOSTRAR LA IMAGEN MENU.PNG SIN BOTONES
         function verMenuPublico() {
             Swal.fire({
                 html: `
@@ -810,8 +816,6 @@
                 customClass: { popup: 'croiss-swal-popup-transparent' }
             });
         }
-
-       
 
         function updateQty(name, change) {
             try {
@@ -838,65 +842,66 @@
 			}
 		}
 
-function renderProducts() {
-    const container = document.getElementById('shopProductsList');
-    if(!container) return;
-    container.innerHTML = '';
+        function renderProducts() {
+            const container = document.getElementById('shopProductsList');
+            if(!container) return;
+            container.innerHTML = '';
 
-    const MOSTRAR_POP = false; 
+            const MOSTRAR_POP = false; 
 
-    menuItems.forEach(p => {
-        if (!p || !p.nombre) return;
-        const name = p.nombre;
-        const nameLower = name.toLowerCase();
-        const qty = cart[name] ? cart[name].cantidad : 0;
-        const conJalea = cart[name] ? cart[name].con_jalea : false;
+            menuItems.forEach(p => {
+                if (!p || !p.nombre) return;
+                const name = p.nombre;
+                const safeName = name.replace(/'/g, "\\'");
+                const nameLower = name.toLowerCase();
+                const qty = cart[name] ? cart[name].cantidad : 0;
+                const conJalea = cart[name] ? cart[name].con_jalea : false;
 
-        if (!MOSTRAR_POP && nameLower.includes('pop')) return;
+                if (!MOSTRAR_POP && nameLower.includes('pop')) return;
 
-        // Convierte el texto entre paréntesis en una letra fina, delicada y sin negrita
-        const displayName = name.replace(
-            /\(([^)]+)\)/g, 
-            '<span style="display: block; font-weight: 300; font-size: 0.82rem; color: #7A6B63; margin-top: 2px;">($1)</span>'
-        );
+                // Convierte el texto entre paréntesis en una letra fina, delicada y sin negrita
+                const displayName = name.replace(
+                    /\(([^)]+)\)/g, 
+                    '<span style="display: block; font-weight: 300; font-size: 0.82rem; color: #7A6B63; margin-top: 2px;">($1)</span>'
+                );
 
-        let badgeAhorro = '';
-        if (nameLower.includes('pop')) {
-            if (nameLower.includes('9')) {
-                badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390)</small>';
-            } else if (nameLower.includes('18')) {
-                badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x18 Pop Croiss ($550)! Ahorrás comprando en cantidad</small>';
-            } else if (nameLower.includes('27')) {
-                badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x27 Pop Croiss ($750)! Opción ideal para compartir</small>';
-            }
+                let badgeAhorro = '';
+                if (nameLower.includes('pop')) {
+                    if (nameLower.includes('9')) {
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390)</small>';
+                    } else if (nameLower.includes('18')) {
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x18 Pop Croiss ($550)! Ahorrás comprando en cantidad</small>';
+                    } else if (nameLower.includes('27')) {
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x27 Pop Croiss ($750)! Opción ideal para compartir</small>';
+                    }
+                }
+
+                // Selector doble visible cuando el cliente añade al menos 1 unidad
+                const selectorJaleaHtml = (qty > 0 && !nameLower.includes('pop')) ? `
+                    <div class="jalea-toggle-group">
+                        <button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop(\'${safeName}\', false)">Sin Jalea</button>
+                        <button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop(\'${safeName}\', true)">Con Jalea 🍯</button>
+                    </div>
+                ` : '';
+
+                const div = document.createElement('div');
+                div.className = 'menu-row';
+                div.innerHTML = `
+                    <div class="menu-item-info">
+                        <strong>${displayName}</strong>
+                        ${badgeAhorro}
+                        ${selectorJaleaHtml}
+                    </div>
+                    <div class="menu-qty-selector">
+                        <button type="button" class="btn-qty-flat" onclick="updateQty(\'${safeName}\', -1)">-</button>
+                        <span class="qty-number">${qty}</span>
+                        <button type="button" class="btn-qty-flat" onclick="updateQty(\'${safeName}\', 1)">+</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            updateSubtotal();
         }
-
-        // Selector doble visible cuando el cliente añade al menos 1 unidad
-        const selectorJaleaHtml = (qty > 0 && !nameLower.includes('pop')) ? `
-            <div class="jalea-toggle-group">
-                <button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop('${name.replace(/'/g, "\\'")}', false)">Sin Jalea</button>
-                <button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop('${name.replace(/'/g, "\\'")}', true)">Con Jalea 🍯</button>
-            </div>
-        ` : '';
-
-        const div = document.createElement('div');
-        div.className = 'menu-row';
-        div.innerHTML = `
-            <div class="menu-item-info">
-                <strong>${displayName}</strong>
-                ${badgeAhorro}
-                ${selectorJaleaHtml}
-            </div>
-            <div class="menu-qty-selector">
-                <button type="button" class="btn-qty-flat" onclick="updateQty('${name.replace(/'/g, "\\'")}', -1)">-</button>
-                <span class="qty-number">${qty}</span>
-                <button type="button" class="btn-qty-flat" onclick="updateQty('${name.replace(/'/g, "\\'")}', 1)">+</button>
-            </div>
-        `;
-        container.appendChild(div);
-    });
-    updateSubtotal();
-}
 
         // CÁLCULO DE PRECIOS UNIFICADO (CROISSANTS TRADICIONALES + POP CROISS)
         function calculatePrices() {
@@ -1041,7 +1046,6 @@ function renderProducts() {
 			renderDates();
 			
 			// 5. VOLVER AL PASO 1 (Esto soluciona el problema de usabilidad)
-			// Usamos un pequeño delay para que la transición visual sea suave
 			setTimeout(() => {
 				irAlPaso(1);
 				scrollToSection('topHeader');
@@ -1050,222 +1054,258 @@ function renderProducts() {
 
         let currentStep = 1;
 
-			// MOSTRAR/OCULTAR MÓDULO REGALO
-			function toggleOpcionRegalo() {
-				const chk = document.getElementById('chkEsRegalo');
-				const box = document.getElementById('boxRegaloCampos');
-				if (box) {
-					box.style.display = (chk && chk.checked) ? 'block' : 'none';
+		// MOSTRAR/OCULTAR MÓDULO REGALO
+		function toggleOpcionRegalo() {
+			const chk = document.getElementById('chkEsRegalo');
+			const box = document.getElementById('boxRegaloCampos');
+			if (box) {
+				box.style.display = (chk && chk.checked) ? 'block' : 'none';
+			}
+		}
+
+		// ACTUALIZACIÓN DEL RESUMEN CON OPCIÓN DE REGALO
+		function buildSummary() {
+			const calc = calculatePrices();
+			const box = document.getElementById('orderSummaryBox');
+			if(!box) return;
+
+			const nom = (document.getElementById('custNombre')?.value || '').trim();
+			const tel = (document.getElementById('custTel')?.value || '').trim();
+			const esRegalo = document.getElementById('chkEsRegalo')?.checked;
+			const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
+			const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
+
+			if (calc.totalCroissants === 0) {
+				box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>`;
+				return;
+			}
+
+			let itemsHtml = '';
+			for(let k in cart) {
+				if(cart[k] && cart[k].cantidad > 0) {
+					itemsHtml += `<div>• ${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
 				}
 			}
 
-			// ACTUALIZACIÓN DEL RESUMEN CON OPCIÓN DE REGALO
-			function buildSummary() {
-				const calc = calculatePrices();
-				const box = document.getElementById('orderSummaryBox');
-				if(!box) return;
-
-				const nom = (document.getElementById('custNombre')?.value || '').trim();
-				const tel = (document.getElementById('custTel')?.value || '').trim();
-				const esRegalo = document.getElementById('chkEsRegalo')?.checked;
-				const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
-				const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
-
-				if (calc.totalCroissants === 0) {
-					box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>`;
-					return;
-				}
-
-				let itemsHtml = '';
-				for(let k in cart) {
-					if(cart[k] && cart[k].cantidad > 0) {
-						itemsHtml += `<div>• ${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
-					}
-				}
-
-				let bloqueRegaloHtml = '';
-				if (esRegalo) {
-					bloqueRegaloHtml = `
-						<div style="background:#FAF0EB; border:1px dashed #C86D28; border-radius:12px; padding:10px; margin:10px 0;">
-							<strong style="color:#C86D28;">🎁 ¡Pedido para Regalo!</strong><br>
-							${destinatario ? `<strong>Para:</strong> ${destinatario}<br>` : ''}
-							${mensajeRegalo ? `<strong>Mensaje:</strong> "<em>${mensajeRegalo}</em>"` : ''}
-						</div>
-					`;
-				}
-
-				box.innerHTML = `
-					<div style="margin-bottom: 8px;">
-						${nom ? `<strong>Cliente:</strong> ${nom}<br>` : ''}
-						${tel ? `<strong>Contacto:</strong> ${tel}<br>` : ''}
-						<strong>Fecha Entrega:</strong> ${selectedDate ? selectedDate : '<span style="color:#DC2626;">(Seleccionar arriba)</span>'}<br>
-					</div>
-					${bloqueRegaloHtml}
-					<div style="margin-top: 8px;">
-						<strong style="color:#C86D28;">Items:</strong>
-						${itemsHtml}
-					</div>
-					<div style="margin-top:12px; font-size:1.2rem; font-weight:800; text-align:right; color:#2D1E18;">
-						Total A Pagar: $${calc.totalMoney}
+			let bloqueRegaloHtml = '';
+			if (esRegalo) {
+				bloqueRegaloHtml = `
+					<div style="background:#FAF0EB; border:1px dashed #C86D28; border-radius:12px; padding:10px; margin:10px 0;">
+						<strong style="color:#C86D28;">🎁 ¡Pedido para Regalo!</strong><br>
+						${destinatario ? `<strong>Para:</strong> ${destinatario}<br>` : ''}
+						${mensajeRegalo ? `<strong>Mensaje:</strong> "<em>${mensajeRegalo}</em>"` : ''}
 					</div>
 				`;
 			}
 
-			// HELPER PARA QUE TODAS LAS ALERTAS MANTENGAN LA ESTÉTICA CROISS
-			function mostrarAlertaCliente(titulo, texto, icono = 'warning') {
-				Swal.fire({
-					title: titulo,
-					text: texto,
-					icon: icono,
-					confirmButtonText: 'Entendido',
-					customClass: {
-						popup: 'croiss-swal-popup',
-						confirmButton: 'croiss-swal-confirm'
-					}
-				});
+			box.innerHTML = `
+				<div style="margin-bottom: 8px;">
+					${nom ? `<strong>Cliente:</strong> ${nom}<br>` : ''}
+					${tel ? `<strong>Contacto:</strong> ${tel}<br>` : ''}
+					<strong>Fecha Entrega:</strong> ${selectedDate ? selectedDate : '<span style="color:#DC2626;">(Seleccionar arriba)</span>'}<br>
+				</div>
+				${bloqueRegaloHtml}
+				<div style="margin-top: 8px;">
+					<strong style="color:#C86D28;">Items:</strong>
+					${itemsHtml}
+				</div>
+				<div style="margin-top:12px; font-size:1.2rem; font-weight:800; text-align:right; color:#2D1E18;">
+					Total A Pagar: $${calc.totalMoney}
+				</div>
+			`;
+		}
+
+		// HELPER PARA QUE TODAS LAS ALERTAS MANTENGAN LA ESTÉTICA CROISS
+		function mostrarAlertaCliente(titulo, texto, icono = 'warning') {
+			Swal.fire({
+				title: titulo,
+				text: texto,
+				icon: icono,
+				confirmButtonText: 'Entendido',
+				customClass: {
+					popup: 'croiss-swal-popup',
+					confirmButton: 'croiss-swal-confirm'
+				}
+			});
+		}
+
+		// CONTROL DEL ACORDEÓN PASO A PASO CON ALERTAS ESTILIZADAS
+		function irAlPaso(paso) {
+			const calc = calculatePrices();
+
+			// Validaciones progresivas con la nueva estética
+			if (paso > 1 && calc.totalCroissants === 0) {
+				mostrarAlertaCliente('Elegí tus croissants', 'Agregá al menos 1 croissant a tu pedido antes de continuar.');
+				return;
 			}
 
-			// CONTROL DEL ACORDEÓN PASO A PASO CON ALERTAS ESTILIZADAS
-			function irAlPaso(paso) {
-				const calc = calculatePrices();
-
-				// Validaciones progresivas con la nueva estética
-				if (paso > 1 && calc.totalCroissants === 0) {
-					mostrarAlertaCliente('Elegí tus croissants', 'Agregá al menos 1 croissant a tu pedido antes de continuar.');
-					return;
-				}
-
-				if (paso > 2 && !selectedDate) {
-					mostrarAlertaCliente('Seleccioná la fecha', 'Por favor marcá el día de entrega antes de continuar.');
-					return;
-				}
-
-				if (paso > 3) {
-					const nom = (document.getElementById('custNombre')?.value || '').trim();
-					const tel = (document.getElementById('custTel')?.value || '').trim();
-					const email = (document.getElementById('custEmail')?.value || '').trim();
-
-					if (!nom || !tel || !email) {
-						mostrarAlertaCliente('Campos Obligatorios', 'Por favor completá Nombre, Teléfono y Email.');
-						return;
-					}
-				}
-
-				currentStep = paso;
-
-				// Desplegar/Ocultar secciones
-				for (let i = 1; i <= 4; i++) {
-					const body = document.getElementById(`step-body-${i}`);
-					const badge = document.getElementById(`step-badge-${i}`);
-					if (body) {
-						if (i === paso) {
-							body.style.display = 'block';
-							if (badge) badge.classList.add('step-active');
-						} else {
-							body.style.display = 'none';
-							if (badge) badge.classList.remove('step-active');
-						}
-					}
-				}
-
-				const stepHeader = document.getElementById(`step-header-${paso}`);
-				if (stepHeader) {
-					stepHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-				}
-
-				if (paso === 4) {
-					buildSummary();
-				}
+			if (paso > 2 && !selectedDate) {
+				mostrarAlertaCliente('Seleccioná la fecha', 'Por favor marcá el día de entrega antes de continuar.');
+				return;
 			}
 
-			// CONFIRMACIÓN FINAL DEL PEDIDO (SÍ Y NO ÚNICAMENTE)
-			async function confirmarPedidoTienda() {
-				const calc = calculatePrices();
+			if (paso > 3) {
 				const nom = (document.getElementById('custNombre')?.value || '').trim();
 				const tel = (document.getElementById('custTel')?.value || '').trim();
 				const email = (document.getElementById('custEmail')?.value || '').trim();
 
-				let notasCliente = (document.getElementById('custNotas')?.value || '').trim();
-				const esRegalo = document.getElementById('chkEsRegalo')?.checked;
-
-				if (esRegalo) {
-					const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
-					const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
-					let tagRegalo = `[ES PARA REGALO 🎁]`;
-					if (destinatario) tagRegalo += ` Para: ${destinatario}.`;
-					if (mensajeRegalo) tagRegalo += ` Cartita: "${mensajeRegalo}".`;
-					
-					notasCliente = `${tagRegalo} ${notasCliente}`.trim();
-				}
-
-				let itemsArr = [];
-				for(let k in cart) {
-					if(cart[k] && cart[k].cantidad > 0) {
-						itemsArr.push({
-							producto: k,
-							cantidad: cart[k].cantidad,
-							con_jalea: cart[k].con_jalea
-						});
-					}
-				}
-
-				const payload = {
-					cliente: nom,
-					telefono: tel,
-					email: email,
-					direccion: (document.getElementById('custDir')?.value || '').trim(),
-					fecha_entrega: selectedDate,
-					notas: notasCliente,
-					items: itemsArr,
-					monto_total: calc.totalMoney
-				};
-
-				mostrarCroissLoader();
-
-				try {
-					const res = await fetch('/api/public/crear_pedido', {
-						method: 'POST',
-						headers: {'Content-Type': 'application/json'},
-						body: JSON.stringify(payload)
-					});
-					const data = await res.json();
-
-					if(data.status === 'exito') {
-						const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
-						const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
-
-						Swal.fire({
-							title: '¡Pedido Recibido! 🥐',
-							html: `
-								<p style="font-size:0.88rem; color:#7A6B63;">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
-								<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">¿Querés coordinar los detalles por WhatsApp ahora?</p>
-							`,
-							icon: 'success',
-							showConfirmButton: true,
-							confirmButtonText: 'Sí',
-							showCancelButton: true,
-							cancelButtonText: 'No',
-							showDenyButton: false, // Desactivado explícitamente
-							allowOutsideClick: false,
-							customClass: { 
-								popup: 'croiss-swal-popup', 
-								confirmButton: 'croiss-swal-confirm',
-								cancelButton: 'croiss-swal-cancel'
-							}
-						}).then((result) => {
-							if (result.isConfirmed) {
-								window.open(wpUrl, '_blank');
-							}
-							reiniciarTienda();
-						});
-					} else {
-						mostrarAlertaCliente('Atención', data.mensaje, 'error');
-					}
-				} catch(e) {
-					mostrarAlertaCliente('Error', 'No se pudo conectar con el servidor', 'error');
+				if (!nom || !tel || !email) {
+					mostrarAlertaCliente('Campos Obligatorios', 'Por favor completá Nombre, Teléfono y Email.');
+					return;
 				}
 			}
-		
+
+			currentStep = paso;
+
+			// Desplegar/Ocultar secciones
+			for (let i = 1; i <= 4; i++) {
+				const body = document.getElementById(`step-body-${i}`);
+				const badge = document.getElementById(`step-badge-${i}`);
+				if (body) {
+					if (i === paso) {
+						body.style.display = 'block';
+						if (badge) badge.classList.add('step-active');
+					} else {
+						body.style.display = 'none';
+						if (badge) badge.classList.remove('step-active');
+					}
+				}
+			}
+
+			const stepHeader = document.getElementById(`step-header-${paso}`);
+			if (stepHeader) {
+				stepHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+			}
+
+			if (paso === 4) {
+				buildSummary();
+			}
+		}
+
+		// CONFIRMACIÓN FINAL DEL PEDIDO (SÍ Y NO ÚNICAMENTE)
+		async function confirmarPedidoTienda() {
+			const calc = calculatePrices();
+			const nom = (document.getElementById('custNombre')?.value || '').trim();
+			const tel = (document.getElementById('custTel')?.value || '').trim();
+			const email = (document.getElementById('custEmail')?.value || '').trim();
+
+			let notasCliente = (document.getElementById('custNotas')?.value || '').trim();
+			const esRegalo = document.getElementById('chkEsRegalo')?.checked;
+
+			if (esRegalo) {
+				const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
+				const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
+				let tagRegalo = `[ES PARA REGALO 🎁]`;
+				if (destinatario) tagRegalo += ` Para: ${destinatario}.`;
+				if (mensajeRegalo) tagRegalo += ` Cartita: "${mensajeRegalo}".`;
+				
+				notasCliente = `${tagRegalo} ${notasCliente}`.trim();
+			}
+
+			let itemsArr = [];
+			for(let k in cart) {
+				if(cart[k] && cart[k].cantidad > 0) {
+					itemsArr.push({
+						producto: k,
+						cantidad: cart[k].cantidad,
+						con_jalea: cart[k].con_jalea
+					});
+				}
+			}
+
+			const payload = {
+				cliente: nom,
+				telefono: tel,
+				email: email,
+				direccion: (document.getElementById('custDir')?.value || '').trim(),
+				fecha_entrega: selectedDate,
+				notas: notasCliente,
+				items: itemsArr,
+				monto_total: calc.totalMoney
+			};
+
+			mostrarCroissLoader();
+
+			try {
+				const res = await fetch('/api/public/crear_pedido', {
+					method: 'POST',
+					headers: {'Content-Type': 'application/json'},
+					body: JSON.stringify(payload)
+				});
+				const data = await res.json();
+
+				if(data.status === 'exito') {
+					const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
+					const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
+
+					Swal.fire({
+						title: '¡Pedido Recibido! 🥐',
+						html: `
+							<p style="font-size:0.88rem; color:#7A6B63;">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
+							<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">¿Querés coordinar los detalles por WhatsApp ahora?</p>
+						`,
+						icon: 'success',
+						showConfirmButton: true,
+						confirmButtonText: 'Sí',
+						showCancelButton: true,
+						cancelButtonText: 'No',
+						showDenyButton: false,
+						allowOutsideClick: false,
+						customClass: { 
+							popup: 'croiss-swal-popup', 
+							confirmButton: 'croiss-swal-confirm',
+							cancelButton: 'croiss-swal-cancel'
+						},
+						didOpen: () => {
+							// Eliminación física directa del botón de Denegar si existiera
+							const btnDeny = Swal.getDenyButton();
+							if (btnDeny) btnDeny.remove();
+						}
+					}).then((result) => {
+						if (result.isConfirmed) {
+							window.open(wpUrl, '_blank');
+						}
+						reiniciarTienda();
+					});
+				} else {
+					mostrarAlertaCliente('Atención', data.mensaje, 'error');
+				}
+			} catch(e) {
+				mostrarAlertaCliente('Error', 'No se pudo conectar con el servidor', 'error');
+			}
+		}
+
+        // ==========================================
+        // DESLIZAR HACIA ABAJO PARA RECARGAR (PULL TO REFRESH)
+        // ==========================================
+        let pullStartY = 0;
+        let isPullingAtTop = false;
+
+        document.addEventListener('touchstart', (e) => {
+            if (window.scrollY === 0 && e.touches.length === 1) {
+                pullStartY = e.touches[0].pageY;
+                isPullingAtTop = true;
+            }
+        }, { passive: true });
+
+        document.addEventListener('touchend', (e) => {
+            if (!isPullingAtTop) return;
+
+            const pullEndY = e.changedTouches[0].pageY;
+            const pullDistance = pullEndY - pullStartY;
+
+            if (pullDistance > 110) {
+                if (typeof mostrarCroissLoader === 'function') {
+                    mostrarCroissLoader();
+                }
+                setTimeout(() => {
+                    window.location.reload();
+                }, 300);
+            }
+
+            isPullingAtTop = false;
+            pullStartY = 0;
+        });
     </script>
 </body>
 </html>
