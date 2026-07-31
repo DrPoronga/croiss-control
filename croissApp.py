@@ -498,8 +498,28 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
 def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False):
     alertas = []
     try:
-        calculo = calcular_costo_y_empaque_pedido(desc_producto, total_croissants)
-        cajas_x6, cajas_x3, cajas_x1, papel = calculo["cajas_grande"], calculo["cajas_mediana"], calculo["cajas_chica"], calculo["papel"]
+        cajas_x6, cajas_x3, cajas_x1, papel = 0, 0, 0, 0
+
+        # 1. Detectar si el pedido contiene Pop Croiss y asignar cajas fijas
+        if desc_producto and "pop" in str(desc_producto).lower():
+            for item in str(desc_producto).split(","):
+                item_clean = item.strip().lower()
+                if not item_clean or "pop" not in item_clean: continue
+                
+                # Extraer cantidad de cajas pedidas (ej: 2x Caja x18 Pop)
+                m = re.match(r"^(\d+)x", item_clean)
+                cant_cajas = int(m.group(1)) if m else 1
+
+                if "9" in item_clean:
+                    cajas_x3 += cant_cajas  # Caja de 9 usa Caja X3
+                elif "18" in item_clean or "27" in item_clean:
+                    cajas_x6 += cant_cajas  # Caja de 18 y 27 usan Caja X6
+
+            papel = cajas_x6 + cajas_x3
+        else:
+            # 2. Si son croissants tradicionales, usa la regla por volumen normal
+            calculo = calcular_costo_y_empaque_pedido(desc_producto, total_croissants)
+            cajas_x6, cajas_x3, cajas_x1, papel = calculo["cajas_grande"], calculo["cajas_mediana"], calculo["cajas_chica"], calculo["papel"]
 
         sheet_insumos = obtener_o_crear_sheet_insumos()
         registros = get_clean_records(sheet_insumos)
@@ -531,14 +551,8 @@ def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False
         aplicar_cambio("x1", cajas_x1)
         aplicar_cambio("papel", papel)
 
-        # OPTIMIZACIÓN: Batch update para actualizar todas las celdas en 1 sola llamada
         if modificaciones:
-            batch_updates = []
-            for row_idx, n_stock in modificaciones.items():
-                batch_updates.append({
-                    'range': f'B{row_idx}',
-                    'values': [[n_stock]]
-                })
+            batch_updates = [{'range': f'B{row_idx}', 'values': [[n_stock]]} for row_idx, n_stock in modificaciones.items()]
             ejecutar_con_reintento(sheet_insumos.batch_update, batch_updates)
 
         for ins, stock in nombres_alertas.items():
@@ -548,7 +562,7 @@ def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False
         print(f"Aviso modificando empaque/stock: {e}", flush=True)
 
     return alertas
-
+    
 @app.route('/api/venta', methods=['POST'])
 def registrar_venta():
     try:
