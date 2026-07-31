@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* FIX DEFINITIVO PARA SCROLL CON RUEDITA EN PC */
+        /* DESBLOQUEO TOTAL DE SCROLL PARA PC (RUEDA DEL MOUSE) Y MÓVIL */
         html { 
             scroll-behavior: smooth;
             overflow-x: hidden;
@@ -22,7 +22,6 @@
             font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
             margin: 0 !important;
             padding: 0 !important;
-            /* Se quita overflow-y de body para que no bloquee la rueda del mouse */
         }
 
         /* EVITA QUE SWEETALERT2 BLOQUEE LA RUEDITA EN COMPUTADORAS */
@@ -897,8 +896,8 @@
                 // Selector doble visible cuando el cliente añade al menos 1 unidad
                 const selectorJaleaHtml = (qty > 0 && !nameLower.includes('pop')) ? `
                     <div class="jalea-toggle-group">
-                        <button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop(\'${safeName}\', false)">Sin Jalea</button>
-                        <button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop(\'${safeName}\', true)">Con Jalea 🍯</button>
+                        <button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', false)">Sin Jalea</button>
+                        <button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', true)">Con Jalea 🍯</button>
                     </div>
                 ` : '';
 
@@ -911,9 +910,9 @@
                         ${selectorJaleaHtml}
                     </div>
                     <div class="menu-qty-selector">
-                        <button type="button" class="btn-qty-flat" onclick="updateQty(\'${safeName}\', -1)">-</button>
+                        <button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', -1)">-</button>
                         <span class="qty-number">${qty}</span>
-                        <button type="button" class="btn-qty-flat" onclick="updateQty(\'${safeName}\', 1)">+</button>
+                        <button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', 1)">+</button>
                     </div>
                 `;
                 container.appendChild(div);
@@ -1116,11 +1115,15 @@
 				`;
 			}
 
+			let clienteHtml = nom ? '<strong>Cliente:</strong> ' + nom + '<br>' : '';
+			let contactoHtml = tel ? '<strong>Contacto:</strong> ' + tel + '<br>' : '';
+			let fechaHtml = selectedDate ? selectedDate : '<span style="color:#DC2626;">(Seleccionar arriba)</span>';
+
 			box.innerHTML = `
 				<div style="margin-bottom: 8px;">
-					${nom ? `<strong>Cliente:</strong> ${nom}<br>` : ''}
-					${tel ? `<strong>Contacto:</strong> ${tel}<br>` : ''}
-					<strong>Fecha Entrega:</strong> ${selectedDate ? selectedDate : '<span style="color:#DC2626;">(Seleccionar arriba)</span>'}<br>
+					${clienteHtml}
+					${contactoHtml}
+					<strong>Fecha Entrega:</strong> ${fechaHtml}<br>
 				</div>
 				${bloqueRegaloHtml}
 				<div style="margin-top: 8px;">
