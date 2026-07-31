@@ -21,12 +21,79 @@
             padding: 0 !important;
             scroll-behavior: smooth;
         }
+		
+		/* ==========================================
+		   ESTÉTIKA UNIFICADA DE POP-UPS (SWEETALERT2)
+		   ========================================== */
 
+		/* Fondo y contenedor de las alertas */
+		.croiss-swal-popup, .swal2-popup {
+			border-radius: 28px !important;
+			padding: 24px 20px !important;
+			background: #FFFFFF !important;
+			font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
+			box-shadow: 0 20px 50px rgba(45, 30, 24, 0.18) !important;
+		}
+
+		/* Títulos de los mensajes */
+		.swal2-title {
+			color: #2D1E18 !important;
+			font-size: 1.35rem !important;
+			font-weight: 800 !important;
+			letter-spacing: -0.3px !important;
+		}
+
+		/* Textos informativos de los mensajes */
+		.swal2-html-container, .swal2-content {
+			color: #7A6B63 !important;
+			font-size: 0.9rem !important;
+			font-weight: 600 !important;
+			line-height: 1.5 !important;
+		}
+
+		/* ELIMINACIÓN ESTRICTA DEL TERCER BOTÓN DE "NO" / DENY */
 		.swal2-deny {
 			display: none !important;
 		}
 
-        .web-site-wrapper {
+		/* Contenedor de botones */
+		.swal2-actions {
+			gap: 10px !important;
+			margin-top: 20px !important;
+		}
+
+		/* Botón de Confirmación (SÍ / Entendido) */
+		.croiss-swal-confirm, .swal2-confirm {
+			background: #C86D28 !important;
+			color: #FFFFFF !important;
+			border-radius: 25px !important;
+			padding: 12px 28px !important;
+			font-size: 0.95rem !important;
+			font-weight: 800 !important;
+			border: none !important;
+			box-shadow: 0 4px 14px rgba(200, 109, 40, 0.3) !important;
+			cursor: pointer !important;
+			transition: transform 0.15s ease !important;
+		}
+
+		/* Botón de Cancelar (NO) */
+		.croiss-swal-cancel, .swal2-cancel {
+			background: transparent !important;
+			color: #7A6B63 !important;
+			border: 1.5px solid #D8CFC8 !important;
+			border-radius: 25px !important;
+			padding: 12px 28px !important;
+			font-size: 0.9rem !important;
+			font-weight: 700 !important;
+			cursor: pointer !important;
+			transition: transform 0.15s ease !important;
+		}
+
+		.swal2-confirm:active, .swal2-cancel:active {
+			transform: scale(0.96) !important;
+		}
+
+		.web-site-wrapper {
             max-width: 580px;
             margin: 0 auto;
             padding: 0 16px 60px 16px;
@@ -983,60 +1050,6 @@ function renderProducts() {
 
         let currentStep = 1;
 
-			// CONTROL DEL ACORDEÓN PASO A PASO
-			function irAlPaso(paso) {
-				const calc = calculatePrices();
-
-				// Validaciones progresivas
-				if (paso > 1 && calc.totalCroissants === 0) {
-					Swal.fire({ title: 'Elegí tus croissants', text: 'Agregá al menos 1 croissant a tu pedido antes de continuar.', icon: 'warning', confirmButtonText: 'Entendido' });
-					return;
-				}
-
-				if (paso > 2 && !selectedDate) {
-					Swal.fire({ title: 'Seleccioná la fecha', text: 'Por favor marcá el día de entrega antes de continuar.', icon: 'warning', confirmButtonText: 'Entendido' });
-					return;
-				}
-
-				if (paso > 3) {
-					const nom = (document.getElementById('custNombre')?.value || '').trim();
-					const tel = (document.getElementById('custTel')?.value || '').trim();
-					const email = (document.getElementById('custEmail')?.value || '').trim();
-
-					if (!nom || !tel || !email) {
-						Swal.fire({ title: 'Campos Obligatorios', text: 'Por favor completá Nombre, Teléfono y Email.', icon: 'warning', confirmButtonText: 'Entendido' });
-						return;
-					}
-				}
-
-				currentStep = paso;
-
-				// Desplegar/Ocultar secciones
-				for (let i = 1; i <= 4; i++) {
-					const body = document.getElementById(`step-body-${i}`);
-					const badge = document.getElementById(`step-badge-${i}`);
-					if (body) {
-						if (i === paso) {
-							body.style.display = 'block';
-							if (badge) badge.classList.add('step-active');
-						} else {
-							body.style.display = 'none';
-							if (badge) badge.classList.remove('step-active');
-						}
-					}
-				}
-
-				// Scroll al encabezado del paso activo
-				const stepHeader = document.getElementById(`step-header-${paso}`);
-				if (stepHeader) {
-					stepHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-				}
-
-				if (paso === 4) {
-					buildSummary();
-				}
-			}
-
 			// MOSTRAR/OCULTAR MÓDULO REGALO
 			function toggleOpcionRegalo() {
 				const chk = document.getElementById('chkEsRegalo');
@@ -1098,7 +1111,74 @@ function renderProducts() {
 				`;
 			}
 
-			// CONFIRMACIÓN FINAL DEL PEDIDO
+			// HELPER PARA QUE TODAS LAS ALERTAS MANTENGAN LA ESTÉTICA CROISS
+			function mostrarAlertaCliente(titulo, texto, icono = 'warning') {
+				Swal.fire({
+					title: titulo,
+					text: texto,
+					icon: icono,
+					confirmButtonText: 'Entendido',
+					customClass: {
+						popup: 'croiss-swal-popup',
+						confirmButton: 'croiss-swal-confirm'
+					}
+				});
+			}
+
+			// CONTROL DEL ACORDEÓN PASO A PASO CON ALERTAS ESTILIZADAS
+			function irAlPaso(paso) {
+				const calc = calculatePrices();
+
+				// Validaciones progresivas con la nueva estética
+				if (paso > 1 && calc.totalCroissants === 0) {
+					mostrarAlertaCliente('Elegí tus croissants', 'Agregá al menos 1 croissant a tu pedido antes de continuar.');
+					return;
+				}
+
+				if (paso > 2 && !selectedDate) {
+					mostrarAlertaCliente('Seleccioná la fecha', 'Por favor marcá el día de entrega antes de continuar.');
+					return;
+				}
+
+				if (paso > 3) {
+					const nom = (document.getElementById('custNombre')?.value || '').trim();
+					const tel = (document.getElementById('custTel')?.value || '').trim();
+					const email = (document.getElementById('custEmail')?.value || '').trim();
+
+					if (!nom || !tel || !email) {
+						mostrarAlertaCliente('Campos Obligatorios', 'Por favor completá Nombre, Teléfono y Email.');
+						return;
+					}
+				}
+
+				currentStep = paso;
+
+				// Desplegar/Ocultar secciones
+				for (let i = 1; i <= 4; i++) {
+					const body = document.getElementById(`step-body-${i}`);
+					const badge = document.getElementById(`step-badge-${i}`);
+					if (body) {
+						if (i === paso) {
+							body.style.display = 'block';
+							if (badge) badge.classList.add('step-active');
+						} else {
+							body.style.display = 'none';
+							if (badge) badge.classList.remove('step-active');
+						}
+					}
+				}
+
+				const stepHeader = document.getElementById(`step-header-${paso}`);
+				if (stepHeader) {
+					stepHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
+				}
+
+				if (paso === 4) {
+					buildSummary();
+				}
+			}
+
+			// CONFIRMACIÓN FINAL DEL PEDIDO (SÍ Y NO ÚNICAMENTE)
 			async function confirmarPedidoTienda() {
 				const calc = calculatePrices();
 				const nom = (document.getElementById('custNombre')?.value || '').trim();
@@ -1157,7 +1237,7 @@ function renderProducts() {
 						Swal.fire({
 							title: '¡Pedido Recibido! 🥐',
 							html: `
-								<p style="font-size:0.88rem; color:var(--text-muted);">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
+								<p style="font-size:0.88rem; color:#7A6B63;">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
 								<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">¿Querés coordinar los detalles por WhatsApp ahora?</p>
 							`,
 							icon: 'success',
@@ -1165,7 +1245,7 @@ function renderProducts() {
 							confirmButtonText: 'Sí',
 							showCancelButton: true,
 							cancelButtonText: 'No',
-							showDenyButton: false, // <-- Desactiva explícitamente el tercer botón
+							showDenyButton: false, // Desactivado explícitamente
 							allowOutsideClick: false,
 							customClass: { 
 								popup: 'croiss-swal-popup', 
@@ -1179,10 +1259,10 @@ function renderProducts() {
 							reiniciarTienda();
 						});
 					} else {
-						Swal.fire({ title: 'Atención', text: data.mensaje, icon: 'error', confirmButtonText: 'Entendido' });
+						mostrarAlertaCliente('Atención', data.mensaje, 'error');
 					}
 				} catch(e) {
-					Swal.fire({ title: 'Error', text: 'No se pudo conectar con el servidor', icon: 'error', confirmButtonText: 'Entendido' });
+					mostrarAlertaCliente('Error', 'No se pudo conectar con el servidor', 'error');
 				}
 			}
 		
