@@ -863,7 +863,8 @@
             if(!container) return;
             container.innerHTML = '';
 
-            const MOSTRAR_POP = false; 
+            // 1. CAMBIAR ESTO A TRUE PARA ENCENDERLOS
+            const MOSTRAR_POP = true; 
 
             menuItems.forEach(p => {
                 if (!p || !p.nombre) return;
@@ -881,44 +882,18 @@
                     '<span style="display: block; font-weight: 300; font-size: 0.82rem; color: #7A6B63; margin-top: 2px;">($1)</span>'
                 );
 
+                // 2. TEXTOS DE PRECIOS ACTUALIZADOS AQUÍ
                 let badgeAhorro = '';
                 if (nameLower.includes('pop')) {
                     if (nameLower.includes('9')) {
                         badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390)</small>';
                     } else if (nameLower.includes('18')) {
-                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x18 Pop Croiss ($550)! Ahorrás comprando en cantidad</small>';
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x18 Pop Croiss ($720)! Ahorrás comprando en cantidad</small>';
                     } else if (nameLower.includes('27')) {
-                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x27 Pop Croiss ($750)! Opción ideal para compartir</small>';
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x27 Pop Croiss ($999)! Opción ideal para compartir</small>';
                     }
                 }
-
-                // Selector doble visible cuando el cliente añade al menos 1 unidad
-                const selectorJaleaHtml = (qty > 0 && !nameLower.includes('pop')) ? `
-                    <div class="jalea-toggle-group">
-                        <button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', false)">Sin Jalea</button>
-                        <button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', true)">Con Jalea 🍯</button>
-                    </div>
-                ` : '';
-
-                const div = document.createElement('div');
-                div.className = 'menu-row';
-                div.innerHTML = `
-                    <div class="menu-item-info">
-                        <strong>${displayName}</strong>
-                        ${badgeAhorro}
-                        ${selectorJaleaHtml}
-                    </div>
-                    <div class="menu-qty-selector">
-                        <button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', -1)">-</button>
-                        <span class="qty-number">${qty}</span>
-                        <button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', 1)">+</button>
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-            updateSubtotal();
-        }
-
+                
         // CÁLCULO DE PRECIOS UNIFICADO (CROISSANTS TRADICIONALES + POP CROISS)
         function calculatePrices() {
             let totalCroissantsNormales = 0;
