@@ -8,32 +8,43 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* DESBLOQUEO DE SCROLL OBLIGATORIO */
-        html, body { 
-            height: auto !important;
-            min-height: 100vh !important;
-            overflow-x: hidden !important;
-            overflow-y: auto !important;
+        /* SCROLL Y RESET NORMAL (PC + MÓVIL) */
+        html { 
+            scroll-behavior: smooth;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        body { 
+            min-height: 100vh;
             background-color: #F9F3EE !important; 
             color: #2D1E18 !important; 
             font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
             margin: 0 !important;
             padding: 0 !important;
-            scroll-behavior: smooth;
-            overscroll-behavior-y: contain; /* Para el deslizar hacia abajo */
+            overflow-x: hidden;
         }
 		
 		/* ==========================================
 		   ESTÉTIKA UNIFICADA DE POP-UPS (SWEETALERT2)
 		   ========================================== */
 
-		/* Fondo y contenedor de las alertas */
-		.croiss-swal-popup, .swal2-popup {
+		/* Aplica fondo blanco SOLO a los popups normales (NO al loader transparente) */
+		.swal2-popup:not(.croiss-swal-popup-transparent) {
 			border-radius: 28px !important;
 			padding: 24px 20px !important;
 			background: #FFFFFF !important;
 			font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
 			box-shadow: 0 20px 50px rgba(45, 30, 24, 0.18) !important;
+		}
+
+		/* Asegura transparencia absoluta para la animación del croissant */
+		.croiss-swal-popup-transparent,
+        .croiss-swal-popup-transparent .swal2-popup {
+			background: transparent !important;
+			background-color: transparent !important;
+			box-shadow: none !important;
+			border: none !important;
+			padding: 0 !important;
 		}
 
 		/* Títulos de los mensajes */
@@ -1282,7 +1293,7 @@
         let isPullingAtTop = false;
 
         document.addEventListener('touchstart', (e) => {
-            if (window.scrollY === 0 && e.touches.length === 1) {
+            if (window.scrollY === 0 && e.touches && e.touches.length === 1) {
                 pullStartY = e.touches[0].pageY;
                 isPullingAtTop = true;
             }
@@ -1294,7 +1305,7 @@
             const pullEndY = e.changedTouches[0].pageY;
             const pullDistance = pullEndY - pullStartY;
 
-            if (pullDistance > 110) {
+            if (pullDistance > 120) {
                 if (typeof mostrarCroissLoader === 'function') {
                     mostrarCroissLoader();
                 }
