@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CROISS ¬∑ Artesanos del Croissant ü•ê</title>
+    <title>CROISS °§ Artesanos del Croissant ??</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* DESBLOQUEO DE SCROLL OBLIGATORIO (ANULA BLOQUEOS DE STYLE.CSS Y SWEETALERT) */
+        /* DESBLOQUEO DE SCROLL OBLIGATORIO */
         html, body { 
             height: auto !important;
             min-height: 100vh !important;
@@ -22,18 +22,13 @@
             scroll-behavior: smooth;
         }
 
-        /* EVITA QUE CUALQUIER MODAL BLOQUEE EL DESPLAZAMIENTO */
         html.swal2-shown, 
         body.swal2-shown {
             height: auto !important;
             overflow-y: auto !important;
         }
 		
-		/* ==========================================
-		   EST√âTICA UNIFICADA DE POP-UPS (SWEETALERT2)
-		   ========================================== */
-
-		/* Fondo blanco SOLO a los popups normales */
+		/* EST®¶TICA UNIFICADA DE POP-UPS (SWEETALERT2) */
 		.swal2-popup:not(.croiss-swal-popup-transparent) {
 			border-radius: 28px !important;
 			padding: 24px 20px !important;
@@ -42,7 +37,6 @@
 			box-shadow: 0 20px 50px rgba(45, 30, 24, 0.18) !important;
 		}
 
-		/* Transparencia absoluta para la animaci√≥n del croissant */
 		.croiss-swal-popup-transparent,
         .croiss-swal-popup-transparent .swal2-popup {
 			background: transparent !important;
@@ -52,7 +46,6 @@
 			padding: 0 !important;
 		}
 
-		/* T√≠tulos de los mensajes */
 		.swal2-title {
 			color: #2D1E18 !important;
 			font-size: 1.35rem !important;
@@ -60,7 +53,6 @@
 			letter-spacing: -0.3px !important;
 		}
 
-		/* Textos informativos de los mensajes */
 		.swal2-html-container, .swal2-content {
 			color: #7A6B63 !important;
 			font-size: 0.9rem !important;
@@ -68,7 +60,6 @@
 			line-height: 1.5 !important;
 		}
 
-		/* ELIMINACI√ìN ESTRICTA DEL TERCER BOT√ìN DE "NO" / DENY */
 		.swal2-deny, button.swal2-deny {
 			display: none !important;
             visibility: hidden !important;
@@ -80,13 +71,11 @@
             pointer-events: none !important;
 		}
 
-		/* Contenedor de botones */
 		.swal2-actions {
 			gap: 10px !important;
 			margin-top: 20px !important;
 		}
 
-		/* Bot√≥n de Confirmaci√≥n (S√ç / Entendido) */
 		.croiss-swal-confirm, .swal2-confirm {
 			background: #C86D28 !important;
 			color: #FFFFFF !important;
@@ -100,7 +89,6 @@
 			transition: transform 0.15s ease !important;
 		}
 
-		/* Bot√≥n de Cancelar (NO) */
 		.croiss-swal-cancel, .swal2-cancel {
 			background: transparent !important;
 			color: #7A6B63 !important;
@@ -123,7 +111,6 @@
             padding: 0 16px 60px 16px;
         }
 
-        /* PORTADA / HERO WEB */
         .web-hero {
             position: relative;
             padding: 45px 20px 36px 20px;
@@ -145,16 +132,6 @@
             position: relative;
             z-index: 1;
             color: #FFFFFF;
-        }
-
-        .hero-tagline {
-            font-size: 0.75rem;
-            font-weight: 800;
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            color: #E2A06E;
-            margin-bottom: 6px;
-            display: block;
         }
 
         .hero-main-title {
@@ -222,11 +199,6 @@
         }
         .btn-web-outline:active { background: rgba(255, 255, 255, 0.15); }
 
-        /* SECCIONES DE LA WEB */
-        .web-section {
-            margin-bottom: 30px;
-        }
-
         .web-section-title {
             font-size: 1.25rem;
             font-weight: 800;
@@ -241,27 +213,20 @@
             margin-bottom: 20px;
         }
 
-        /* ANIMACI√ìN DE ENTRADA DESDE LOS LATERALES (SCROLL REVEAL) */
         .reveal-on-scroll {
             opacity: 0;
             transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease-out;
             will-change: transform, opacity;
         }
 
-        .reveal-left {
-            transform: translateX(-70px);
-        }
-
-        .reveal-right {
-            transform: translateX(70px);
-        }
+        .reveal-left { transform: translateX(-70px); }
+        .reveal-right { transform: translateX(70px); }
 
         .reveal-on-scroll.visible {
             opacity: 1;
             transform: translateX(0);
         }
 
-        /* TARJETAS DE IM√ÅGENES LATERALES */
         .scroll-photo-card {
             margin: 32px 0;
             border-radius: 22px;
@@ -278,7 +243,6 @@
             display: block;
         }
 
-        /* FILAS DEL MEN√ö GASTRON√ìMICO */
         .menu-row {
             display: flex;
             justify-content: space-between;
@@ -292,25 +256,6 @@
             font-weight: 700;
             color: #2D1E18;
             display: block;
-        }
-
-        .btn-jalea-inline {
-            background: transparent;
-            color: #7A6B63;
-            border: 1px solid #D8CFC8;
-            border-radius: 14px;
-            padding: 3px 10px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            cursor: pointer;
-            margin-top: 6px;
-            transition: all 0.2s;
-        }
-        .btn-jalea-inline.active {
-            background: #FCEFE6;
-            color: #C86D28;
-            border-color: #C86D28;
-            font-weight: 700;
         }
 
         .menu-qty-selector {
@@ -344,7 +289,6 @@
             color: #2D1E18;
         }
 
-        /* BARRA DE SUBTOTAL PLANO */
         .subtotal-web-bar {
             margin-top: 20px;
             padding: 16px 0;
@@ -368,7 +312,6 @@
             color: #C86D28;
         }
 
-        /* SELECTOR DE FECHAS PLANO */
         .web-dates-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -395,10 +338,7 @@
             background: #EFEAE6;
         }
 
-        /* FORMULARIO EDITORIAL */
-        .web-field {
-            margin-bottom: 18px;
-        }
+        .web-field { margin-bottom: 18px; }
 
         .web-field label {
             display: block;
@@ -424,11 +364,8 @@
             box-sizing: border-box;
             transition: border-color 0.2s;
         }
-        .web-field input:focus {
-            border-color: #C86D28;
-        }
+        .web-field input:focus { border-color: #C86D28; }
 
-        /* RESUMEN FINAL TICKET */
         .summary-ticket-clean {
             padding: 18px 0;
             border-top: 1px dashed #D8CFC8;
@@ -438,7 +375,6 @@
             line-height: 1.6;
         }
 
-        /* BOT√ìN DE CONFIRMACI√ìN PRINCIPAL */
         .btn-submit-order-final {
             width: 100%;
             background: #16A34A;
@@ -454,7 +390,6 @@
         }
         .btn-submit-order-final:active { transform: scale(0.98); }
 		
-		/* SELECTOR DOBLE DE JALEA (SIN JALEA / CON JALEA) */
 		.jalea-toggle-group {
 			display: inline-flex;
 			background: #EFEAE6;
@@ -485,24 +420,20 @@
 </head>
 <body>
 
-    <!-- PORTADA DE LA WEB -->
     <header class="web-hero" id="topHeader">
         <div class="web-hero-bg"></div>
         <div class="web-hero-content">
-            
             <h1 class="hero-main-title">CROISS</h1>
             <span class="hero-subtitle">Artesanos del Croissant</span>
-            
             <p class="hero-story-text">
-                Nacimos con una pasi√≥n: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante fermentaci√≥n lenta e ingredientes seleccionados, horneando cada lote para lograr esa textura crocante por fuera y suave por dentro.
+                Nacimos con una pasi®Æn: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante fermentaci®Æn lenta e ingredientes seleccionados, horneando cada lote para lograr esa textura crocante por fuera y suave por dentro.
             </p>
-
             <div class="hero-actions">
-                <button type="button" class="btn-web-main" onclick="scrollToSection('sec-menu')">
+                <button type="button" class="btn-web-main" onclick="scrollToSection('step-card-1')">
                     Crea tu Pedido
                 </button>
                 <button type="button" class="btn-web-outline" onclick="verMenuPublico()">
-                    Men√∫
+                    Men®≤
                 </button>
             </div>
         </div>
@@ -510,33 +441,32 @@
 
     <div class="web-site-wrapper">
 
-    <!-- PASO 1: MEN√ö -->
+    <!-- PASO 1: MEN®≤ -->
     <section class="web-step-card" id="step-card-1">
         <div class="web-step-header" id="step-header-1" onclick="irAlPaso(1)">
-            <span class="step-badge" id="step-badge-1">Paso 1</span>
-            <h2 class="web-section-title">Eleg√≠ tus Croissants</h2>
+            <span class="step-badge step-active" id="step-badge-1">Paso 1</span>
+            <h2 class="web-section-title">Eleg®™ tus Croissants</h2>
         </div>
         
         <div class="web-step-body" id="step-body-1" style="display: block;">
-            <p class="web-section-desc">Seleccion√° las variedades para tu caja reci√©n horneada.</p>
-
-            <div id="shopProductsList">Cargando men√∫...</div>
+            <p class="web-section-desc">Seleccion®¢ las variedades para tu caja reci®¶n horneada.</p>
+            <div id="shopProductsList">Cargando men®≤...</div>
 
             <div class="subtotal-web-bar">
                 <div>
                     <span class="label">Subtotal Pedido</span>
-                    <small id="shopPromoMsg" style="display: block; font-size: 0.72rem; color: #7A6B63; font-weight: 600;">Llev√°s 0 croissants</small>
+                    <small id="shopPromoMsg" style="display: block; font-size: 0.72rem; color: #7A6B63; font-weight: 600;">Llev®¢s 0 croissants</small>
                 </div>
                 <span class="amount" id="shopSubtotalText">$0</span>
             </div>
 
-            <button type="button" class="btn-step-next" onclick="irAlPaso(2)">Siguiente: Fecha de Entrega ‚û?/button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(2)">Siguiente: Fecha de Entrega ?</button>
         </div>
     </section>
 
     <!-- IMAGEN 1 DECORATIVA -->
     <div class="scroll-photo-card reveal-on-scroll reveal-left">
-        <img src="{{ url_for('static', filename='croiss1.png') }}" alt="Croissant CROISS" onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss1.jpg') }}';">
+        <img src="{{ url_for('static', filename='croiss1.png') }}" alt="Croissant CROISS" onerror="this.onerror=null; this.src='/static/croiss1.jpg';">
     </div>
 
     <!-- PASO 2: FECHA DE ENTREGA -->
@@ -547,21 +477,19 @@
         </div>
 
         <div class="web-step-body" id="step-body-2" style="display: none;">
-            <p class="web-section-desc">Eleg√≠ el d√≠a en que quer√©s recibir tu orden.</p>
-            <p style="font-size: 0.8rem; color: #166534; font-weight: 600; margin-bottom: 14px;">üí¨ La zona y el horario exacto se coordinan por WhatsApp.</p>
-
+            <p class="web-section-desc">Eleg®™ el d®™a en que quer®¶s recibir tu orden.</p>
+            <p style="font-size: 0.8rem; color: #166534; font-weight: 600; margin-bottom: 14px;">?? La zona y el horario exacto se coordinan por WhatsApp.</p>
             <div id="datesContainer" class="web-dates-grid">Cargando fechas disponibles...</div>
-
-            <button type="button" class="btn-step-next" onclick="irAlPaso(3)">Siguiente: Tus Datos ‚û?/button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(3)">Siguiente: Tus Datos ?</button>
         </div>
     </section>
 
     <!-- IMAGEN 2 DECORATIVA -->
     <div class="scroll-photo-card reveal-on-scroll reveal-right">
-        <img src="{{ url_for('static', filename='croiss2.png') }}" alt="Variedad CROISS" onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss2.jpg') }}';">
+        <img src="{{ url_for('static', filename='croiss2.png') }}" alt="Variedad CROISS" onerror="this.onerror=null; this.src='/static/croiss2.jpg';">
     </div>
 
-    <!-- PASO 3: TUS DATOS + OPCI√ìN DE REGALO -->
+    <!-- PASO 3: TUS DATOS + OPCI®ÆN DE REGALO -->
     <section class="web-step-card" id="step-card-3">
         <div class="web-step-header" id="step-header-3" onclick="irAlPaso(3)">
             <span class="step-badge" id="step-badge-3">Paso 3</span>
@@ -569,14 +497,14 @@
         </div>
 
         <div class="web-step-body" id="step-body-3" style="display: none;">
-            <p class="web-section-desc">Ingres√° tu informaci√≥n de contacto.</p>
+            <p class="web-section-desc">Ingres®¢ tu informaci®Æn de contacto.</p>
 
             <div class="web-field">
                 <label>Nombre Completo *</label>
-                <input type="text" id="custNombre" placeholder="Ej: Mar√≠a Silva" required>
+                <input type="text" id="custNombre" placeholder="Ej: Mar®™a Silva" required>
             </div>
             <div class="web-field">
-                <label>Tel√©fono / WhatsApp *</label>
+                <label>Tel®¶fono / WhatsApp *</label>
                 <input type="tel" id="custTel" placeholder="Ej: 099 123 456" required>
             </div>
             <div class="web-field">
@@ -584,86 +512,86 @@
                 <input type="email" id="custEmail" placeholder="ejemplo@email.com" required>
             </div>
             <div class="web-field">
-                <label>Direcci√≥n / Barrio (Opcional)</label>
+                <label>Direcci®Æn / Barrio (Opcional)</label>
                 <input type="text" id="custDir" placeholder="Ej: Pocitos, Calle Falsa 123">
             </div>
 
-            <!-- M√ìDULO DE REGALO -->
+            <!-- M®ÆDULO DE REGALO -->
             <div style="background: #FAF0EB; border: 1px dashed #C86D28; border-radius: 16px; padding: 14px; margin: 18px 0;">
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 800; font-size: 0.95rem; color: #2D1E18; margin: 0;">
                     <input type="checkbox" id="chkEsRegalo" onchange="toggleOpcionRegalo()" style="width: 20px; height: 20px; accent-color: #C86D28;">
-                    üéÅ ¬øEs para regalo?
+                    ?? ?Es para regalo?
                 </label>
                 <div id="boxRegaloCampos" style="display: none; margin-top: 14px; border-top: 1px dashed #E2D9D3; padding-top: 12px;">
                     <div class="web-field">
-                        <label>Nombre de quien recibe üíå</label>
+                        <label>Nombre de quien recibe ??</label>
                         <input type="text" id="custRegaloDestinatario" placeholder="Ej: Valentina">
                     </div>
                     <div class="web-field">
-                        <label>Mensaje para la tarjetita / cartita üìù</label>
-                        <textarea id="custRegaloMensaje" rows="3" placeholder="Ej: ¬°Feliz cumple Valen! Espero que disfrutes mucho este regalito dulce..." style="width: 100%; padding: 12px; border: 1.5px solid #D8CFC8; border-radius: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box; outline: none; background: #FFFFFF;"></textarea>
+                        <label>Mensaje para la tarjetita / cartita ??</label>
+                        <textarea id="custRegaloMensaje" rows="3" placeholder="Ej: ?Feliz cumple Valen! Espero que disfrutes mucho este regalito dulce..." style="width: 100%; padding: 12px; border: 1.5px solid #D8CFC8; border-radius: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box; outline: none; background: #FFFFFF;"></textarea>
                     </div>
                 </div>
             </div>
 
             <div class="web-field">
                 <label>Notas / Aclaraciones Adicionales (Opcional)</label>
-                <input type="text" id="custNotas" placeholder="Ej: Entregar de ma√±ana, golpear port√≥n negro...">
+                <input type="text" id="custNotas" placeholder="Ej: Entregar de ma?ana, golpear port®Æn negro...">
             </div>
 
-            <button type="button" class="btn-step-next" onclick="irAlPaso(4)">Siguiente: Confirmaci√≥n ‚û?/button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(4)">Siguiente: Confirmaci®Æn ?</button>
         </div>
     </section>
 
     <!-- IMAGEN 3 DECORATIVA -->
     <div class="scroll-photo-card reveal-on-scroll reveal-left">
-        <img src="{{ url_for('static', filename='croiss3.png') }}" alt="Caja CROISS" onerror="this.onerror=null; this.src='{{ url_for('static', filename='croiss3.jpg') }}';">
+        <img src="{{ url_for('static', filename='croiss3.png') }}" alt="Caja CROISS" onerror="this.onerror=null; this.src='/static/croiss3.jpg';">
     </div>
 
-    <!-- PASO 4: CONFIRMACI√ìN Y RESUMEN FINAL -->
+    <!-- PASO 4: CONFIRMACI®ÆN Y RESUMEN FINAL -->
 	<section class="web-step-card" id="step-card-4">
 		<div class="web-step-header" id="step-header-4" onclick="irAlPaso(4)">
 			<span class="step-badge" id="step-badge-4">Paso 4</span>
-			<h2 class="web-section-title">Resumen & Confirmaci√≥n</h2>
+			<h2 class="web-section-title">Resumen & Confirmaci®Æn</h2>
 		</div>
 
 		<div class="web-step-body" id="step-body-4" style="display: none;">
-			<p class="web-section-desc">Verific√° los detalles de tu compra antes de confirmar.</p>
+			<p class="web-section-desc">Verific®¢ los detalles de tu compra antes de confirmar.</p>
 
-			<!-- BANNER INFORMATIVO ENV√çO WHATSAPP -->
 			<div style="background: #F0FDF4; border: 1.5px solid #22C55E; border-radius: 16px; padding: 14px; margin-bottom: 18px; text-align: center;">
 				<span style="font-size: 0.88rem; font-weight: 800; color: #15803D; display: block;">
-					üí¨ TEN√â EN CUENTA
+					?? TEN®¶ EN CUENTA
 				</span>
 				<span style="font-size: 0.82rem; color: #166534; font-weight: 600; display: block; margin-top: 2px;">
-					El env√≠o y sus detalles se confirmar√°n 100% a trav√©s de WhatsApp.
+					El env®™o y sus detalles se confirmar®¢n 100% a trav®¶s de WhatsApp.
 				</span>
 			</div>
 
 			<div class="summary-ticket-clean" id="orderSummaryBox">
-				<p style="color: #94a3b8; text-align: center; margin: 0;">Agreg√° croissants arriba para ver el resumen</p>
+				<p style="color: #94a3b8; text-align: center; margin: 0;">Agreg®¢ croissants arriba para ver el resumen</p>
 			</div>
 
 			<button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
-				Confirmar Pedido ü•ê
+				Confirmar Pedido ??
 			</button>
 		</div>
 	</section>
 
 </div>
 
-    <!-- L√ìGICA JAVASCRIPT Y ANIMACIONES -->
+    <!-- L®ÆGICA JAVASCRIPT Y ANIMACIONES -->
     <script>
         const croissImagePreload = new Image();
         croissImagePreload.src = '/static/croissant.png';
         let croissAnimFrameId = null;
 
         const defaultMenu = [
-			{ nombre: "Croissant Cl√°sico", relleno: "ninguno" },
+			{ nombre: "Croissant Cl®¢sico", relleno: "ninguno" },
 			{ nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
-			{ nombre: "Croissant c/ Jam√≥n y Queso (+ $50)", relleno: "salado" },
-			{ nombre: "Croisstzel (Tu Croissant Cl√°sico con peque√±as piedras de sal por encima)", relleno: "ninguno" },
-			{ nombre: "Croisstzel c/ Jam√≥n y Queso (+ $50)", relleno: "salado" }
+			{ nombre: "Croissant c/ Jam®Æn y Queso (+ $50)", relleno: "salado" },
+			{ nombre: "Croisstzel (Tu Croissant Cl®¢sico con peque?as piedras de sal por encima)", relleno: "ninguno" },
+			{ nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" },
+			{ nombre: "Croisstzel c/ Jam®Æn y Queso (+ $50)", relleno: "salado" }
 		];
 
         let menuItems = defaultMenu;
@@ -677,7 +605,6 @@
             iniciarObservadorScroll();
         });
 
-        // DETECTOR DE SCROLL PARA ENTRADA/SALIDA LATERAL
         function iniciarObservadorScroll() {
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
@@ -687,9 +614,7 @@
                         entry.target.classList.remove('visible');
                     }
                 });
-            }, {
-                threshold: 0.15
-            });
+            }, { threshold: 0.15 });
 
             document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
         }
@@ -701,7 +626,6 @@
             }
         }
 		
-        // ANIMACI√ìN CANVAS DEL CROISSANT MORDI√âNDOSE
         function mostrarCroissLoader() {
             if (!croissImagePreload.src) croissImagePreload.src = '/static/croissant.png';
 
@@ -786,14 +710,13 @@
 					menuItems = data.productos.map(p => {
 						let nombreLimpio = p.nombre || '';
 						
-						// Si el producto trae la palabra "sal" pero no dice Croisstzel, lo renombra
 						if (nombreLimpio.toLowerCase().includes('sal') && !nombreLimpio.toLowerCase().includes('croisstzel')) {
 							if (nombreLimpio.toLowerCase().includes('jamon') || nombreLimpio.toLowerCase().includes('queso')) {
-								nombreLimpio = "Croisstzel c/ Jam√≥n y Queso (+ $50)";
+								nombreLimpio = "Croisstzel c/ Jam®Æn y Queso (+ $50)";
 							} else if (nombreLimpio.toLowerCase().includes('dulce') || nombreLimpio.toLowerCase().includes('ddl')) {
 								nombreLimpio = "Croisstzel c/ Dulce de Leche (+ $30)";
 							} else {
-								nombreLimpio = "Croisstzel (Tu Croiss Cl√°sico pero con peque√±as piedras de sal por encima)";
+								nombreLimpio = "Croisstzel (Tu Croiss Cl®¢sico pero con peque?as piedras de sal por encima)";
 							}
 						}
 						
@@ -815,13 +738,12 @@
             renderDates();
         }
 
-        // MOSTRAR LA IMAGEN MENU.PNG SIN BOTONES
         function verMenuPublico() {
             Swal.fire({
                 html: `
                     <div style="text-align:center; padding: 0; cursor:pointer;" onclick="Swal.close()">
                         <img src="/static/menu.png" 
-                             alt="Men√∫ CROISS" 
+                             alt="Men®≤ CROISS" 
                              style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);">
                     </div>
                 `,
@@ -843,7 +765,6 @@
             }
         }
 
-        // NUEVA FUNCI√ìN: Establece expl√≠citamente true o false
 		function setJaleaShop(name, conJaleaVal) {
 			try {
 				if (!cart[name]) {
@@ -857,101 +778,91 @@
 			}
 		}
 
-		function renderProducts() {
-					const container = document.getElementById('shopProductsList');
-					if(!container) return;
-					container.innerHTML = '';
+        function renderProducts() {
+            const container = document.getElementById('shopProductsList');
+            if(!container) return;
+            container.innerHTML = '';
 
-					// 1. POP CROISS ACTIVADOS
-					const MOSTRAR_POP = true; 
+            const MOSTRAR_POP = true; 
 
-					menuItems.forEach(p => {
-						if (!p || !p.nombre) return;
-						const name = p.nombre;
-						const safeName = name.replace(/'/g, "\\'");
-						const nameLower = name.toLowerCase();
-						const qty = cart[name] ? cart[name].cantidad : 0;
-						const conJalea = cart[name] ? cart[name].con_jalea : false;
+            menuItems.forEach(p => {
+                if (!p || !p.nombre) return;
+                const name = p.nombre;
+                const safeName = name.replace(/'/g, "\\'");
+                const nameLower = name.toLowerCase();
+                const qty = cart[name] ? cart[name].cantidad : 0;
+                const conJalea = cart[name] ? cart[name].con_jalea : false;
 
-						if (!MOSTRAR_POP && nameLower.includes('pop')) return;
+                if (!MOSTRAR_POP && nameLower.includes('pop')) return;
 
-						// Convierte el texto entre par®¶ntesis en una letra fina, delicada y sin negrita
-						const displayName = name.replace(
-							/\(([^)]+)\)/g, 
-							'<span style="display: block; font-weight: 300; font-size: 0.82rem; color: #7A6B63; margin-top: 2px;">($1)</span>'
-						);
+                const displayName = name.replace(
+                    /\(([^)]+)\)/g, 
+                    '<span style="display: block; font-weight: 300; font-size: 0.82rem; color: #7A6B63; margin-top: 2px;">($1)</span>'
+                );
 
-						// 2. TEXTOS Y PRECIOS ACTUALIZADOS
-						let badgeAhorro = '';
-						if (nameLower.includes('pop')) {
-							if (nameLower.includes('9')) {
-								badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390)</small>';
-							} else if (nameLower.includes('18')) {
-								badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">?Caja x18 Pop Croiss ($720)! Ahorr®¢s comprando en cantidad</small>';
-							} else if (nameLower.includes('27')) {
-								badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">?Caja x27 Pop Croiss ($999)! Opci®Æn ideal para compartir</small>';
-							}
-						}
+                let badgeAhorro = '';
+                if (nameLower.includes('pop')) {
+                    if (nameLower.includes('9')) {
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390)</small>';
+                    } else if (nameLower.includes('18')) {
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">?Caja x18 Pop Croiss ($720)! Ahorr®¢s comprando en cantidad</small>';
+                    } else if (nameLower.includes('27')) {
+                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">?Caja x27 Pop Croiss ($999)! Opci®Æn ideal para compartir</small>';
+                    }
+                }
 
-						// Selector doble visible cuando el cliente a?ade al menos 1 unidad
-						const selectorJaleaHtml = (qty > 0 && !nameLower.includes('pop')) ? `
-							<div class="jalea-toggle-group">
-								<button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', false)">Sin Jalea</button>
-								<button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', true)">Con Jalea ??</button>
-							</div>
-						` : '';
+                const selectorJaleaHtml = (qty > 0 && !nameLower.includes('pop')) ? `
+                    <div class="jalea-toggle-group">
+                        <button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', false)">Sin Jalea</button>
+                        <button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', true)">Con Jalea ??</button>
+                    </div>
+                ` : '';
 
-						const div = document.createElement('div');
-						div.className = 'menu-row';
-						div.innerHTML = `
-							<div class="menu-item-info">
-								<strong>${displayName}</strong>
-								${badgeAhorro}
-								${selectorJaleaHtml}
-							</div>
-							<div class="menu-qty-selector">
-								<button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', -1)">-</button>
-								<span class="qty-number">${qty}</span>
-								<button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', 1)">+</button>
-							</div>
-						`;
-						container.appendChild(div);
-					});
-					updateSubtotal();
-				}
-                
-        // C√ÅLCULO DE PRECIOS UNIFICADO (CROISSANTS TRADICIONALES + POP CROISS)
+                const div = document.createElement('div');
+                div.className = 'menu-row';
+                div.innerHTML = `
+                    <div class="menu-item-info">
+                        <strong>${displayName}</strong>
+                        ${badgeAhorro}
+                        ${selectorJaleaHtml}
+                    </div>
+                    <div class="menu-qty-selector">
+                        <button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', -1)">-</button>
+                        <span class="qty-number">${qty}</span>
+                        <button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', 1)">+</button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            updateSubtotal();
+        }
+
         function calculatePrices() {
             let totalCroissantsNormales = 0;
             
-            // 1. Contamos solo los croissants normales para la escala por volumen
             for(let k in cart) {
                 if(cart[k] && cart[k].cantidad && !k.toLowerCase().includes('pop')) {
                     totalCroissantsNormales += cart[k].cantidad;
                 }
             }
 
-            // Escala por Volumen para croissants tradicionales
-            let basePrice = 140; // Individual
-            if(totalCroissantsNormales >= 6) basePrice = 100; // Caja x6
-            else if(totalCroissantsNormales >= 3) basePrice = 110; // Caja x3
+            let basePrice = 140;
+            if(totalCroissantsNormales >= 6) basePrice = 100;
+            else if(totalCroissantsNormales >= 3) basePrice = 110;
 
             let totalMoney = 0;
             let totalCroissants = 0;
 
-            // 2. Sumamos los totales discriminando Pop vs Normales
             for(let k in cart) {
                 if(!cart[k] || cart[k].cantidad <= 0) continue;
                 let kLower = k.toLowerCase();
                 totalCroissants += cart[k].cantidad;
 
                 if (kLower.includes('pop')) {
-                    // Si es Pop Croiss, toma su precio fijo de la caja
                     let prodMatch = menuItems.find(p => p.nombre && p.nombre.toLowerCase() === kLower);
                     let precioFijo = prodMatch && prodMatch.precio ? prodMatch.precio : 0;
                     totalMoney += precioFijo * cart[k].cantidad;
                 } else {
-                    // Si es croissant normal, aplica escala + extras de relleno
                     let extra = 0;
                     if(kLower.includes('jamon') || kLower.includes('queso') || kLower.includes('salado')) extra = 50;
                     else if(kLower.includes('dulce') || kLower.includes('ddl')) extra = 30;
@@ -971,13 +882,13 @@
                 const msgEl = document.getElementById('shopPromoMsg');
                 if(msgEl) {
                     if(calc.totalCroissants === 0) {
-                        msgEl.innerText = 'Agreg√° croissants para continuar';
+                        msgEl.innerText = 'Agreg®¢ croissants para continuar';
                     } else if(calc.totalCroissants < 3) {
-                        msgEl.innerText = `Llev√°s ${calc.totalCroissants}. ¬°Agreg√° ${3 - calc.totalCroissants} m√°s para precio promo ($110 c/u)!`;
+                        msgEl.innerText = `Llev®¢s ${calc.totalCroissants}. ?Agreg®¢ ${3 - calc.totalCroissants} m®¢s para precio promo ($110 c/u)!`;
                     } else if(calc.totalCroissants < 6) {
-                        msgEl.innerText = `¬°Precio promo activado ($110)! Agreg√° ${6 - calc.totalCroissants} m√°s para precio mayorista ($100 c/u).`;
+                        msgEl.innerText = `?Precio promo activado ($110)! Agreg®¢ ${6 - calc.totalCroissants} m®¢s para precio mayorista ($100 c/u).`;
                     } else {
-                        msgEl.innerText = 'üéâ ¬°Mejor precio mayorista activado!';
+                        msgEl.innerText = '?? ?Mejor precio mayorista activado!';
                     }
                 }
 
@@ -1039,30 +950,25 @@
         }
 
         function reiniciarTienda() {
-			// 1. Vaciamos el carrito y la fecha
 			cart = {};
 			selectedDate = "";
 			
-			// 2. Limpiamos todos los datos personales
 			if(document.getElementById('custNombre')) document.getElementById('custNombre').value = "";
 			if(document.getElementById('custTel')) document.getElementById('custTel').value = "";
 			if(document.getElementById('custEmail')) document.getElementById('custEmail').value = "";
 			if(document.getElementById('custDir')) document.getElementById('custDir').value = "";
 			if(document.getElementById('custNotas')) document.getElementById('custNotas').value = "";
 			
-			// 3. Limpiamos los datos del m√≥dulo de Regalo
 			if(document.getElementById('chkEsRegalo')) {
 				document.getElementById('chkEsRegalo').checked = false;
-				toggleOpcionRegalo(); // Oculta los campos de destinatario y cartita
+				toggleOpcionRegalo();
 			}
 			if(document.getElementById('custRegaloDestinatario')) document.getElementById('custRegaloDestinatario').value = "";
 			if(document.getElementById('custRegaloMensaje')) document.getElementById('custRegaloMensaje').value = "";
 
-			// 4. Refrescamos los subtotales, contadores y botones de fechas
 			renderProducts();
 			renderDates();
 			
-			// 5. VOLVER AL PASO 1 (Esto soluciona el problema de usabilidad)
 			setTimeout(() => {
 				irAlPaso(1);
 				scrollToSection('topHeader');
@@ -1071,7 +977,6 @@
 
         let currentStep = 1;
 
-		// MOSTRAR/OCULTAR M√ìDULO REGALO
 		function toggleOpcionRegalo() {
 			const chk = document.getElementById('chkEsRegalo');
 			const box = document.getElementById('boxRegaloCampos');
@@ -1080,7 +985,6 @@
 			}
 		}
 
-		// ACTUALIZACI√ìN DEL RESUMEN CON OPCI√ìN DE REGALO
 		function buildSummary() {
 			const calc = calculatePrices();
 			const box = document.getElementById('orderSummaryBox');
@@ -1093,14 +997,14 @@
 			const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
 
 			if (calc.totalCroissants === 0) {
-				box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agreg√° croissants arriba para ver el resumen</p>`;
+				box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agreg®¢ croissants arriba para ver el resumen</p>`;
 				return;
 			}
 
 			let itemsHtml = '';
 			for(let k in cart) {
 				if(cart[k] && cart[k].cantidad > 0) {
-					itemsHtml += `<div>‚Ä?${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
+					itemsHtml += `<div>? ${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
 				}
 			}
 
@@ -1108,7 +1012,7 @@
 			if (esRegalo) {
 				bloqueRegaloHtml = `
 					<div style="background:#FAF0EB; border:1px dashed #C86D28; border-radius:12px; padding:10px; margin:10px 0;">
-						<strong style="color:#C86D28;">üéÅ ¬°Pedido para Regalo!</strong><br>
+						<strong style="color:#C86D28;">?? ?Pedido para Regalo!</strong><br>
 						${destinatario ? `<strong>Para:</strong> ${destinatario}<br>` : ''}
 						${mensajeRegalo ? `<strong>Mensaje:</strong> "<em>${mensajeRegalo}</em>"` : ''}
 					</div>
@@ -1136,7 +1040,6 @@
 			`;
 		}
 
-		// HELPER PARA QUE TODAS LAS ALERTAS MANTENGAN LA EST√âTICA CROISS
 		function mostrarAlertaCliente(titulo, texto, icono = 'warning') {
 			Swal.fire({
 				title: titulo,
@@ -1150,18 +1053,16 @@
 			});
 		}
 
-		// CONTROL DEL ACORDE√ìN PASO A PASO CON ALERTAS ESTILIZADAS
 		function irAlPaso(paso) {
 			const calc = calculatePrices();
 
-			// Validaciones progresivas con la nueva est√©tica
 			if (paso > 1 && calc.totalCroissants === 0) {
-				mostrarAlertaCliente('Eleg√≠ tus croissants', 'Agreg√° al menos 1 croissant a tu pedido antes de continuar.');
+				mostrarAlertaCliente('Eleg®™ tus croissants', 'Agreg®¢ al menos 1 croissant a tu pedido antes de continuar.');
 				return;
 			}
 
 			if (paso > 2 && !selectedDate) {
-				mostrarAlertaCliente('Seleccion√° la fecha', 'Por favor marc√° el d√≠a de entrega antes de continuar.');
+				mostrarAlertaCliente('Seleccion®¢ la fecha', 'Por favor marc®¢ el d®™a de entrega antes de continuar.');
 				return;
 			}
 
@@ -1171,14 +1072,13 @@
 				const email = (document.getElementById('custEmail')?.value || '').trim();
 
 				if (!nom || !tel || !email) {
-					mostrarAlertaCliente('Campos Obligatorios', 'Por favor complet√° Nombre, Tel√©fono y Email.');
+					mostrarAlertaCliente('Campos Obligatorios', 'Por favor complet®¢ Nombre, Tel®¶fono y Email.');
 					return;
 				}
 			}
 
 			currentStep = paso;
 
-			// Desplegar/Ocultar secciones
 			for (let i = 1; i <= 4; i++) {
 				const body = document.getElementById(`step-body-${i}`);
 				const badge = document.getElementById(`step-badge-${i}`);
@@ -1203,7 +1103,6 @@
 			}
 		}
 
-		// CONFIRMACI√ìN FINAL DEL PEDIDO (S√ç Y NO √öNICAMENTE)
 		async function confirmarPedidoTienda() {
 			const calc = calculatePrices();
 			const nom = (document.getElementById('custNombre')?.value || '').trim();
@@ -1216,7 +1115,7 @@
 			if (esRegalo) {
 				const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
 				const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
-				let tagRegalo = `[ES PARA REGALO üéÅ]`;
+				let tagRegalo = `[ES PARA REGALO ??]`;
 				if (destinatario) tagRegalo += ` Para: ${destinatario}.`;
 				if (mensajeRegalo) tagRegalo += ` Cartita: "${mensajeRegalo}".`;
 				
@@ -1256,18 +1155,18 @@
 				const data = await res.json();
 
 				if(data.status === 'exito') {
-					const msgWp = encodeURIComponent(`¬°Hola CROISS! ü•ê Registr√© el pedido ${data.id} a nombre de ${payload.cliente} para el d√≠a ${selectedDate}. ¬øC√≥mo coordinamos los detalles y el pago?`);
+					const msgWp = encodeURIComponent(`?Hola CROISS! ?? Registr®¶ el pedido ${data.id} a nombre de ${payload.cliente} para el d®™a ${selectedDate}. ?C®Æmo coordinamos los detalles y el pago?`);
 					const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
 
 					Swal.fire({
-						title: '¬°Pedido Recibido! ü•ê',
+						title: '?Pedido Recibido! ??',
 						html: `
 							<p style="font-size:0.88rem; color:#7A6B63;">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
-							<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">¬øQuer√©s coordinar los detalles por WhatsApp ahora?</p>
+							<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">?Quer®¶s coordinar los detalles por WhatsApp ahora?</p>
 						`,
 						icon: 'success',
 						showConfirmButton: true,
-						confirmButtonText: 'S√≠',
+						confirmButtonText: 'S®™',
 						showCancelButton: true,
 						cancelButtonText: 'No',
 						showDenyButton: false,
@@ -1278,7 +1177,6 @@
 							cancelButton: 'croiss-swal-cancel'
 						},
 						didOpen: () => {
-							// Eliminaci√≥n f√≠sica directa del bot√≥n de Denegar si existiera
 							const btnDeny = Swal.getDenyButton();
 							if (btnDeny) btnDeny.remove();
 						}
@@ -1289,16 +1187,13 @@
 						reiniciarTienda();
 					});
 				} else {
-					mostrarAlertaCliente('Atenci√≥n', data.mensaje, 'error');
+					mostrarAlertaCliente('Atenci®Æn', data.mensaje, 'error');
 				}
 			} catch(e) {
 				mostrarAlertaCliente('Error', 'No se pudo conectar con el servidor', 'error');
 			}
 		}
 
-        // ==========================================
-        // DESLIZAR HACIA ABAJO PARA RECARGAR (PULL TO REFRESH)
-        // ==========================================
         let pullStartY = 0;
         let isPullingAtTop = false;
 
