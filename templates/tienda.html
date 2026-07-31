@@ -22,6 +22,10 @@
             scroll-behavior: smooth;
         }
 
+		.swal2-deny {
+			display: none !important;
+		}
+
         .web-site-wrapper {
             max-width: 580px;
             margin: 0 auto;
@@ -1151,10 +1155,11 @@
 								<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">¿Querés coordinar los detalles por WhatsApp ahora?</p>
 							`,
 							icon: 'success',
-							showCancelButton: true,
-							showDenyButton: false, // Desactivado botón intermedio
+							showConfirmButton: true,
 							confirmButtonText: 'Sí',
+							showCancelButton: true,
 							cancelButtonText: 'No',
+							showDenyButton: false, // <-- Desactiva explícitamente el tercer botón
 							allowOutsideClick: false,
 							customClass: { 
 								popup: 'croiss-swal-popup', 
