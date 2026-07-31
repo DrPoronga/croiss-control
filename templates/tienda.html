@@ -530,7 +530,7 @@
                 <span class="amount" id="shopSubtotalText">$0</span>
             </div>
 
-            <button type="button" class="btn-step-next" onclick="irAlPaso(2)">Siguiente: Fecha de Entrega ‚ûî</button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(2)">Siguiente: Fecha de Entrega ‚û?/button>
         </div>
     </section>
 
@@ -552,7 +552,7 @@
 
             <div id="datesContainer" class="web-dates-grid">Cargando fechas disponibles...</div>
 
-            <button type="button" class="btn-step-next" onclick="irAlPaso(3)">Siguiente: Tus Datos ‚ûî</button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(3)">Siguiente: Tus Datos ‚û?/button>
         </div>
     </section>
 
@@ -611,7 +611,7 @@
                 <input type="text" id="custNotas" placeholder="Ej: Entregar de ma√±ana, golpear port√≥n negro...">
             </div>
 
-            <button type="button" class="btn-step-next" onclick="irAlPaso(4)">Siguiente: Confirmaci√≥n ‚ûî</button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(4)">Siguiente: Confirmaci√≥n ‚û?/button>
         </div>
     </section>
 
@@ -858,41 +858,68 @@
 			}
 		}
 
-        function renderProducts() {
-            const container = document.getElementById('shopProductsList');
-            if(!container) return;
-            container.innerHTML = '';
+		function renderProducts() {
+					const container = document.getElementById('shopProductsList');
+					if(!container) return;
+					container.innerHTML = '';
 
-            // 1. CAMBIAR ESTO A TRUE PARA ENCENDERLOS
-            const MOSTRAR_POP = true; 
+					// 1. POP CROISS ACTIVADOS
+					const MOSTRAR_POP = true; 
 
-            menuItems.forEach(p => {
-                if (!p || !p.nombre) return;
-                const name = p.nombre;
-                const safeName = name.replace(/'/g, "\\'");
-                const nameLower = name.toLowerCase();
-                const qty = cart[name] ? cart[name].cantidad : 0;
-                const conJalea = cart[name] ? cart[name].con_jalea : false;
+					menuItems.forEach(p => {
+						if (!p || !p.nombre) return;
+						const name = p.nombre;
+						const safeName = name.replace(/'/g, "\\'");
+						const nameLower = name.toLowerCase();
+						const qty = cart[name] ? cart[name].cantidad : 0;
+						const conJalea = cart[name] ? cart[name].con_jalea : false;
 
-                if (!MOSTRAR_POP && nameLower.includes('pop')) return;
+						if (!MOSTRAR_POP && nameLower.includes('pop')) return;
 
-                // Convierte el texto entre par√©ntesis en una letra fina, delicada y sin negrita
-                const displayName = name.replace(
-                    /\(([^)]+)\)/g, 
-                    '<span style="display: block; font-weight: 300; font-size: 0.82rem; color: #7A6B63; margin-top: 2px;">($1)</span>'
-                );
+						// Convierte el texto entre par®¶ntesis en una letra fina, delicada y sin negrita
+						const displayName = name.replace(
+							/\(([^)]+)\)/g, 
+							'<span style="display: block; font-weight: 300; font-size: 0.82rem; color: #7A6B63; margin-top: 2px;">($1)</span>'
+						);
 
-                // 2. TEXTOS DE PRECIOS ACTUALIZADOS AQU√ç
-                let badgeAhorro = '';
-                if (nameLower.includes('pop')) {
-                    if (nameLower.includes('9')) {
-                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390)</small>';
-                    } else if (nameLower.includes('18')) {
-                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¬°Caja x18 Pop Croiss ($720)! Ahorr√°s comprando en cantidad</small>';
-                    } else if (nameLower.includes('27')) {
-                        badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¬°Caja x27 Pop Croiss ($999)! Opci√≥n ideal para compartir</small>';
-                    }
-                }
+						// 2. TEXTOS Y PRECIOS ACTUALIZADOS
+						let badgeAhorro = '';
+						if (nameLower.includes('pop')) {
+							if (nameLower.includes('9')) {
+								badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390)</small>';
+							} else if (nameLower.includes('18')) {
+								badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">?Caja x18 Pop Croiss ($720)! Ahorr®¢s comprando en cantidad</small>';
+							} else if (nameLower.includes('27')) {
+								badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">?Caja x27 Pop Croiss ($999)! Opci®Æn ideal para compartir</small>';
+							}
+						}
+
+						// Selector doble visible cuando el cliente a?ade al menos 1 unidad
+						const selectorJaleaHtml = (qty > 0 && !nameLower.includes('pop')) ? `
+							<div class="jalea-toggle-group">
+								<button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', false)">Sin Jalea</button>
+								<button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', true)">Con Jalea ??</button>
+							</div>
+						` : '';
+
+						const div = document.createElement('div');
+						div.className = 'menu-row';
+						div.innerHTML = `
+							<div class="menu-item-info">
+								<strong>${displayName}</strong>
+								${badgeAhorro}
+								${selectorJaleaHtml}
+							</div>
+							<div class="menu-qty-selector">
+								<button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', -1)">-</button>
+								<span class="qty-number">${qty}</span>
+								<button type="button" class="btn-qty-flat" onclick="updateQty('${safeName}', 1)">+</button>
+							</div>
+						`;
+						container.appendChild(div);
+					});
+					updateSubtotal();
+				}
                 
         // C√ÅLCULO DE PRECIOS UNIFICADO (CROISSANTS TRADICIONALES + POP CROISS)
         function calculatePrices() {
@@ -1074,7 +1101,7 @@
 			let itemsHtml = '';
 			for(let k in cart) {
 				if(cart[k] && cart[k].cantidad > 0) {
-					itemsHtml += `<div>‚Ä¢ ${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
+					itemsHtml += `<div>‚Ä?${cart[k].cantidad}x ${k} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
 				}
 			}
 
