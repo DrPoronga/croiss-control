@@ -8,26 +8,27 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* DESBLOQUEO TOTAL DE SCROLL PARA PC (RUEDA DEL MOUSE) Y MÓVIL */
-        html, body { 
-            height: auto !important;
-            min-height: 100vh !important;
-            overflow-x: hidden !important;
+        /* FIX DEFINITIVO PARA SCROLL CON RUEDITA EN PC */
+        html { 
+            scroll-behavior: smooth;
+            overflow-x: hidden;
             overflow-y: auto !important;
+            overscroll-behavior-y: contain;
+        }
+        body { 
+            min-height: 100vh;
             background-color: #F9F3EE !important; 
             color: #2D1E18 !important; 
             font-family: 'Plus Jakarta Sans', -apple-system, sans-serif !important;
             margin: 0 !important;
             padding: 0 !important;
-            scroll-behavior: smooth;
-            overscroll-behavior-y: contain;
+            /* Se quita overflow-y de body para que no bloquee la rueda del mouse */
         }
 
-        /* EVITA QUE SWEETALERT2 BLOQUEE EL MOUSE EN COMPUTADORAS */
+        /* EVITA QUE SWEETALERT2 BLOQUEE LA RUEDITA EN COMPUTADORAS */
         html.swal2-shown, 
         body.swal2-shown {
             overflow-y: auto !important;
-            height: auto !important;
         }
 		
 		/* ==========================================
