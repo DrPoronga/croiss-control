@@ -432,6 +432,26 @@ def enviar_recordatorio_pago():
 # ==========================================
 # CÁLCULO DE COSTO Y EMPAQUES (OPTIMIZADO)
 # ==========================================
+def calcular_croissants_congelados_equivalentes(items):
+    total_equivalente = 0
+    for item in items:
+        prod = str(item.get("producto", "")).lower()
+        cant = int(item.get("cantidad", 1))
+        
+        if "pop" in prod:
+            if "9" in prod:
+                total_equivalente += cant * 3
+            elif "18" in prod:
+                total_equivalente += cant * 6
+            elif "27" in prod:
+                total_equivalente += cant * 9
+            else:
+                total_equivalente += cant * 3
+        else:
+            total_equivalente += cant
+            
+    return total_equivalente
+    
 def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     if total_croissants <= 0:
         return {"costo_base": 0.0, "costo_empaque": 0.0, "costo_total": 0.0, "cajas_grande": 0, "cajas_mediana": 0, "cajas_chica": 0, "papel": 0}
@@ -572,7 +592,7 @@ def registrar_venta():
         sheet_stock = conectar_sheet("Productos_Stock")
         
         items = datos.get("items", [])
-        total_unidades = sum(int(item.get("cantidad", 1)) for item in items)
+        total_unidades = calcular_croissants_congelados_equivalentes(items)
         
         c_cong, c_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
         capacidad_total = st_cong + (st_masas * 10)
@@ -721,7 +741,7 @@ def api_public_crear_pedido():
         datos = request.json or {}
         fecha_entrega = datos.get("fecha_entrega")
         items = datos.get("items", [])
-        total_unidades = sum(int(item.get("cantidad", 1)) for item in items)
+        total_unidades = calcular_croissants_congelados_equivalentes(items)
 
         if not fecha_entrega or total_unidades <= 0:
             return jsonify({"status": "error", "mensaje": "Datos de pedido inválidos."}), 400
