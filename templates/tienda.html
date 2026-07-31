@@ -565,7 +565,6 @@
         croissImagePreload.src = '/static/croissant.png';
         let croissAnimFrameId = null;
 
-        // MENÚ SEGÚN EL PDF "Menú Croiss.pdf"[cite: 6]
         const defaultMenu = [
 			{ nombre: "Croissant Clásico", relleno: "ninguno" },
 			{ nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
@@ -688,15 +687,30 @@
         }
 
         async function fetchCatalogo() {
-            try {
-                const res = await fetch('/api/public/catalogo');
-                const data = await res.json();
-                if(data.status === 'exito' && Array.isArray(data.productos) && data.productos.length > 0) {
-                    menuItems = data.productos;
-                }
-            } catch(e) { console.error(e); }
-            renderProducts();
-        }
+			try {
+				const res = await fetch('/api/public/catalogo');
+				const data = await res.json();
+				if(data.status === 'exito' && Array.isArray(data.productos) && data.productos.length > 0) {
+					menuItems = data.productos.map(p => {
+						let nombreLimpio = p.nombre || '';
+						
+						// Si el producto trae la palabra "sal" pero no dice Croisstzel, lo renombra
+						if (nombreLimpio.toLowerCase().includes('sal') && !nombreLimpio.toLowerCase().includes('croisstzel')) {
+							if (nombreLimpio.toLowerCase().includes('jamon') || nombreLimpio.toLowerCase().includes('queso')) {
+								nombreLimpio = "Croisstzel c/ Jamón y Queso (+ $50)";
+							} else if (nombreLimpio.toLowerCase().includes('dulce') || nombreLimpio.toLowerCase().includes('ddl')) {
+								nombreLimpio = "Croisstzel c/ Dulce de Leche (+ $30)";
+							} else {
+								nombreLimpio = "Croisstzel (con pequeñas piedras de sal por encima)";
+							}
+						}
+						
+						return { ...p, nombre: nombreLimpio };
+					});
+				}
+			} catch(e) { console.error(e); }
+			renderProducts();
+		}
 
         async function fetchFechas() {
             try {
