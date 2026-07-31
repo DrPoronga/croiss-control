@@ -1303,7 +1303,6 @@ async function cargarCuentas() {
                     contPago.innerHTML = '<p style="font-size:0.85rem; color:#16a34a; font-weight:600;">Excelente! Nadie te debe dinero.</p>';
                 } else {
                     data.pendientes_pago.forEach(p => {
-                        // Limpiamos comillas simples del nombre por si acaso para evitar errores en JS
                         const clienteClean = p.cliente.replace(/'/g, "\\'");
                         
                         const div = document.createElement('div');
@@ -1342,23 +1341,30 @@ async function cargarCuentas() {
 
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
+                        
+                        // Si ya está en camino, mostramos un avisito
+                        const avisoEnCamino = (e.entrega && e.entrega.toLowerCase() === 'en camino') 
+                            ? `<br><small style="color:#2563EB; font-weight:800;">🛵 ¡El pedido ya salió!</small>` : '';
+
                         div.innerHTML = `
                             <div>
                                 <strong>${e.fecha_entrega} - ${e.cliente}</strong><br>
                                 <span style="font-size:0.85rem; color:#334155;">${e.producto} (${e.cantidad} un.)</span>
                                 ${e.direccion ? `<br><small style="color:#64748b;">Dir: ${e.direccion}</small>` : ''}
+                                ${avisoEnCamino}
                             </div>
                             <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
                                 <span class="agenda-badge ${badgeClase}">${badgeTexto}</span>
                                 ${btnMaps}
                                 <div style="display:flex; gap:6px; margin-top:2px;">
-                                    <button class="btn-jalea-chip active" style="padding: 6px 10px; font-size: 0.75rem;" onclick="notificarEntrega(${e.fila}, '${clienteClean}')">Entregado</button>
+                                    <button type="button" class="btn-jalea-chip" style="background:#DBEAFE; color:#1D4ED8; border-color:#BFDBFE; padding: 6px 10px; font-size: 0.75rem;" onclick="marcarEnCamino(${e.fila}, '${clienteClean}')">🛵 En camino</button>
+                                    <button type="button" class="btn-jalea-chip active" style="padding: 6px 10px; font-size: 0.75rem;" onclick="notificarEntrega(${e.fila}, '${clienteClean}')">Entregado</button>
                                     <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${e.fila}, '${clienteClean}')">X</button>
                                 </div>
                             </div>
                         `;
                         contEntrega.appendChild(div);
-                    });
+                    }); // <--- AQUÍ SE AGREGA EL CIERRE QUE FALTABA
                 }
             }
         }
@@ -1419,6 +1425,34 @@ async function notificarEntrega(numFila, nombreCliente) {
                     if (typeof cargarAgenda === 'function') cargarAgenda();
                     if (typeof cargarClientes === 'function') cargarClientes();
                 } else { Swal.fire('Atención', data.mensaje, 'warning'); }
+            } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
+        }
+    });
+}
+
+async function marcarEnCamino(numFila, clienteNombre) {
+    Swal.fire({
+        title: `<strong style="color:var(--text-main); font-size:1.2rem;">¿Marcar pedido en camino?</strong>`,
+        html: `<p style="font-size:0.88rem; color:var(--text-muted); font-weight:600; margin-top:4px; line-height:1.4;">Se le enviará un correo automático a <strong style="color:var(--text-main);">${clienteNombre}</strong> para avisarle que su orden ya salió hacia su dirección.</p>`,
+        showCancelButton: true, confirmButtonText: '🛵 Sí, en camino', cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const res = await fetch('/api/marcar_en_camino', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ fila: numFila })
+                });
+                const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('¡Pedido en camino!', `Aviso enviado por e-mail a ${clienteNombre}.`);
+                    if (typeof cargarCuentas === 'function') cargarCuentas();
+                    if (typeof cargarAgenda === 'function') cargarAgenda();
+                } else { Swal.fire('Error', data.mensaje, 'error'); }
             } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
         }
     });
