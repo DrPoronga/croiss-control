@@ -1778,5 +1778,51 @@ def sumar_stock_insumo():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+# ==========================================
+# NUEVO: ESTADO "EN CAMINO"
+# ==========================================
+def plantilla_email_en_camino(cliente, direccion=""):
+    dir_str = f" a <strong>{direccion}</strong>" if direccion else ""
+    cuerpo = f"""
+    <h2 style="color: #2D1E18; font-size: 18px; font-weight: 800; margin: 0 0 12px 0; text-align: center;">¡Tu pedido va en camino, {cliente}! 🛵💨</h2>
+    <p style="margin: 0 0 18px 0; color: #7A6B63; text-align: center;">Nuestros croissants recién horneados salieron del taller y van rumbo{dir_str}.</p>
+    <div style="background-color: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 14px; padding: 16px; text-align: center; margin-bottom: 20px;">
+      <p style="margin: 0; font-size: 13px; color: #1D4ED8; font-weight: 700;">Prepárate para disfrutarlos. ¡Muchas gracias por elegir CROISS!</p>
+    </div>
+    """
+    return _base_email_template("¡Pedido en camino! 🛵", "#2563EB", cuerpo)
+
+@app.route('/api/marcar_en_camino', methods=['POST'])
+def marcar_en_camino():
+    try:
+        datos = request.json or {}
+        num_fila = datos.get("fila")
+        if not num_fila: return jsonify({"status": "error", "mensaje": "Fila no especificada"}), 400
+
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
+        row_data = sheet_ventas.row_values(int(num_fila))
+
+        col_entrega, col_email, col_cliente, col_dir = 13, -1, -1, -1
+        for i, h in enumerate(headers, start=1):
+            if "entrega" in h and "fecha" not in h: col_entrega = i
+            elif "email" in h or "correo" in h: col_email = i
+            elif "cliente" in h: col_cliente = i
+            elif "direc" in h: col_dir = i
+
+        ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_entrega, "En camino")
+
+        if col_email > 0 and col_cliente > 0:
+            email_cliente = row_data[col_email - 1] if col_email - 1 < len(row_data) else ""
+            nombre_cliente = row_data[col_cliente - 1] if col_cliente - 1 < len(row_data) else "Cliente"
+            direccion = row_data[col_dir - 1] if col_dir > 0 and col_dir - 1 < len(row_data) else ""
+            
+            if email_cliente and "@" in email_cliente:
+                enviar_email_async(email_cliente, "¡Tu pedido CROISS está en camino! 🛵💨", plantilla_email_en_camino(nombre_cliente, direccion))
+
+        return jsonify({"status": "exito", "mensaje": "Pedido marcado en camino"}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
