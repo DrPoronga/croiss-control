@@ -528,24 +528,34 @@
     </div>
 
     <!-- PASO 4: CONFIRMACIÓN Y RESUMEN FINAL -->
-    <section class="web-step-card" id="step-card-4">
-        <div class="web-step-header" id="step-header-4" onclick="irAlPaso(4)">
-            <span class="step-badge" id="step-badge-4">Paso 4</span>
-            <h2 class="web-section-title">Resumen & Confirmación</h2>
-        </div>
+		<section class="web-step-card" id="step-card-4">
+			<div class="web-step-header" id="step-header-4" onclick="irAlPaso(4)">
+				<span class="step-badge" id="step-badge-4">Paso 4</span>
+				<h2 class="web-section-title">Resumen & Confirmación</h2>
+			</div>
 
-        <div class="web-step-body" id="step-body-4" style="display: none;">
-            <p class="web-section-desc">Verificá los detalles de tu orden antes de confirmar.</p>
+			<div class="web-step-body" id="step-body-4" style="display: none;">
+				<p class="web-section-desc">Verificá los detalles de tu compra antes de confirmar.</p>
 
-            <div class="summary-ticket-clean" id="orderSummaryBox">
-                <p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>
-            </div>
+				<!-- BANNER INFORMATIVO ENVÍO WHATSAPP -->
+				<div style="background: #F0FDF4; border: 1.5px solid #22C55E; border-radius: 16px; padding: 14px; margin-bottom: 18px; text-align: center;">
+					<span style="font-size: 0.88rem; font-weight: 800; color: #15803D; display: block;">
+						💬 TENÉ EN CUENTA
+					</span>
+					<span style="font-size: 0.82rem; color: #166534; font-weight: 600; display: block; margin-top: 2px;">
+						El envío y sus detalles se confirmarán 100% a través de WhatsApp.
+					</span>
+				</div>
 
-            <button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
-                Confirmar Pedido 🥐
-            </button>
-        </div>
-    </section>
+				<div class="summary-ticket-clean" id="orderSummaryBox">
+					<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>
+				</div>
+
+				<button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
+					Confirmar Pedido 🥐
+				</button>
+			</div>
+		</section>
 
 </div>
 
@@ -557,13 +567,13 @@
 
         // MENÚ SEGÚN EL PDF "Menú Croiss.pdf"[cite: 6]
         const defaultMenu = [
-            { nombre: "Croissant Clásico", relleno: "ninguno" },
-            { nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
-            { nombre: "Croissant c/ Jamón y Queso (+ $50)", relleno: "salado" },
-            { nombre: "Croisstzel (Sal del Himalaya)", relleno: "ninguno" },
-            { nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" },
-            { nombre: "Croisstzel c/ Jamón y Queso (+ $50)", relleno: "salado" }
-        ];
+			{ nombre: "Croissant Clásico", relleno: "ninguno" },
+			{ nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
+			{ nombre: "Croissant c/ Jamón y Queso (+ $50)", relleno: "salado" },
+			{ nombre: "Croisstzel (con pequeñas piedras de sal por encima)", relleno: "ninguno" },
+			{ nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" },
+			{ nombre: "Croisstzel c/ Jamón y Queso (+ $50)", relleno: "salado" }
+		];
 
         let menuItems = defaultMenu;
         let cart = {}; 
@@ -599,7 +609,7 @@
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         }
-
+		
         // ANIMACIÓN CANVAS DEL CROISSANT MORDIÉNDOSE[cite: 2]
         function mostrarCroissLoader() {
             if (!croissImagePreload.src) croissImagePreload.src = '/static/croissant.png';
@@ -761,12 +771,12 @@
 
 				let badgeAhorro = '';
 				if (nameLower.includes('pop')) {
-					if (nameLower.includes('12')) {
-						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">No comparto, todos para mí 🤫</small>';
-					} else if (nameLower.includes('24')) {
-						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Te ahorrás $80! (Capaz que comparto uno o dos...)</small>';
-					} else if (nameLower.includes('36')) {
-						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Te ahorrás $210! (Opción Picada "Me la juego con el equipo")</small>';
+					if (nameLower.includes('9')) {
+						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390)</small>';
+					} else if (nameLower.includes('18')) {
+						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x18 Pop Croiss ($550)! Ahorrás comprando en cantidad</small>';
+					} else if (nameLower.includes('27')) {
+						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x27 Pop Croiss ($750)! Opción ideal para compartir</small>';
 					}
 				}
 
@@ -1128,8 +1138,9 @@
 							`,
 							icon: 'success',
 							showCancelButton: true,
-							confirmButtonText: '💬 Sí, ir a WhatsApp',
-							cancelButtonText: 'No por ahora',
+							showDenyButton: false, // Desactivado botón intermedio
+							confirmButtonText: 'Sí',
+							cancelButtonText: 'No',
 							allowOutsideClick: false,
 							customClass: { 
 								popup: 'croiss-swal-popup', 
@@ -1137,11 +1148,9 @@
 								cancelButton: 'croiss-swal-cancel'
 							}
 						}).then((result) => {
-							// SOLO ABRE WHATSAPP SI PRESIONÓ "SÍ"
 							if (result.isConfirmed) {
 								window.open(wpUrl, '_blank');
 							}
-							// EN CUALQUIER CASO REINICIA Y VUELVE AL PASO 1
 							reiniciarTienda();
 						});
 					} else {

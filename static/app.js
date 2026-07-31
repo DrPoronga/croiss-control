@@ -46,6 +46,14 @@ function getInputValueSafe(id, defaultVal = '') {
     return el ? el.value.trim() : defaultVal;
 }
 
+function formatNombrePrivado(nombreCompleto) {
+    if (!nombreCompleto) return '';
+    const partes = nombreCompleto.trim().split(/\s+/);
+    if (partes.length === 1) return partes[0]; // Si solo tiene un nombre, lo deja igual
+    // Retorna primer nombre + inicial del primer apellido
+    return `${partes[0]} ${partes[1].charAt(0).toUpperCase()}.`;
+}
+
 // ==========================================
 // DETECTOR INTELIGENTE DE COLUMNAS SHEETS
 // ==========================================
@@ -1844,7 +1852,8 @@ async function cargarClientes() {
             const bannerDetalle = document.getElementById('topDetalle');
 
             if (data.top_cliente_mes) {
-                if (bannerNombre) bannerNombre.innerText = data.top_cliente_mes.nombre;
+                // AQUÍ APLICAMOS LA FUNCIÓN PARA CORTAR EL APELLIDO
+                if (bannerNombre) bannerNombre.innerText = formatNombrePrivado(data.top_cliente_mes.nombre);
                 if (bannerDetalle) bannerDetalle.innerHTML = `Lidera el mes con <span class="cifra-sensible" style="font-weight:800;">${data.top_cliente_mes.total_croissants} croissants</span> comprados`;
             } else {
                 if (bannerNombre) bannerNombre.innerText = 'Sin Compradores';
@@ -1879,7 +1888,8 @@ function renderizarRankingMes(rankingLista) {
         div.innerHTML = `
             <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:1.2rem;">${medallas[idx] || `#${idx + 1}`}</span>
-                <div><strong>${c.nombre || 'Cliente'}</strong></div>
+                <!-- AQUÍ APLICAMOS LA FUNCIÓN PARA CORTAR EL APELLIDO -->
+                <div><strong>${formatNombrePrivado(c.nombre) || 'Cliente'}</strong></div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
                 <strong class="cifra-sensible" style="color:var(--accent); font-size:0.9rem; background: var(--accent-light); padding: 4px 10px; border-radius: 12px;">${c.total_croissants || 0} croiss.</strong>
@@ -2521,9 +2531,6 @@ async function enviarRecordatorioPago(numFila, clienteNombre) {
 // ==========================================
 // PLACA DE INSTAGRAM PARA EL GANADOR DEL MES
 // ==========================================
-// ==========================================
-// PLACA DE INSTAGRAM PARA EL GANADOR DEL MES
-// ==========================================
 function abrirPlacaGanador() {
     const ranking = datosClientesGlobal.ranking || [];
     if (!ranking || ranking.length === 0) {
@@ -2531,9 +2538,10 @@ function abrirPlacaGanador() {
         return;
     }
 
-    const top1 = ranking[0] ? ranking[0].nombre : 'Sin ganador';
-    const top2 = ranking[1] ? ranking[1].nombre : '-';
-    const top3 = ranking[2] ? ranking[2].nombre : '-';
+    // AQUÍ APLICAMOS LA FUNCIÓN A LOS 3 PUESTOS
+    const top1 = ranking[0] ? formatNombrePrivado(ranking[0].nombre) : 'Sin ganador';
+    const top2 = ranking[1] ? formatNombrePrivado(ranking[1].nombre) : '-';
+    const top3 = ranking[2] ? formatNombrePrivado(ranking[2].nombre) : '-';
 
     // Obtener el mes y año seleccionado en el filtro
     const inputMes = document.getElementById('cMesFilter');
@@ -2769,3 +2777,4 @@ function abrirPlacaGanador() {
     `);
     win.document.close();
 }
+
