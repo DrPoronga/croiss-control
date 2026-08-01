@@ -1616,6 +1616,7 @@ function cambiarSegmentoStock(segmento) {
 
 async function cargarStockCongelados() {
     try {
+		cargarStockPop();
         const resCong = await fetch('/api/stock/congelados');
         const dataCong = await resCong.json();
         if (dataCong.status === 'exito') {
