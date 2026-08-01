@@ -739,25 +739,79 @@
         }
 
         function verMenuPublico() {
-            Swal.fire({
-                html: `
-                    <div style="text-align:center; padding: 0; max-height: 80vh; overflow-y: auto; cursor:pointer;" onclick="Swal.close()">
-						<img src="{{ url_for('static', filename='menu.png') }}" 
-							 alt="Menú CROISS Tradicional" 
-							 style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto 14px auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);">
-						
-						<img src="{{ url_for('static', filename='menu2.jpg') }}" 
-							 alt="Menú Pop Croiss" 
-							 style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);"
-							 onerror="this.onerror=null; this.src='/static/menu2.jpg';">
+			Swal.fire({
+				html: `
+					<div style="text-align: center; max-width: 100%;">
+						<!-- Selector Estilo iOS (Segmented Control) -->
+						<div style="display: flex; background: rgba(239, 234, 230, 0.95); padding: 4px; border-radius: 16px; margin-bottom: 14px; border: 1px solid rgba(45, 30, 24, 0.1); backdrop-filter: blur(10px);">
+							<button type="button" id="tabMenuTradicional" onclick="cambiarImagenMenu('tradicional')" style="flex: 1; border: none; background: #FFFFFF; color: #2D1E18; padding: 10px 0; font-size: 0.85rem; font-weight: 800; border-radius: 12px; cursor: pointer; box-shadow: 0 3px 8px rgba(45, 30, 24, 0.12); transition: all 0.25s ease;">
+								🥐 Clásicos
+							</button>
+							<button type="button" id="tabMenuPop" onclick="cambiarImagenMenu('pop')" style="flex: 1; border: none; background: transparent; color: #7A6B63; padding: 10px 0; font-size: 0.85rem; font-weight: 700; border-radius: 12px; cursor: pointer; transition: all 0.25s ease;">
+								🍿 Pop Croiss
+							</button>
+						</div>
+
+						<!-- Visor de Imágenes -->
+						<div style="position: relative; width: 100%; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 30px rgba(45, 30, 24, 0.18);">
+							<img id="imgMenuTradicional" 
+								 src="{{ url_for('static', filename='menu.png') }}" 
+								 alt="Menú CROISS Tradicional" 
+								 style="width: 100%; height: auto; display: block; border-radius: 20px; transition: opacity 0.25s ease;"
+								 onclick="Swal.close()">
+							
+							<img id="imgMenuPop" 
+								 src="{{ url_for('static', filename='menu2.jpg') }}" 
+								 alt="Menú Pop Croiss" 
+								 style="width: 100%; height: auto; display: none; border-radius: 20px; transition: opacity 0.25s ease;"
+								 onerror="this.onerror=null; this.src='/static/menu2.png';"
+								 onclick="Swal.close()">
+						</div>
 					</div>
-                `,
-                showConfirmButton: false,
-                showCloseButton: true,
-                background: 'transparent',
-                customClass: { popup: 'croiss-swal-popup-transparent' }
-            });
-        }
+				`,
+				showConfirmButton: false,
+				showCloseButton: true,
+				background: 'transparent',
+				customClass: { popup: 'croiss-swal-popup-transparent' }
+			});
+		}
+
+		function cambiarImagenMenu(tipo) {
+			const imgTrad = document.getElementById('imgMenuTradicional');
+			const imgPop = document.getElementById('imgMenuPop');
+			const btnTrad = document.getElementById('tabMenuTradicional');
+			const btnPop = document.getElementById('tabMenuPop');
+
+			if (!imgTrad || !imgPop) return;
+
+			if (tipo === 'tradicional') {
+				imgTrad.style.display = 'block';
+				imgPop.style.display = 'none';
+
+				btnTrad.style.background = '#FFFFFF';
+				btnTrad.style.color = '#2D1E18';
+				btnTrad.style.fontWeight = '800';
+				btnTrad.style.boxShadow = '0 3px 8px rgba(45, 30, 24, 0.12)';
+
+				btnPop.style.background = 'transparent';
+				btnPop.style.color = '#7A6B63';
+				btnPop.style.fontWeight = '700';
+				btnPop.style.boxShadow = 'none';
+			} else {
+				imgTrad.style.display = 'none';
+				imgPop.style.display = 'block';
+
+				btnPop.style.background = '#FFFFFF';
+				btnPop.style.color = '#C86D28';
+				btnPop.style.fontWeight = '800';
+				btnPop.style.boxShadow = '0 3px 8px rgba(45, 30, 24, 0.12)';
+
+				btnTrad.style.background = 'transparent';
+				btnTrad.style.color = '#7A6B63';
+				btnTrad.style.fontWeight = '700';
+				btnTrad.style.boxShadow = 'none';
+			}
+		}
 
         function updateQty(name, change) {
             try {
