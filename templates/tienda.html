@@ -741,11 +741,16 @@
         function verMenuPublico() {
             Swal.fire({
                 html: `
-                    <div style="text-align:center; padding: 0; cursor:pointer;" onclick="Swal.close()">
-                        <img src="/static/menu.png" 
-                             alt="Menu CROISS" 
-                             style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);">
-                    </div>
+                    <div style="text-align:center; padding: 0; max-height: 80vh; overflow-y: auto; cursor:pointer;" onclick="Swal.close()">
+						<img src="{{ url_for('static', filename='menu.png') }}" 
+							 alt="Menú CROISS Tradicional" 
+							 style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto 14px auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);">
+						
+						<img src="{{ url_for('static', filename='menu2.jfif') }}" 
+							 alt="Menú Pop Croiss" 
+							 style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);"
+							 onerror="this.onerror=null; this.src='/static/menu2.jpg';">
+					</div>
                 `,
                 showConfirmButton: false,
                 showCloseButton: true,
