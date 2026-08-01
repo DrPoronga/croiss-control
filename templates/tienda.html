@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CROISS �� Artesanos del Croissant ??</title>
+    <title>CROISS · Artesanos del Croissant 🥐</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -28,7 +28,7 @@
             overflow-y: auto !important;
         }
 		
-		/* EST��TICA UNIFICADA DE POP-UPS (SWEETALERT2) */
+		/* ESTÉTICA UNIFICADA DE POP-UPS (SWEETALERT2) */
 		.swal2-popup:not(.croiss-swal-popup-transparent) {
 			border-radius: 28px !important;
 			padding: 24px 20px !important;
@@ -426,14 +426,14 @@
             <h1 class="hero-main-title">CROISS</h1>
             <span class="hero-subtitle">Artesanos del Croissant</span>
             <p class="hero-story-text">
-                Nacimos con una pasi��n: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante fermentaci��n lenta e ingredientes seleccionados, horneando cada lote para lograr esa textura crocante por fuera y suave por dentro.
+                Nacimos con una pasión: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante fermentación lenta e ingredientes seleccionados, horneando cada lote para lograr esa textura crocante por fuera y suave por dentro.
             </p>
             <div class="hero-actions">
                 <button type="button" class="btn-web-main" onclick="scrollToSection('step-card-1')">
                     Crea tu Pedido
                 </button>
                 <button type="button" class="btn-web-outline" onclick="verMenuPublico()">
-                    Men��
+                    Menú
                 </button>
             </div>
         </div>
@@ -441,26 +441,26 @@
 
     <div class="web-site-wrapper">
 
-    <!-- PASO 1: MEN�� -->
+    <!-- PASO 1: MENÚ -->
     <section class="web-step-card" id="step-card-1">
         <div class="web-step-header" id="step-header-1" onclick="irAlPaso(1)">
             <span class="step-badge step-active" id="step-badge-1">Paso 1</span>
-            <h2 class="web-section-title">Eleg�� tus Croissants</h2>
+            <h2 class="web-section-title">Elegí tus Croissants</h2>
         </div>
         
         <div class="web-step-body" id="step-body-1" style="display: block;">
-            <p class="web-section-desc">Seleccion�� las variedades para tu caja reci��n horneada.</p>
-            <div id="shopProductsList">Cargando men��...</div>
+            <p class="web-section-desc">Seleccioná las variedades para tu caja recién horneada.</p>
+            <div id="shopProductsList">Cargando menú...</div>
 
             <div class="subtotal-web-bar">
                 <div>
                     <span class="label">Subtotal Pedido</span>
-                    <small id="shopPromoMsg" style="display: block; font-size: 0.72rem; color: #7A6B63; font-weight: 600;">Llev��s 0 croissants</small>
+                    <small id="shopPromoMsg" style="display: block; font-size: 0.72rem; color: #7A6B63; font-weight: 600;">Llevás 0 croissants</small>
                 </div>
                 <span class="amount" id="shopSubtotalText">$0</span>
             </div>
 
-            <button type="button" class="btn-step-next" onclick="irAlPaso(2)">Siguiente: Fecha de Entrega ?</button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(2)">Siguiente: Fecha de Entrega ➔</button>
         </div>
     </section>
 
@@ -477,10 +477,10 @@
         </div>
 
         <div class="web-step-body" id="step-body-2" style="display: none;">
-            <p class="web-section-desc">Eleg�� el d��a en que quer��s recibir tu orden.</p>
-            <p style="font-size: 0.8rem; color: #166534; font-weight: 600; margin-bottom: 14px;">?? La zona y el horario exacto se coordinan por WhatsApp.</p>
+            <p class="web-section-desc">Elegí el día en que querés recibir tu orden.</p>
+            <p style="font-size: 0.8rem; color: #166534; font-weight: 600; margin-bottom: 14px;">💬 La zona y el horario exacto se coordinan por WhatsApp.</p>
             <div id="datesContainer" class="web-dates-grid">Cargando fechas disponibles...</div>
-            <button type="button" class="btn-step-next" onclick="irAlPaso(3)">Siguiente: Tus Datos ?</button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(3)">Siguiente: Tus Datos ➔</button>
         </div>
     </section>
 
@@ -489,7 +489,7 @@
         <img src="{{ url_for('static', filename='croiss2.png') }}" alt="Variedad CROISS" onerror="this.onerror=null; this.src='/static/croiss2.jpg';">
     </div>
 
-    <!-- PASO 3: TUS DATOS + OPCI��N DE REGALO -->
+    <!-- PASO 3: TUS DATOS + OPCIÓN DE REGALO -->
     <section class="web-step-card" id="step-card-3">
         <div class="web-step-header" id="step-header-3" onclick="irAlPaso(3)">
             <span class="step-badge" id="step-badge-3">Paso 3</span>
@@ -497,14 +497,14 @@
         </div>
 
         <div class="web-step-body" id="step-body-3" style="display: none;">
-            <p class="web-section-desc">Ingres�� tu informaci��n de contacto.</p>
+            <p class="web-section-desc">Ingresá tu información de contacto.</p>
 
             <div class="web-field">
                 <label>Nombre Completo *</label>
-                <input type="text" id="custNombre" placeholder="Ej: Mar��a Silva" required>
+                <input type="text" id="custNombre" placeholder="Ej: María Silva" required>
             </div>
             <div class="web-field">
-                <label>Tel��fono / WhatsApp *</label>
+                <label>Teléfono / WhatsApp *</label>
                 <input type="tel" id="custTel" placeholder="Ej: 099 123 456" required>
             </div>
             <div class="web-field">
@@ -512,34 +512,34 @@
                 <input type="email" id="custEmail" placeholder="ejemplo@email.com" required>
             </div>
             <div class="web-field">
-                <label>Direcci��n / Barrio (Opcional)</label>
+                <label>Dirección / Barrio (Opcional)</label>
                 <input type="text" id="custDir" placeholder="Ej: Pocitos, Calle Falsa 123">
             </div>
 
-            <!-- M��DULO DE REGALO -->
+            <!-- MÓDULO DE REGALO -->
             <div style="background: #FAF0EB; border: 1px dashed #C86D28; border-radius: 16px; padding: 14px; margin: 18px 0;">
                 <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 800; font-size: 0.95rem; color: #2D1E18; margin: 0;">
                     <input type="checkbox" id="chkEsRegalo" onchange="toggleOpcionRegalo()" style="width: 20px; height: 20px; accent-color: #C86D28;">
-                    ?? ?Es para regalo?
+                    🎁 ¿Es para regalo?
                 </label>
                 <div id="boxRegaloCampos" style="display: none; margin-top: 14px; border-top: 1px dashed #E2D9D3; padding-top: 12px;">
                     <div class="web-field">
-                        <label>Nombre de quien recibe ??</label>
+                        <label>Nombre de quien recibe 💌</label>
                         <input type="text" id="custRegaloDestinatario" placeholder="Ej: Valentina">
                     </div>
                     <div class="web-field">
-                        <label>Mensaje para la tarjetita / cartita ??</label>
-                        <textarea id="custRegaloMensaje" rows="3" placeholder="Ej: ?Feliz cumple Valen! Espero que disfrutes mucho este regalito dulce..." style="width: 100%; padding: 12px; border: 1.5px solid #D8CFC8; border-radius: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box; outline: none; background: #FFFFFF;"></textarea>
+                        <label>Mensaje para la tarjetita / cartita 📝</label>
+                        <textarea id="custRegaloMensaje" rows="3" placeholder="Ej: ¡Feliz cumple Valen! Espero que disfrutes mucho este regalito dulce..." style="width: 100%; padding: 12px; border: 1.5px solid #D8CFC8; border-radius: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box; outline: none; background: #FFFFFF;"></textarea>
                     </div>
                 </div>
             </div>
 
             <div class="web-field">
                 <label>Notas / Aclaraciones Adicionales (Opcional)</label>
-                <input type="text" id="custNotas" placeholder="Ej: Entregar de ma?ana, golpear port��n negro...">
+                <input type="text" id="custNotas" placeholder="Ej: Entregar de mañana, golpear portón negro...">
             </div>
 
-            <button type="button" class="btn-step-next" onclick="irAlPaso(4)">Siguiente: Confirmaci��n ?</button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(4)">Siguiente: Confirmación ➔</button>
         </div>
     </section>
 
@@ -548,50 +548,50 @@
         <img src="{{ url_for('static', filename='croiss3.png') }}" alt="Caja CROISS" onerror="this.onerror=null; this.src='/static/croiss3.jpg';">
     </div>
 
-    <!-- PASO 4: CONFIRMACI��N Y RESUMEN FINAL -->
+    <!-- PASO 4: CONFIRMACIÓN Y RESUMEN FINAL -->
 	<section class="web-step-card" id="step-card-4">
 		<div class="web-step-header" id="step-header-4" onclick="irAlPaso(4)">
 			<span class="step-badge" id="step-badge-4">Paso 4</span>
-			<h2 class="web-section-title">Resumen & Confirmaci��n</h2>
+			<h2 class="web-section-title">Resumen & Confirmación</h2>
 		</div>
 
 		<div class="web-step-body" id="step-body-4" style="display: none;">
-			<p class="web-section-desc">Verific�� los detalles de tu compra antes de confirmar.</p>
+			<p class="web-section-desc">Verificá los detalles de tu compra antes de confirmar.</p>
 
 			<div style="background: #F0FDF4; border: 1.5px solid #22C55E; border-radius: 16px; padding: 14px; margin-bottom: 18px; text-align: center;">
 				<span style="font-size: 0.88rem; font-weight: 800; color: #15803D; display: block;">
-					?? TEN�� EN CUENTA
+					💬 TENÉ EN CUENTA
 				</span>
 				<span style="font-size: 0.82rem; color: #166534; font-weight: 600; display: block; margin-top: 2px;">
-					El env��o y sus detalles se confirmar��n 100% a trav��s de WhatsApp.
+					El envío y sus detalles se confirmarán 100% a través de WhatsApp.
 				</span>
 			</div>
 
 			<div class="summary-ticket-clean" id="orderSummaryBox">
-				<p style="color: #94a3b8; text-align: center; margin: 0;">Agreg�� croissants arriba para ver el resumen</p>
+				<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>
 			</div>
 
 			<button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
-				Confirmar Pedido ??
+				Confirmar Pedido 🥐
 			</button>
 		</div>
 	</section>
 
 </div>
 
-    <!-- L��GICA JAVASCRIPT Y ANIMACIONES -->
+    <!-- LÓGICA JAVASCRIPT Y ANIMACIONES -->
     <script>
         const croissImagePreload = new Image();
         croissImagePreload.src = '/static/croissant.png';
         let croissAnimFrameId = null;
 
         const defaultMenu = [
-			{ nombre: "Croissant Cl��sico", relleno: "ninguno" },
+			{ nombre: "Croissant Clásico", relleno: "ninguno" },
 			{ nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
-			{ nombre: "Croissant c/ Jam��n y Queso (+ $50)", relleno: "salado" },
-			{ nombre: "Croisstzel (Tu Croissant Cl��sico con peque?as piedras de sal por encima)", relleno: "ninguno" },
+			{ nombre: "Croissant c/ Jamón y Queso (+ $50)", relleno: "salado" },
+			{ nombre: "Croisstzel (Tu Croissant Clásico con pequeñas piedras de sal por encima)", relleno: "ninguno" },
 			{ nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" },
-			{ nombre: "Croisstzel c/ Jam��n y Queso (+ $50)", relleno: "salado" }
+			{ nombre: "Croisstzel c/ Jamón y Queso (+ $50)", relleno: "salado" }
 		];
 
         let menuItems = defaultMenu;
@@ -712,11 +712,11 @@
 						
 						if (nombreLimpio.toLowerCase().includes('sal') && !nombreLimpio.toLowerCase().includes('croisstzel')) {
 							if (nombreLimpio.toLowerCase().includes('jamon') || nombreLimpio.toLowerCase().includes('queso')) {
-								nombreLimpio = "Croisstzel c/ Jam��n y Queso (+ $50)";
+								nombreLimpio = "Croisstzel c/ Jamón y Queso (+ $50)";
 							} else if (nombreLimpio.toLowerCase().includes('dulce') || nombreLimpio.toLowerCase().includes('ddl')) {
 								nombreLimpio = "Croisstzel c/ Dulce de Leche (+ $30)";
 							} else {
-								nombreLimpio = "Croisstzel (Tu Croiss Cl��sico pero con peque?as piedras de sal por encima)";
+								nombreLimpio = "Croisstzel (Tu Croiss Clásico pero con pequeñas piedras de sal por encima)";
 							}
 						}
 						
@@ -743,7 +743,7 @@
                 html: `
                     <div style="text-align:center; padding: 0; cursor:pointer;" onclick="Swal.close()">
                         <img src="/static/menu.png" 
-                             alt="Men�� CROISS" 
+                             alt="Menú CROISS" 
                              style="width: 100%; max-width: 100%; height: auto; border-radius: 18px; display: block; margin: 0 auto; box-shadow: 0 8px 25px rgba(45,30,24,0.15);">
                     </div>
                 `,
@@ -814,11 +814,11 @@
 					const numSalsas = nameLower.includes('9') ? 1 : 2;
 					
 					if (nameLower.includes('9')) {
-						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390) �� Incluye 1 Salsa</small>';
+						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">Caja x9 Pop Croiss ($390) · Incluye 1 Salsa</small>';
 					} else if (nameLower.includes('18')) {
-						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">?Caja x18 Pop Croiss ($720)! �� Incluye 2 Salsas</small>';
+						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x18 Pop Croiss ($720)! · Incluye 2 Salsas</small>';
 					} else if (nameLower.includes('27')) {
-						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">?Caja x27 Pop Croiss ($999)! �� Incluye 2 Salsas</small>';
+						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">¡Caja x27 Pop Croiss ($999)! · Incluye 2 Salsas</small>';
 					}
 
 					if (qty > 0) {
@@ -845,7 +845,7 @@
 				const selectorJaleaHtml = (qty > 0 && !nameLower.includes('pop')) ? `
 					<div class="jalea-toggle-group">
 						<button type="button" class="btn-jalea-pill ${!conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', false)">Sin Jalea</button>
-						<button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', true)">Con Jalea ??</button>
+						<button type="button" class="btn-jalea-pill ${conJalea ? 'active' : ''}" onclick="setJaleaShop('${safeName}', true)">Con Jalea 🍯</button>
 					</div>
 				` : '';
 
@@ -914,13 +914,13 @@
                 const msgEl = document.getElementById('shopPromoMsg');
                 if(msgEl) {
                     if(calc.totalCroissants === 0) {
-                        msgEl.innerText = 'Agreg�� croissants para continuar';
+                        msgEl.innerText = 'Agregá croissants para continuar';
                     } else if(calc.totalCroissants < 3) {
-                        msgEl.innerText = `Llev��s ${calc.totalCroissants}. ?Agreg�� ${3 - calc.totalCroissants} m��s para precio promo ($110 c/u)!`;
+                        msgEl.innerText = `Llevás ${calc.totalCroissants}. ¡Agregá ${3 - calc.totalCroissants} más para precio promo ($110 c/u)!`;
                     } else if(calc.totalCroissants < 6) {
-                        msgEl.innerText = `?Precio promo activado ($110)! Agreg�� ${6 - calc.totalCroissants} m��s para precio mayorista ($100 c/u).`;
+                        msgEl.innerText = `¡Precio promo activado ($110)! Agregá ${6 - calc.totalCroissants} más para precio mayorista ($100 c/u).`;
                     } else {
-                        msgEl.innerText = '?? ?Mejor precio mayorista activado!';
+                        msgEl.innerText = '🎉 ¡Mejor precio mayorista activado!';
                     }
                 }
 
@@ -1029,7 +1029,7 @@
 			const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
 
 			if (calc.totalCroissants === 0) {
-				box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agreg�� croissants arriba para ver el resumen</p>`;
+				box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>`;
 				return;
 			}
 
@@ -1037,7 +1037,7 @@
 			for(let k in cart) {
 				if(cart[k] && cart[k].cantidad > 0) {
 					let detalleSalsas = (cart[k].salsas && cart[k].salsas.length > 0) ? ` <span style="font-size:0.8rem; color:#C86D28;">(Salsas: ${cart[k].salsas.join(', ')})</span>` : '';
-					itemsHtml += `<div>? ${cart[k].cantidad}x ${k}${detalleSalsas} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
+					itemsHtml += `<div>• ${cart[k].cantidad}x ${k}${detalleSalsas} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
 				}
 			}
 
@@ -1045,7 +1045,7 @@
 			if (esRegalo) {
 				bloqueRegaloHtml = `
 					<div style="background:#FAF0EB; border:1px dashed #C86D28; border-radius:12px; padding:10px; margin:10px 0;">
-						<strong style="color:#C86D28;">?? ?Pedido para Regalo!</strong><br>
+						<strong style="color:#C86D28;">🎁 ¡Pedido para Regalo!</strong><br>
 						${destinatario ? `<strong>Para:</strong> ${destinatario}<br>` : ''}
 						${mensajeRegalo ? `<strong>Mensaje:</strong> "<em>${mensajeRegalo}</em>"` : ''}
 					</div>
@@ -1090,12 +1090,12 @@
 			const calc = calculatePrices();
 
 			if (paso > 1 && calc.totalCroissants === 0) {
-				mostrarAlertaCliente('Eleg�� tus croissants', 'Agreg�� al menos 1 croissant a tu pedido antes de continuar.');
+				mostrarAlertaCliente('Elegí tus croissants', 'Agregá al menos 1 croissant a tu pedido antes de continuar.');
 				return;
 			}
 
 			if (paso > 2 && !selectedDate) {
-				mostrarAlertaCliente('Seleccion�� la fecha', 'Por favor marc�� el d��a de entrega antes de continuar.');
+				mostrarAlertaCliente('Seleccioná la fecha', 'Por favor marcá el día de entrega antes de continuar.');
 				return;
 			}
 
@@ -1105,7 +1105,7 @@
 				const email = (document.getElementById('custEmail')?.value || '').trim();
 
 				if (!nom || !tel || !email) {
-					mostrarAlertaCliente('Campos Obligatorios', 'Por favor complet�� Nombre, Tel��fono y Email.');
+					mostrarAlertaCliente('Campos Obligatorios', 'Por favor completá Nombre, Teléfono y Email.');
 					return;
 				}
 			}
@@ -1148,7 +1148,7 @@
 			if (esRegalo) {
 				const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
 				const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
-				let tagRegalo = `[ES PARA REGALO ??]`;
+				let tagRegalo = `[ES PARA REGALO 🎁]`;
 				if (destinatario) tagRegalo += ` Para: ${destinatario}.`;
 				if (mensajeRegalo) tagRegalo += ` Cartita: "${mensajeRegalo}".`;
 				
@@ -1189,18 +1189,18 @@
 				const data = await res.json();
 
 				if(data.status === 'exito') {
-					const msgWp = encodeURIComponent(`?Hola CROISS! ?? Registr�� el pedido ${data.id} a nombre de ${payload.cliente} para el d��a ${selectedDate}. ?C��mo coordinamos los detalles y el pago?`);
+					const msgWp = encodeURIComponent(`¡Hola CROISS! 🥐 Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate}. ¿Cómo coordinamos los detalles y el pago?`);
 					const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
 
 					Swal.fire({
-						title: '?Pedido Recibido! ??',
+						title: '¡Pedido Recibido! 🥐',
 						html: `
 							<p style="font-size:0.88rem; color:#7A6B63;">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
-							<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">?Quer��s coordinar los detalles por WhatsApp ahora?</p>
+							<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">¿Querés coordinar los detalles por WhatsApp ahora?</p>
 						`,
 						icon: 'success',
 						showConfirmButton: true,
-						confirmButtonText: 'S��',
+						confirmButtonText: 'Sí',
 						showCancelButton: true,
 						cancelButtonText: 'No',
 						showDenyButton: false,
@@ -1221,7 +1221,7 @@
 						reiniciarTienda();
 					});
 				} else {
-					mostrarAlertaCliente('Atenci��n', data.mensaje, 'error');
+					mostrarAlertaCliente('Atención', data.mensaje, 'error');
 				}
 			} catch(e) {
 				mostrarAlertaCliente('Error', 'No se pudo conectar con el servidor', 'error');

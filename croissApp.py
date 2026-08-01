@@ -1,6 +1,4 @@
 app = Flask(__name__)
-
-# Fuerza a Jinja2 a abrir todos los HTML como UTF-8 en el servidor
 app.jinja_env.encoding = 'utf-8'
 
 import os
