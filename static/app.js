@@ -407,6 +407,105 @@ function autocompletarDatosCliente() {
     }
 }
 
+///
+
+async function cargarStockPop() {
+    try {
+        const res = await fetch('/api/stock/pop');
+        const data = await res.json();
+        if (data.status === 'exito') {
+            const elPop = document.getElementById('cantPopCongelados');
+            const elMasasPop = document.getElementById('cantMasasPop');
+            if (elPop) elPop.innerText = `${data.pop_congelados} un.`;
+            if (elMasasPop) elMasasPop.innerText = `${data.pop_masas} masas`;
+        }
+    } catch (e) {
+        console.error("Error cargando stock pop:", e);
+    }
+}
+
+function abrirModalEditarPopDirecto() {
+    const popTxt = document.getElementById('cantPopCongelados') ? document.getElementById('cantPopCongelados').innerText.replace(' un.', '').trim() : '0';
+    const masasTxt = document.getElementById('cantMasasPop') ? document.getElementById('cantMasasPop').innerText.replace(' masas', '').trim() : '0';
+
+    Swal.fire({
+        title: 'Fijar Stock de Pop Croiss',
+        html: `
+            <div style="text-align: left; margin-top: 10px; font-size: 0.88rem;">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 4px; color: #B45309;">🍿 Pop Croiss Congelados (unidades sueltas):</label>
+                    <input type="number" id="inputFijarPop" class="croiss-swal-input" value="${parseInt(popTxt) || 0}" min="0" placeholder="Ej: 27">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 4px; color: var(--accent);">🥣 Masas Pop en Heladera (1 masa = 30 pop):</label>
+                    <input type="number" id="inputFijarMasasPop" class="croiss-swal-input" value="${parseInt(masasTxt) || 0}" min="0" placeholder="Ej: 1">
+                </div>
+            </div>
+        `,
+        showCancelButton: true, confirmButtonText: 'Guardar Stock Pop', cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
+        preConfirm: () => {
+            const p = parseInt(document.getElementById('inputFijarPop').value);
+            const m = parseInt(document.getElementById('inputFijarMasasPop').value);
+            if (isNaN(p) || p < 0 || isNaN(m) || m < 0) {
+                Swal.showValidationMessage('Ingresa valores válidos mayores o iguales a 0.');
+                return false;
+            }
+            return { congelados: p, masas: m };
+        }
+    }).then(async (res) => {
+        if (res.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const r = await fetch('/api/stock/pop/fijar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(res.value)
+                });
+                const data = await r.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    cargarStockPop();
+                    mostrarCroissExito('Stock Pop Fijado', `Fijados: ${data.pop_congelados} Pop Croiss.`);
+                } else { Swal.fire('Error', data.mensaje, 'error'); }
+            } catch (err) { Swal.fire('Error', 'No se pudo actualizar el stock Pop', 'error'); }
+        }
+    });
+}
+
+function abrirModalSumarPop() {
+    Swal.fire({
+        title: 'Sumar Pop Croiss al Freezer',
+        customClass: { popup: 'croiss-swal-popup', title: 'croiss-swal-title', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
+        buttonsStyling: false,
+        html: `<div style="text-align: left; margin-top: 14px;"><label style="display:block; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase;">Cantidad de Pop Croiss preparados (unidades sueltas)</label><input type="number" id="inputSumarPop" class="croiss-swal-input" value="9" min="1" placeholder="Ej: 27"></div>`,
+        showCancelButton: true, confirmButtonText: '+ Sumar Pop', cancelButtonText: 'Cancelar', focusConfirm: false,
+        preConfirm: () => {
+            const cant = document.getElementById('inputSumarPop').value;
+            if (!cant || parseInt(cant) <= 0) { Swal.showValidationMessage('Ingresá una cantidad válida.'); return false; }
+            return parseInt(cant);
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const res = await fetch('/api/stock/pop', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ congelados: result.value }) });
+                const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    cargarStockPop();
+                    mostrarCroissExito('Pop Agregados!', `Se sumaron +${result.value} unidades de Pop Croiss.`);
+                } else { Swal.fire('Error', data.mensaje, 'error'); }
+            } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
+        }
+    });
+}
+
+
 // ==========================================
 // BALANCE Y MÉTRICAS DE VENTAS
 // ==========================================

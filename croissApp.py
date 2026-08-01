@@ -593,32 +593,67 @@ def registrar_venta():
         sheet_stock = conectar_sheet("Productos_Stock")
         
         items = datos.get("items", [])
-        total_unidades = calcular_croissants_congelados_equivalentes(items)
         
-        c_cong, c_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
-        capacidad_total = st_cong + (st_masas * 10)
+        # Unidades requeridas
+        req_normales = sum(
+            int(item.get("cantidad", 1)) for item in items 
+            if "pop" not in str(item.get("producto", "")).lower()
+        )
+        req_pop = calcular_unidades_pop_reales(items)
+        total_equivalente_horno = calcular_croissants_congelados_equivalentes(items)
 
-        if total_unidades > capacidad_total:
+        # Consultar capacidades de Stock Normal
+        c_cong, c_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
+        capacidad_normal = st_cong + (st_masas * 10)
+
+        # Consultar capacidades de Stock Pop
+        c_pop_cong, c_pop_masas, col_st_pop, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
+        capacidad_pop = st_pop_cong + (st_pop_masas * 30)
+
+        # Validaciones de stock
+        if req_normales > capacidad_normal:
             return jsonify({
                 "status": "error",
-                "mensaje": f"🚫 Capacidad insuficiente. Tienes {st_cong} croiss congelados + {st_masas} masa(s) (Capacidad total: {capacidad_total}) e intentas vender {total_unidades}."
+                "mensaje": f"🚫 Capacidad insuficiente de Croissants Tradicionales. Tienes {st_cong} congelados + {st_masas} masa(s) e intentas vender {req_normales}."
             }), 400
 
-        if total_unidades <= st_cong:
-            st_cong -= total_unidades
-        else:
-            restante = total_unidades - st_cong
-            st_cong = 0
-            masas_a_romper = math.ceil(restante / 10.0)
-            st_masas -= masas_a_romper
-            st_cong += (masas_a_romper * 10) - restante
+        if req_pop > capacidad_pop:
+            return jsonify({
+                "status": "error",
+                "mensaje": f"🚫 Capacidad insuficiente de Pop Croiss. Tienes {st_pop_cong} Pop congelados + {st_pop_masas} masa(s) Pop e intentas vender {req_pop} unidades Pop."
+            }), 400
 
-        # OPTIMIZACIÓN: Batch update para actualizar congelados y masas en 1 sola llamada
+        # Descontar Stock Normal
+        if req_normales > 0:
+            if req_normales <= st_cong:
+                st_cong -= req_normales
+            else:
+                restante = req_normales - st_cong
+                st_cong = 0
+                masas_a_romper = math.ceil(restante / 10.0)
+                st_masas = max(0, st_masas - masas_a_romper)
+                st_cong += (masas_a_romper * 10) - restante
+
+        # Descontar Stock Pop
+        if req_pop > 0:
+            if req_pop <= st_pop_cong:
+                st_pop_cong -= req_pop
+            else:
+                rest_pop = req_pop - st_pop_cong
+                st_pop_cong = 0
+                masas_pop_romper = math.ceil(rest_pop / 30.0)
+                st_pop_masas = max(0, st_pop_masas - masas_pop_romper)
+                st_pop_cong += (masas_pop_romper * 30) - rest_pop
+
+        # Batch update a Google Sheets
         batch_stock = []
-        if c_cong:
-            batch_stock.append({'range': f'D{c_cong.row}', 'values': [[st_cong]]})
-        if c_masas:
-            batch_stock.append({'range': f'D{c_masas.row}', 'values': [[st_masas]]})
+        if req_normales > 0:
+            if c_cong: batch_stock.append({'range': f'D{c_cong.row}', 'values': [[st_cong]]})
+            if c_masas: batch_stock.append({'range': f'D{c_masas.row}', 'values': [[st_masas]]})
+        if req_pop > 0:
+            if c_pop_cong: batch_stock.append({'range': f'D{c_pop_cong.row}', 'values': [[st_pop_cong]]})
+            if c_pop_masas: batch_stock.append({'range': f'D{c_pop_masas.row}', 'values': [[st_pop_masas]]})
+
         if batch_stock:
             ejecutar_con_reintento(sheet_stock.batch_update, batch_stock)
 
@@ -633,7 +668,7 @@ def registrar_venta():
             resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
 
         descripcion_final = ", ".join(resumen_productos)
-        alertas_empaque = modificar_stock_empaque(descripcion_final, total_unidades, es_devolucion=False)
+        alertas_empaque = modificar_stock_empaque(descripcion_final, total_equivalente_horno, es_devolucion=False)
 
         cliente_nombre = datos.get("cliente", "Consumidor Final")
         email_cliente = str(datos.get("email", "")).strip()
@@ -644,7 +679,7 @@ def registrar_venta():
         estado_pedido = datos.get("estado", "Pendiente")
         notas_cliente = str(datos.get("notas", "")).strip()
 
-        # MANEJO DE DESCUENTOS: Registrar etiqueta en notas
+        # Manejo de Descuentos
         descuento_pct = float(datos.get("descuento", 0))
         if descuento_pct > 0:
             tag_dto = f"[Dto {int(descuento_pct) if descuento_pct.is_integer() else descuento_pct}%]"
@@ -652,7 +687,7 @@ def registrar_venta():
         
         nueva_fila = [
             nuevo_id, datos.get("fecha"), fecha_entrega, cliente_nombre,
-            descripcion_final, total_unidades, monto_total, estado_pedido,
+            descripcion_final, total_equivalente_horno, monto_total, estado_pedido,
             datos.get("medio_pago", "-"), email_cliente, telefono_cliente,
             direccion_cliente, "Pendiente", notas_cliente
         ]
@@ -742,50 +777,82 @@ def api_public_crear_pedido():
         datos = request.json or {}
         fecha_entrega = datos.get("fecha_entrega")
         items = datos.get("items", [])
-        total_unidades = calcular_croissants_congelados_equivalentes(items)
 
-        if not fecha_entrega or total_unidades <= 0:
+        req_normales = sum(
+            int(item.get("cantidad", 1)) for item in items 
+            if "pop" not in str(item.get("producto", "")).lower()
+        )
+        req_pop = calcular_unidades_pop_reales(items)
+        total_equivalente_horno = calcular_croissants_congelados_equivalentes(items)
+
+        if not fecha_entrega or total_equivalente_horno <= 0:
             return jsonify({"status": "error", "mensaje": "Datos de pedido inválidos."}), 400
 
         sheet_ventas = conectar_sheet("Ventas")
         asegurar_encabezados_ventas(sheet_ventas)
         registros = get_clean_records(sheet_ventas)
 
-        # VALIDAR LÍMITE ESTRICTO DE 35
+        # VALIDAR LÍMITE ESTRICTO DE 35 (en equivalencia de horno)
         acumulado_dia = sum(
             int(get_field_val(r, "Cantidad"))
             for r in registros
             if normalizar_fecha(get_field_val(r, "Fecha Entrega", "Fecha")) == fecha_entrega and get_field_val(r, "Cantidad").isdigit()
         )
 
-        if (acumulado_dia + total_unidades) > 35:
+        if (acumulado_dia + total_equivalente_horno) > 35:
             return jsonify({
                 "status": "error",
-                "mensaje": f"🚫 ¡Cupo excedido! Para el día {fecha_entrega} quedan solo {max(0, 35 - acumulado_dia)} lugares y estás pidiendo {total_unidades}."
+                "mensaje": f"🚫 ¡Cupo excedido! Para el día {fecha_entrega} quedan solo {max(0, 35 - acumulado_dia)} lugares y estás pidiendo el equivalente a {total_equivalente_horno} croissants."
             }), 400
 
-        # Control de Capacidad de Masa / Freezer
         sheet_stock = conectar_sheet("Productos_Stock")
+
+        # Stock Normal
         c_cong, c_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
-        capacidad_total = st_cong + (st_masas * 10)
+        capacidad_normal = st_cong + (st_masas * 10)
 
-        if total_unidades > capacidad_total:
-            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin insumos suficientes para esta cantidad."}), 400
+        # Stock Pop
+        c_pop_cong, c_pop_masas, col_st_pop, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
+        capacidad_pop = st_pop_cong + (st_pop_masas * 30)
 
-        # Descontar stock
-        if total_unidades <= st_cong:
-            st_cong -= total_unidades
-        else:
-            restante = total_unidades - st_cong
-            st_cong = 0
-            masas_a_romper = math.ceil(restante / 10.0)
-            st_masas -= masas_a_romper
-            st_cong += (masas_a_romper * 10) - restante
+        if req_normales > capacidad_normal:
+            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin croissants tradicionales suficientes."}), 400
+
+        if req_pop > capacidad_pop:
+            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin Pop Croiss suficientes."}), 400
+
+        # Descontar stock Normal
+        if req_normales > 0:
+            if req_normales <= st_cong:
+                st_cong -= req_normales
+            else:
+                restante = req_normales - st_cong
+                st_cong = 0
+                masas_a_romper = math.ceil(restante / 10.0)
+                st_masas = max(0, st_masas - masas_a_romper)
+                st_cong += (masas_a_romper * 10) - restante
+
+        # Descontar stock Pop
+        if req_pop > 0:
+            if req_pop <= st_pop_cong:
+                st_pop_cong -= req_pop
+            else:
+                rest_pop = req_pop - st_pop_cong
+                st_pop_cong = 0
+                masas_pop_romper = math.ceil(rest_pop / 30.0)
+                st_pop_masas = max(0, st_pop_masas - masas_pop_romper)
+                st_pop_cong += (masas_pop_romper * 30) - rest_pop
 
         batch_stock = []
-        if c_cong: batch_stock.append({'range': f'D{c_cong.row}', 'values': [[st_cong]]})
-        if c_masas: batch_stock.append({'range': f'D{c_masas.row}', 'values': [[st_masas]]})
-        if batch_stock: ejecutar_con_reintento(sheet_stock.batch_update, batch_stock)
+        if req_normales > 0:
+            if c_cong: batch_stock.append({'range': f'D{c_cong.row}', 'values': [[st_cong]]})
+            if c_masas: batch_stock.append({'range': f'D{c_masas.row}', 'values': [[st_masas]]})
+        if req_pop > 0:
+            if c_pop_cong: batch_stock.append({'range': f'D{c_pop_cong.row}', 'values': [[st_pop_cong]]})
+            if c_pop_masas: batch_stock.append({'range': f'D{c_pop_masas.row}', 'values': [[st_pop_masas]]})
+
+        if batch_stock:
+            ejecutar_con_reintento(sheet_stock.batch_update, batch_stock)
 
         nuevo_id = f"V-{len(registros) + 1:04d}"
         resumen_productos = []
@@ -796,7 +863,7 @@ def api_public_crear_pedido():
             resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
 
         descripcion_final = ", ".join(resumen_productos)
-        modificar_stock_empaque(descripcion_final, total_unidades, es_devolucion=False)
+        modificar_stock_empaque(descripcion_final, total_equivalente_horno, es_devolucion=False)
 
         cliente_nombre = datos.get("cliente", "Cliente Web")
         email_cliente = str(datos.get("email", "")).strip()
@@ -808,20 +875,19 @@ def api_public_crear_pedido():
 
         nueva_fila = [
             nuevo_id, hoy_str, fecha_entrega, cliente_nombre,
-            descripcion_final, total_unidades, monto_total, "Pendiente",
+            descripcion_final, total_equivalente_horno, monto_total, "Pendiente",
             "Web / WhatsApp", email_cliente, telefono_cliente,
             direccion_cliente, "Pendiente", notas_cliente
         ]
         ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
 
-        # 1. Enviar email de confirmación al cliente
+        # Emails
         if email_cliente:
             try:
                 html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, "Pendiente")
                 enviar_email_async(email_cliente, f"🥐 ¡Pedido {nuevo_id} Registrado en CROISS!", html)
             except Exception: pass
 
-        # 2. ALERTA AL ADMIN POR MAIL (¡NUEVO!)
         try:
             cuerpo_admin = f"""
             <h2>🚨 ¡Nuevo Pedido Web Recibido!</h2>
@@ -841,7 +907,7 @@ def api_public_crear_pedido():
         return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-    
+       
 
 def obtener_celda_congelados(sheet_stock):
     try:
@@ -887,6 +953,54 @@ def obtener_niveles_stock(sheet_stock):
         except ValueError: return 0
 
     return c_cong, c_masas, col_stock, _leer(c_cong), _leer(c_masas)
+
+def obtener_celda_pop_congelados(sheet_stock):
+    try:
+        celda = sheet_stock.find(re.compile(r"pop.*congelado", re.IGNORECASE))
+        if celda: return celda
+    except Exception: pass
+    
+    ejecutar_con_reintento(sheet_stock.append_row, ["POP-001", "Pop Croiss Congelados", 0, 0])
+    return sheet_stock.find(re.compile(r"pop.*congelado", re.IGNORECASE))
+
+def obtener_celda_pop_masas(sheet_stock):
+    try:
+        celda = sheet_stock.find(re.compile(r"masas.*pop|pop.*masas", re.IGNORECASE))
+        if celda: return celda
+    except Exception: pass
+    
+    ejecutar_con_reintento(sheet_stock.append_row, ["MASAPOP-001", "Masas Pop Heladera", 0, 0])
+    return sheet_stock.find(re.compile(r"masas.*pop|pop.*masas", re.IGNORECASE))
+
+def obtener_niveles_stock_pop(sheet_stock):
+    c_pop_cong = obtener_celda_pop_congelados(sheet_stock)
+    c_pop_masas = obtener_celda_pop_masas(sheet_stock)
+
+    headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
+    col_stock = 4
+    for idx, h in enumerate(headers, start=1):
+        if "stock" in h: col_stock = idx; break
+
+    def _leer(celda):
+        if not celda: return 0
+        val = sheet_stock.cell(celda.row, col_stock).value or "0"
+        val_clean = str(val).replace(",", ".").strip()
+        try: return max(0, int(float(val_clean)))
+        except ValueError: return 0
+
+    return c_pop_cong, c_pop_masas, col_stock, _leer(c_pop_cong), _leer(c_pop_masas)
+
+def calcular_unidades_pop_reales(items):
+    total_pop = 0
+    for item in items:
+        prod = str(item.get("producto", "")).lower()
+        cant = int(item.get("cantidad", 1))
+        if "pop" in prod:
+            if "9" in prod: total_pop += cant * 9
+            elif "18" in prod: total_pop += cant * 18
+            elif "27" in prod: total_pop += cant * 27
+            else: total_pop += cant * 9
+    return total_pop
     
 @app.route('/api/agenda', methods=['GET'])
 def obtener_agenda():
@@ -1813,6 +1927,52 @@ def sumar_stock_insumo():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+@app.route('/api/stock/pop', methods=['GET', 'POST'])
+def stock_pop():
+    try:
+        sheet_stock = conectar_sheet("Productos_Stock")
+        c_pop_cong, c_pop_masas, col_stock, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
+
+        if request.method == 'POST':
+            datos = request.json or {}
+            st_pop_cong += int(datos.get("congelados", 0))
+            st_pop_masas += int(datos.get("masas", 0))
+            if c_pop_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_cong.row, col_stock, st_pop_cong)
+            if c_pop_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_masas.row, col_stock, st_pop_masas)
+
+        return jsonify({
+            "status": "exito",
+            "pop_congelados": st_pop_cong,
+            "pop_masas": st_pop_masas,
+            "capacidad_total": st_pop_cong + (st_pop_masas * 30),
+            "mensaje": "Stock Pop actualizado"
+        }), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/stock/pop/fijar', methods=['POST'])
+def fijar_stock_pop():
+    try:
+        datos = request.json or {}
+        st_pop_cong = max(0, int(datos.get("congelados", 0)))
+        st_pop_masas = max(0, int(datos.get("masas", 0)))
+
+        sheet_stock = conectar_sheet("Productos_Stock")
+        c_pop_cong, c_pop_masas, col_stock, _, _ = obtener_niveles_stock_pop(sheet_stock)
+
+        if c_pop_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_cong.row, col_stock, st_pop_cong)
+        if c_pop_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_masas.row, col_stock, st_pop_masas)
+
+        return jsonify({
+            "status": "exito", 
+            "pop_congelados": st_pop_cong,
+            "pop_masas": st_pop_masas,
+            "capacidad_total": st_pop_cong + (st_pop_masas * 30),
+            "mensaje": "Valores Pop fijados correctamente"
+        }), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 # ==========================================
 # NUEVO: ESTADO "EN CAMINO"
 # ==========================================
