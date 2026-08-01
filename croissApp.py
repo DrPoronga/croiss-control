@@ -533,24 +533,42 @@ def obtener_niveles_stock_pop(sheet_stock):
             try: st_num = max(0, int(float(val_st)))
             except ValueError: st_num = 0
 
-            if "pop" in nom and "congelado" in nom and row_pop_cong is None:
+            # 1. Búsqueda flexible de Pop en Freezer / Congelados
+            if "pop" in nom and ("congelado" in nom or "freezer" in nom or "suelta" in nom) and row_pop_cong is None:
                 row_pop_cong, st_pop_cong = r_idx, st_num
-            elif "pop" in nom and "masa" in nom and row_pop_masas is None:
+            # 2. Búsqueda flexible de Masas Pop
+            elif "pop" in nom and ("masa" in nom or "heladera" in nom) and row_pop_masas is None:
                 row_pop_masas, st_pop_masas = r_idx, st_num
 
+    # Respaldos de búsqueda si no matcheó con las palabras compuestas
+    if row_pop_cong is None or row_pop_masas is None:
+        if all_values and len(all_values) > 1:
+            for r_idx, row in enumerate(all_values[1:], start=2):
+                nom = str(row[1] if len(row) > 1 else "").lower().strip()
+                val_st = str(row[col_stock - 1] if col_stock - 1 < len(row) else "0").replace(",", ".").strip()
+                try: st_num = max(0, int(float(val_st)))
+                except ValueError: st_num = 0
+
+                if "pop" in nom and "masa" not in nom and row_pop_cong is None:
+                    row_pop_cong, st_pop_cong = r_idx, st_num
+                elif "pop" in nom and "masa" in nom and row_pop_masas is None:
+                    row_pop_masas, st_pop_masas = r_idx, st_num
+
+    # Si realmente no existe en la planilla, la crea una sola vez
     if row_pop_cong is None:
         ejecutar_con_reintento(sheet_stock.append_row, ["POP-001", "Pop Croiss Congelados", 0, 0])
-        row_pop_cong = len(all_values) + 1 if all_values else 2
+        all_values = sheet_stock.get_all_values()
+        row_pop_cong = len(all_values)
         st_pop_cong = 0
-        all_values.append(["POP-001", "Pop Croiss Congelados", "0", "0"])
 
     if row_pop_masas is None:
         ejecutar_con_reintento(sheet_stock.append_row, ["MASAPOP-001", "Masas Pop Heladera", 0, 0])
-        row_pop_masas = len(all_values) + 1 if all_values else 3
+        all_values = sheet_stock.get_all_values()
+        row_pop_masas = len(all_values)
         st_pop_masas = 0
 
     return row_pop_cong, row_pop_masas, col_stock, st_pop_cong, st_pop_masas
-
+    
 def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     if total_croissants <= 0:
         return {"costo_base": 0.0, "costo_empaque": 0.0, "costo_total": 0.0, "cajas_grande": 0, "cajas_mediana": 0, "cajas_chica": 0, "papel": 0}
