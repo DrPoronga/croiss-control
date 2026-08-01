@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CROISS ¡¤ Artesanos del Croissant</title>
+    <title>CROISS - Artesanos del Croissant</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1037,7 +1037,7 @@
 			for(let k in cart) {
 				if(cart[k] && cart[k].cantidad > 0) {
 					let detalleSalsas = (cart[k].salsas && cart[k].salsas.length > 0) ? ` <span style="font-size:0.8rem; color:#C86D28;">(Salsas: ${cart[k].salsas.join(', ')})</span>` : '';
-					itemsHtml += `<div>? ${cart[k].cantidad}x ${k}${detalleSalsas} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
+					itemsHtml += `<div>â€¢ ${cart[k].cantidad}x ${k}${detalleSalsas} ${cart[k].con_jalea ? '(Con Jalea)' : ''}</div>`;
 				}
 			}
 

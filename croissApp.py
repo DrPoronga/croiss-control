@@ -17,8 +17,6 @@ import math
 # CONFIGURACIÓN GENERAL Y FLASK
 # ==========================================
 app = Flask(__name__)
-
-# Fuerza a Jinja a decodificar las plantillas como UTF-8
 app.jinja_env.encoding = 'utf-8'
 
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "croiss_super_secreta_2026")
