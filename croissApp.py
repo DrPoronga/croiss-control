@@ -431,7 +431,7 @@ def enviar_recordatorio_pago():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 # ==========================================
-# CÁLCULO DE COSTO Y EMPAQUES (OPTIMIZADO)
+# CÁLCULO DE COSTO, EMPAQUES Y CONGELADOS POP
 # ==========================================
 def calcular_croissants_congelados_equivalentes(items):
     total_equivalente = 0
@@ -452,7 +452,64 @@ def calcular_croissants_congelados_equivalentes(items):
             total_equivalente += cant
             
     return total_equivalente
+
+def calcular_unidades_pop_reales(items):
+    total_pop = 0
+    for item in items:
+        prod = str(item.get("producto", "")).lower()
+        cant = int(item.get("cantidad", 1))
+        if "pop" in prod:
+            if "9" in prod: total_pop += cant * 9
+            elif "18" in prod: total_pop += cant * 18
+            elif "27" in prod: total_pop += cant * 27
+            else: total_pop += cant * 9
+    return total_pop
+
+def calcular_unidades_normales(items):
+    total_normales = 0
+    for item in items:
+        prod = str(item.get("producto", "")).lower()
+        cant = int(item.get("cantidad", 1))
+        if "pop" not in prod:
+            total_normales += cant
+    return total_normales
+
+def obtener_celda_pop_congelados(sheet_stock):
+    try:
+        celda = sheet_stock.find(re.compile(r"pop.*congelado|congelado.*pop", re.IGNORECASE))
+        if celda: return celda
+    except Exception: pass
     
+    ejecutar_con_reintento(sheet_stock.append_row, ["POP-001", "Pop Croiss Congelados", 0, 0])
+    return sheet_stock.find(re.compile(r"pop.*congelado|congelado.*pop", re.IGNORECASE))
+
+def obtener_celda_pop_masas(sheet_stock):
+    try:
+        celda = sheet_stock.find(re.compile(r"masas.*pop|pop.*masas", re.IGNORECASE))
+        if celda: return celda
+    except Exception: pass
+    
+    ejecutar_con_reintento(sheet_stock.append_row, ["MASAPOP-001", "Masas Pop Heladera", 0, 0])
+    return sheet_stock.find(re.compile(r"masas.*pop|pop.*masas", re.IGNORECASE))
+
+def obtener_niveles_stock_pop(sheet_stock):
+    c_pop_cong = obtener_celda_pop_congelados(sheet_stock)
+    c_pop_masas = obtener_celda_pop_masas(sheet_stock)
+
+    headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
+    col_stock = 4
+    for idx, h in enumerate(headers, start=1):
+        if "stock" in h: col_stock = idx; break
+
+    def _leer(celda):
+        if not celda: return 0
+        val = sheet_stock.cell(celda.row, col_stock).value or "0"
+        val_clean = str(val).replace(",", ".").strip()
+        try: return max(0, int(float(val_clean)))
+        except ValueError: return 0
+
+    return c_pop_cong, c_pop_masas, col_stock, _leer(c_pop_cong), _leer(c_pop_masas)
+
 def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     if total_croissants <= 0:
         return {"costo_base": 0.0, "costo_empaque": 0.0, "costo_total": 0.0, "cajas_grande": 0, "cajas_mediana": 0, "cajas_chica": 0, "papel": 0}
@@ -594,12 +651,8 @@ def registrar_venta():
         
         items = datos.get("items", [])
         
-        # Unidades requeridas
-        req_normales = sum(
-            int(item.get("cantidad", 1)) for item in items 
-            if "pop" not in str(item.get("producto", "")).lower()
-        )
-        req_pop = calcular_unidades_pop_reales(items)
+        req_normales = calcular_unidades_normales(items)
+        req_pop = calcular_unidades_pop_reales(items) # e.g. 9, 18, 27
         total_equivalente_horno = calcular_croissants_congelados_equivalentes(items)
 
         # Consultar capacidades de Stock Normal
@@ -634,7 +687,7 @@ def registrar_venta():
                 st_masas = max(0, st_masas - masas_a_romper)
                 st_cong += (masas_a_romper * 10) - restante
 
-        # Descontar Stock Pop
+        # Descontar Stock Pop (Resta 9, 18 o 27 de Pop congelados)
         if req_pop > 0:
             if req_pop <= st_pop_cong:
                 st_pop_cong -= req_pop
@@ -705,7 +758,6 @@ def registrar_venta():
         return jsonify({"status": "exito", "mensaje": "Pedido registrado correctamente", "id": nuevo_id, "alertas": alertas_empaque}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
 
 # ==========================================
 # RUTAS PÚBLICAS DE E-COMMERCE / TIENDA
@@ -748,9 +800,7 @@ def api_public_fechas():
         
         conteo_fechas = {}
         nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
-        fechas_lista = []
 
-        # Inicializar próximos 10 días
         for i in range(1, 11):
             f_dt = hoy + timedelta(days=i)
             f_str = f_dt.strftime("%Y-%m-%d")
@@ -778,11 +828,8 @@ def api_public_crear_pedido():
         fecha_entrega = datos.get("fecha_entrega")
         items = datos.get("items", [])
 
-        req_normales = sum(
-            int(item.get("cantidad", 1)) for item in items 
-            if "pop" not in str(item.get("producto", "")).lower()
-        )
-        req_pop = calcular_unidades_pop_reales(items)
+        req_normales = calcular_unidades_normales(items)
+        req_pop = calcular_unidades_pop_reales(items) # e.g. 9, 18, 27
         total_equivalente_horno = calcular_croissants_congelados_equivalentes(items)
 
         if not fecha_entrega or total_equivalente_horno <= 0:
@@ -832,7 +879,7 @@ def api_public_crear_pedido():
                 st_masas = max(0, st_masas - masas_a_romper)
                 st_cong += (masas_a_romper * 10) - restante
 
-        # Descontar stock Pop
+        # Descontar stock Pop (Resta 9, 18 o 27 de Pop congelados)
         if req_pop > 0:
             if req_pop <= st_pop_cong:
                 st_pop_cong -= req_pop
@@ -907,7 +954,6 @@ def api_public_crear_pedido():
         return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-       
 
 def obtener_celda_congelados(sheet_stock):
     try:
@@ -954,54 +1000,6 @@ def obtener_niveles_stock(sheet_stock):
 
     return c_cong, c_masas, col_stock, _leer(c_cong), _leer(c_masas)
 
-def obtener_celda_pop_congelados(sheet_stock):
-    try:
-        celda = sheet_stock.find(re.compile(r"pop.*congelado", re.IGNORECASE))
-        if celda: return celda
-    except Exception: pass
-    
-    ejecutar_con_reintento(sheet_stock.append_row, ["POP-001", "Pop Croiss Congelados", 0, 0])
-    return sheet_stock.find(re.compile(r"pop.*congelado", re.IGNORECASE))
-
-def obtener_celda_pop_masas(sheet_stock):
-    try:
-        celda = sheet_stock.find(re.compile(r"masas.*pop|pop.*masas", re.IGNORECASE))
-        if celda: return celda
-    except Exception: pass
-    
-    ejecutar_con_reintento(sheet_stock.append_row, ["MASAPOP-001", "Masas Pop Heladera", 0, 0])
-    return sheet_stock.find(re.compile(r"masas.*pop|pop.*masas", re.IGNORECASE))
-
-def obtener_niveles_stock_pop(sheet_stock):
-    c_pop_cong = obtener_celda_pop_congelados(sheet_stock)
-    c_pop_masas = obtener_celda_pop_masas(sheet_stock)
-
-    headers = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
-    col_stock = 4
-    for idx, h in enumerate(headers, start=1):
-        if "stock" in h: col_stock = idx; break
-
-    def _leer(celda):
-        if not celda: return 0
-        val = sheet_stock.cell(celda.row, col_stock).value or "0"
-        val_clean = str(val).replace(",", ".").strip()
-        try: return max(0, int(float(val_clean)))
-        except ValueError: return 0
-
-    return c_pop_cong, c_pop_masas, col_stock, _leer(c_pop_cong), _leer(c_pop_masas)
-
-def calcular_unidades_pop_reales(items):
-    total_pop = 0
-    for item in items:
-        prod = str(item.get("producto", "")).lower()
-        cant = int(item.get("cantidad", 1))
-        if "pop" in prod:
-            if "9" in prod: total_pop += cant * 9
-            elif "18" in prod: total_pop += cant * 18
-            elif "27" in prod: total_pop += cant * 27
-            else: total_pop += cant * 9
-    return total_pop
-    
 @app.route('/api/agenda', methods=['GET'])
 def obtener_agenda():
     try:
@@ -1096,6 +1094,51 @@ def fijar_stock_congelados():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+@app.route('/api/stock/pop', methods=['GET', 'POST'])
+def stock_pop():
+    try:
+        sheet_stock = conectar_sheet("Productos_Stock")
+        c_pop_cong, c_pop_masas, col_stock, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
+
+        if request.method == 'POST':
+            datos = request.json or {}
+            st_pop_cong += int(datos.get("congelados", 0))
+            st_pop_masas += int(datos.get("masas", 0))
+            if c_pop_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_cong.row, col_stock, st_pop_cong)
+            if c_pop_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_masas.row, col_stock, st_pop_masas)
+
+        return jsonify({
+            "status": "exito",
+            "pop_congelados": st_pop_cong,
+            "pop_masas": st_pop_masas,
+            "capacidad_total": st_pop_cong + (st_pop_masas * 30),
+            "mensaje": "Stock Pop actualizado"
+        }), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+@app.route('/api/stock/pop/fijar', methods=['POST'])
+def fijar_stock_pop():
+    try:
+        datos = request.json or {}
+        st_pop_cong = max(0, int(datos.get("congelados", 0)))
+        st_pop_masas = max(0, int(datos.get("masas", 0)))
+
+        sheet_stock = conectar_sheet("Productos_Stock")
+        c_pop_cong, c_pop_masas, col_stock, _, _ = obtener_niveles_stock_pop(sheet_stock)
+
+        if c_pop_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_cong.row, col_stock, st_pop_cong)
+        if c_pop_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_masas.row, col_stock, st_pop_masas)
+
+        return jsonify({
+            "status": "exito", 
+            "pop_congelados": st_pop_cong,
+            "pop_masas": st_pop_masas,
+            "capacidad_total": st_pop_cong + (st_pop_masas * 30),
+            "mensaje": "Valores Pop fijados correctamente"
+        }), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/eliminar_venta', methods=['POST'])
 def eliminar_venta():
@@ -1136,18 +1179,23 @@ def eliminar_venta():
         if cant_recuperar > 0:
             try:
                 sheet_stock = conectar_sheet("Productos_Stock")
-                celda_cong = obtener_celda_congelados(sheet_stock)
-                if celda_cong:
-                    f_cong = celda_cong.row
-                    headers_s = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
-                    col_stock = 4
-                    for idx, h in enumerate(headers_s, start=1):
-                        if "stock" in h: col_stock = idx; break
+                if "pop" in desc_prod.lower():
+                    c_pop_cong, _, col_st, st_pop_cong, _ = obtener_niveles_stock_pop(sheet_stock)
+                    if c_pop_cong:
+                        ejecutar_con_reintento(sheet_stock.update_cell, c_pop_cong.row, col_st, st_pop_cong + (cant_recuperar * 3))
+                else:
+                    celda_cong = obtener_celda_congelados(sheet_stock)
+                    if celda_cong:
+                        f_cong = celda_cong.row
+                        headers_s = [str(h).strip().lower() for h in sheet_stock.row_values(1)]
+                        col_stock = 4
+                        for idx, h in enumerate(headers_s, start=1):
+                            if "stock" in h: col_stock = idx; break
 
-                    raw_st = sheet_stock.cell(f_cong, col_stock).value or "0"
-                    val_clean = str(raw_st).replace(",", ".").strip()
-                    st_actual = int(float(val_clean)) if val_clean.replace(".", "", 1).isdigit() else 0
-                    ejecutar_con_reintento(sheet_stock.update_cell, f_cong, col_stock, st_actual + cant_recuperar)
+                        raw_st = sheet_stock.cell(f_cong, col_stock).value or "0"
+                        val_clean = str(raw_st).replace(",", ".").strip()
+                        st_actual = int(float(val_clean)) if val_clean.replace(".", "", 1).isdigit() else 0
+                        ejecutar_con_reintento(sheet_stock.update_cell, f_cong, col_stock, st_actual + cant_recuperar)
             except Exception: pass
 
             modificar_stock_empaque(desc_prod, cant_recuperar, es_devolucion=True)
@@ -1614,7 +1662,7 @@ def obtener_balance():
         }), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 @app.route('/api/editar_pedido', methods=['POST'])
 def editar_pedido():
     try:
@@ -1623,7 +1671,7 @@ def editar_pedido():
         nuevo_producto = datos.get("producto")
         nueva_cantidad = datos.get("cantidad")
         nuevas_notas = datos.get("notas")
-        nueva_fecha_entrega = datos.get("fecha_entrega") # NUEVO: Capturar fecha
+        nueva_fecha_entrega = datos.get("fecha_entrega")
 
         if not num_fila or nuevo_producto is None:
             return jsonify({"status": "error", "mensaje": "Faltan datos requeridos"}), 400
@@ -1634,8 +1682,6 @@ def editar_pedido():
         
         col_producto = headers.index("producto") + 1 if "producto" in headers else 5
         col_cantidad = headers.index("cantidad") + 1 if "cantidad" in headers else 6
-        
-        # NUEVO: Encontrar la columna de Fecha de Entrega
         col_fecha_entrega = headers.index("fecha entrega") + 1 if "fecha entrega" in headers else 3
 
         col_notas = 14
@@ -1651,14 +1697,13 @@ def editar_pedido():
         if nuevas_notas is not None:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_notas, str(nuevas_notas))
             
-        # NUEVO: Si se envió una nueva fecha, se actualiza en el Sheets
         if nueva_fecha_entrega:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_fecha_entrega, str(nueva_fecha_entrega))
 
         return jsonify({"status": "exito", "mensaje": "Pedido actualizado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+
 @app.route('/api/cuentas', methods=['GET'])
 def obtener_cuentas():
     try:
@@ -1927,52 +1972,6 @@ def sumar_stock_insumo():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-@app.route('/api/stock/pop', methods=['GET', 'POST'])
-def stock_pop():
-    try:
-        sheet_stock = conectar_sheet("Productos_Stock")
-        c_pop_cong, c_pop_masas, col_stock, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
-
-        if request.method == 'POST':
-            datos = request.json or {}
-            st_pop_cong += int(datos.get("congelados", 0))
-            st_pop_masas += int(datos.get("masas", 0))
-            if c_pop_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_cong.row, col_stock, st_pop_cong)
-            if c_pop_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_masas.row, col_stock, st_pop_masas)
-
-        return jsonify({
-            "status": "exito",
-            "pop_congelados": st_pop_cong,
-            "pop_masas": st_pop_masas,
-            "capacidad_total": st_pop_cong + (st_pop_masas * 30),
-            "mensaje": "Stock Pop actualizado"
-        }), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-
-@app.route('/api/stock/pop/fijar', methods=['POST'])
-def fijar_stock_pop():
-    try:
-        datos = request.json or {}
-        st_pop_cong = max(0, int(datos.get("congelados", 0)))
-        st_pop_masas = max(0, int(datos.get("masas", 0)))
-
-        sheet_stock = conectar_sheet("Productos_Stock")
-        c_pop_cong, c_pop_masas, col_stock, _, _ = obtener_niveles_stock_pop(sheet_stock)
-
-        if c_pop_cong: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_cong.row, col_stock, st_pop_cong)
-        if c_pop_masas: ejecutar_con_reintento(sheet_stock.update_cell, c_pop_masas.row, col_stock, st_pop_masas)
-
-        return jsonify({
-            "status": "exito", 
-            "pop_congelados": st_pop_cong,
-            "pop_masas": st_pop_masas,
-            "capacidad_total": st_pop_cong + (st_pop_masas * 30),
-            "mensaje": "Valores Pop fijados correctamente"
-        }), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
 # ==========================================
 # NUEVO: ESTADO "EN CAMINO"
 # ==========================================
@@ -2019,5 +2018,6 @@ def marcar_en_camino():
         return jsonify({"status": "exito", "mensaje": "Pedido marcado en camino"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
+
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
