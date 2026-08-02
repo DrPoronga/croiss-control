@@ -1001,6 +1001,39 @@ def api_public_crear_pedido():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+def calcular_unidades_reales_desde_descripcion(desc_str):
+    if not desc_str:
+        return 0
+    total_reales = 0
+    partes = str(desc_str).split(",")
+    for item in partes:
+        item_clean = item.strip()
+        if not item_clean:
+            continue
+        
+        # Eliminar sufijos como (Con Jalea)
+        sin_jalea = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
+        m = re.match(r"^(\d+)x\s+(.+)", sin_jalea, re.IGNORECASE)
+        if m:
+            cant_cajas = int(m.group(1))
+            prod_nombre = m.group(2).lower()
+        else:
+            cant_cajas = 1
+            prod_nombre = sin_jalea.lower()
+
+        if "pop" in prod_nombre:
+            if "27" in prod_nombre:
+                total_reales += cant_cajas * 27
+            elif "18" in prod_nombre:
+                total_reales += cant_cajas * 18
+            elif "9" in prod_nombre:
+                total_reales += cant_cajas * 9
+            else:
+                total_reales += cant_cajas * 9
+        else:
+            total_reales += cant_cajas
+    return total_reales
+
 @app.route('/api/agenda', methods=['GET'])
 def obtener_agenda():
     try:
@@ -1030,25 +1063,31 @@ def obtener_agenda():
 
             if f_entrega_norm in dias_agenda:
                 cant_str = get_field_val(reg, "Cantidad")
-                cant = int(cant_str) if cant_str.isdigit() else 0
+                cant_horno = int(cant_str) if cant_str.isdigit() else 0
+                
+                desc_prod = get_field_val(reg, "Producto")
+                # Calcular las unidades reales para mostrar en la tarjeta del cliente
+                cant_real = calcular_unidades_reales_desde_descripcion(desc_prod) or cant_horno
+
                 dias_agenda[f_entrega_norm]["pedidos"].append({
                     "fila": idx,
                     "id": get_field_val(reg, "ID Venta", "ID"),
                     "cliente": get_field_val(reg, "Cliente"),
-                    "descripcion": get_field_val(reg, "Producto"),
-                    "cantidad": cant,
+                    "descripcion": desc_prod,
+                    "cantidad": cant_real,  # <--- Muestra 9, 18, 27 un. en el distintivo
                     "estado": get_field_val(reg, "Estado"),
                     "direccion": get_field_val(reg, "Dirección", "Direccion"),
                     "telefono": get_field_val(reg, "Teléfono", "Telefono", "Tel"),
                     "email": get_field_val(reg, "Email", "Correo"),
                     "notas": get_field_val(reg, "Notas", "Nota", "Comentario", "Observaciones")
                 })
-                dias_agenda[f_entrega_norm]["total_croissants"] += cant
+                # Mantiene la carga equivalente para la barra de tope del horno (35 max)
+                dias_agenda[f_entrega_norm]["total_croissants"] += cant_horno
                 
         return jsonify({"status": "exito", "agenda": list(dias_agenda.values())}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/stock/congelados', methods=['GET', 'POST'])
 def stock_congelados():
     try:
@@ -1706,7 +1745,10 @@ def obtener_cuentas():
         for idx, reg in enumerate(registros, start=2):
             cliente = get_field_val(reg, "Cliente") or "Cliente"
             prod = get_field_val(reg, "Producto")
-            cant = int(get_field_val(reg, "Cantidad")) if get_field_val(reg, "Cantidad").isdigit() else 0
+            cant_str = get_field_val(reg, "Cantidad")
+            cant_horno = int(cant_str) if cant_str.isdigit() else 0
+            cant_real = calcular_unidades_reales_desde_descripcion(prod) or cant_horno
+            
             direccion_item = get_field_val(reg, "Dirección", "Direccion")
             
             try: monto = float(get_field_val(reg, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
@@ -1716,7 +1758,7 @@ def obtener_cuentas():
             estado_entrega = get_field_val(reg, "Entrega", "Estado Entrega")
             f_entrega = normalizar_fecha(get_field_val(reg, "Fecha Entrega", "Fecha"))
 
-            item = {"fila": idx, "cliente": cliente, "producto": prod, "cantidad": cant, "monto": monto, "estado": estado_pago, "fecha_entrega": f_entrega, "entrega": estado_entrega, "direccion": direccion_item}
+            item = {"fila": idx, "cliente": cliente, "producto": prod, "cantidad": cant_real, "monto": monto, "estado": estado_pago, "fecha_entrega": f_entrega, "entrega": estado_entrega, "direccion": direccion_item}
 
             if estado_pago.lower() == "pendiente":
                 pendientes_pago.append(item)
@@ -1728,7 +1770,7 @@ def obtener_cuentas():
         return jsonify({"status": "exito", "pendientes_pago": pendientes_pago, "pendientes_entrega": pendientes_entrega, "total_por_cobrar": round(total_por_cobrar, 2)}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/marcar_entregado', methods=['POST'])
 def marcar_entregado():
     try:
