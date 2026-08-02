@@ -1403,9 +1403,9 @@ async function cargarCuentas() {
             if (btnCuentas) {
                 const cantPendientes = data.pendientes_pago.length;
                 if (cantPendientes > 0) {
-                    btnCuentas.innerHTML = `Pendientes Cobro <span style="background:#dc2626; color:white; border-radius:10px; padding:2px 6px; font-size:0.65rem; margin-left:4px; vertical-align:middle;">${cantPendientes}</span>`;
+                    btnCuentas.innerHTML = `Deudores <span style="background:#dc2626; color:white; border-radius:10px; padding:2px 6px; font-size:0.65rem; margin-left:4px; vertical-align:middle;">${cantPendientes}</span>`;
                 } else {
-                    btnCuentas.innerHTML = `Pendientes Cobro`;
+                    btnCuentas.innerHTML = `Deudores;
                 }
             }
 
