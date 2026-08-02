@@ -1396,6 +1396,19 @@ async function cargarCuentas() {
         if (data.status === 'exito') {
             if(bannerTotal) bannerTotal.innerText = `$${data.total_por_cobrar}`;
 
+            // ==========================================
+            // CAMBIO 2: NUMERITO (BADGE) ROJO EN LA PESTAÑA
+            // ==========================================
+            const btnCuentas = document.getElementById('segBtnCuentas');
+            if (btnCuentas) {
+                const cantPendientes = data.pendientes_pago.length;
+                if (cantPendientes > 0) {
+                    btnCuentas.innerHTML = `Pendientes Cobro <span style="background:#dc2626; color:white; border-radius:10px; padding:2px 6px; font-size:0.65rem; margin-left:4px; vertical-align:middle;">${cantPendientes}</span>`;
+                } else {
+                    btnCuentas.innerHTML = `Pendientes Cobro`;
+                }
+            }
+
             if(contPago) {
                 contPago.innerHTML = '';
                 if (data.pendientes_pago.length === 0) {
@@ -1438,23 +1451,38 @@ async function cargarCuentas() {
                         div.className = 'cuenta-item';
                         div.style.alignItems = 'flex-start'; 
                         
-                        // Si ya está en camino, mostramos un avisito
                         const avisoEnCamino = (e.entrega && e.entrega.toLowerCase() === 'en camino') 
                             ? `<div style="color:#2563EB; font-weight:800; font-size:0.75rem; margin-top:6px;">🛵 ¡El pedido ya salió!</div>` : '';
 
-                        // BLOQUE NOTAS (Resaltado)
-                        const bloqueNota = e.notas ? `
-                            <div style="margin-top:6px; font-size:0.75rem; color:var(--accent); font-weight:800; background:#FAF0EB; border:1px solid #F7DFC8; padding:6px 10px; border-radius:10px; display:inline-block;">
-                                📝 Nota: ${e.notas}
-                            </div>
-                        ` : '';
+                        // ==========================================
+                        // CAMBIO 3: NOTAS LARGAS ACORTADAS
+                        // ==========================================
+                        let bloqueNota = '';
+                        if (e.notas) {
+                            // Limpiamos la palabra [WEB] y los descuentos para ver la longitud real del mensaje
+                            let notaLimpia = e.notas.replace(/\[WEB\]/gi, '').replace(/\[Dto.*?\]/gi, '').trim();
+                            
+                            if (notaLimpia.length > 25) {
+                                // Si es un mensaje largo (más de 25 letras), mostramos el alerta amarillito
+                                bloqueNota = `
+                                    <div style="margin-top:6px; font-size:0.75rem; color:#B45309; font-weight:800; background:#FEF3C7; border:1px solid #FDE68A; padding:6px 10px; border-radius:10px; display:inline-block;">
+                                        ⚠️ Tiene nota (Leer en Agenda)
+                                    </div>
+                                `;
+                            } else {
+                                // Si es cortita o solo dice [WEB], se muestra normal
+                                bloqueNota = `
+                                    <div style="margin-top:6px; font-size:0.75rem; color:var(--accent); font-weight:800; background:#FAF0EB; border:1px solid #F7DFC8; padding:6px 10px; border-radius:10px; display:inline-block;">
+                                        📝 Nota: ${e.notas}
+                                    </div>
+                                `;
+                            }
+                        }
 
-                        // BOTÓN COBRAR DINÁMICO (Si debe, muestra el botón. Si pagó, muestra etiqueta)
                         const botonCobroOPago = esPagado 
                             ? `<div class="agenda-badge badge-ok" style="display:flex; align-items:center; justify-content:center; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; text-align:center; height:100%; box-sizing:border-box;">Pagado</div>`
-                            : `<button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${e.fila}, '${clienteClean}')">Marcar Pagado</button>`;
+                            : `<button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${e.fila}, '${clienteClean}')">💸 Pago</button>`;
 
-                        // Grilla 2x2 para los botones + Dirección
                         div.innerHTML = `
                             <div style="flex: 1; padding-right: 12px;">
                                 <strong style="color: var(--text-main); font-size: 0.95rem;">${e.fecha_entrega}</strong><br>
@@ -2348,7 +2376,8 @@ function cambiarTab(e, tab) {
         document.getElementById('sec-' + tab).classList.add('active');
 
         if(tab === 'ventas') cargarStock();
-        if(tab === 'entregas') cambiarSegmentoEntrega('cuentas');
+        // AQUI ESTÁ EL CAMBIO: Ahora abre 'entregas' por defecto
+        if(tab === 'entregas') cambiarSegmentoEntrega('entregas');
         if(tab === 'stock') cargarTodoElStock();
         if(tab === 'gastos') toggleCamposMateriaPrima();
         if(tab === 'balance') { cargarBalance(); cargarStock(); }
