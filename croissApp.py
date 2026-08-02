@@ -1745,11 +1745,15 @@ def obtener_cuentas():
         for idx, reg in enumerate(registros, start=2):
             cliente = get_field_val(reg, "Cliente") or "Cliente"
             prod = get_field_val(reg, "Producto")
+            
             cant_str = get_field_val(reg, "Cantidad")
             cant_horno = int(cant_str) if cant_str.isdigit() else 0
             cant_real = calcular_unidades_reales_desde_descripcion(prod) or cant_horno
             
             direccion_item = get_field_val(reg, "Dirección", "Direccion")
+            
+            # NUEVO: Obtenemos las notas
+            notas_item = get_field_val(reg, "Notas", "Nota", "Comentario", "Observaciones")
             
             try: monto = float(get_field_val(reg, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
             except ValueError: monto = 0.0
@@ -1758,7 +1762,8 @@ def obtener_cuentas():
             estado_entrega = get_field_val(reg, "Entrega", "Estado Entrega")
             f_entrega = normalizar_fecha(get_field_val(reg, "Fecha Entrega", "Fecha"))
 
-            item = {"fila": idx, "cliente": cliente, "producto": prod, "cantidad": cant_real, "monto": monto, "estado": estado_pago, "fecha_entrega": f_entrega, "entrega": estado_entrega, "direccion": direccion_item}
+            # NUEVO: Pasamos "notas" al diccionario
+            item = {"fila": idx, "cliente": cliente, "producto": prod, "cantidad": cant_real, "monto": monto, "estado": estado_pago, "fecha_entrega": f_entrega, "entrega": estado_entrega, "direccion": direccion_item, "notas": notas_item}
 
             if estado_pago.lower() == "pendiente":
                 pendientes_pago.append(item)
