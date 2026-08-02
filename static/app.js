@@ -1432,33 +1432,44 @@ async function cargarCuentas() {
                 } else {
                     data.pendientes_entrega.forEach(e => {
                         const esPagado = e.estado.toLowerCase() === 'pagado';
-                        const badgeClase = esPagado ? 'badge-ok' : 'badge-full';
-                        const badgeTexto = esPagado ? 'Pagado' : 'Debe';
                         const clienteClean = e.cliente.replace(/'/g, "\\'");
 
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
-                        // Alineamos arriba para que si el pedido es largo quede prolijo
                         div.style.alignItems = 'flex-start'; 
                         
                         // Si ya está en camino, mostramos un avisito
                         const avisoEnCamino = (e.entrega && e.entrega.toLowerCase() === 'en camino') 
                             ? `<div style="color:#2563EB; font-weight:800; font-size:0.75rem; margin-top:6px;">🛵 ¡El pedido ya salió!</div>` : '';
 
-                        // Grilla 2x2 para los botones y limpieza de texto (solo pedido y cantidad)
+                        // BLOQUE NOTAS (Resaltado)
+                        const bloqueNota = e.notas ? `
+                            <div style="margin-top:6px; font-size:0.75rem; color:var(--accent); font-weight:800; background:#FAF0EB; border:1px solid #F7DFC8; padding:6px 10px; border-radius:10px; display:inline-block;">
+                                📝 Nota: ${e.notas}
+                            </div>
+                        ` : '';
+
+                        // BOTÓN COBRAR DINÁMICO (Si debe, muestra el botón. Si pagó, muestra etiqueta)
+                        const botonCobroOPago = esPagado 
+                            ? `<div class="agenda-badge badge-ok" style="display:flex; align-items:center; justify-content:center; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; text-align:center; height:100%; box-sizing:border-box;">Pagado</div>`
+                            : `<button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${e.fila}, '${clienteClean}')">💸 Cobrar</button>`;
+
+                        // Grilla 2x2 para los botones + Dirección
                         div.innerHTML = `
                             <div style="flex: 1; padding-right: 12px;">
                                 <strong style="color: var(--text-main); font-size: 0.95rem;">${e.fecha_entrega}</strong><br>
                                 <strong style="color: var(--text-main); font-size: 0.9rem;">${e.cliente}</strong><br>
-                                <span style="font-size:0.82rem; color:#475569; margin-top:2px; display:inline-block;">${e.producto} (${e.cantidad} un.)</span>
+                                <span style="font-size:0.82rem; color:#475569; margin-top:2px; display:inline-block;">${e.producto} (${e.cantidad} un.)</span><br>
+                                ${e.direccion ? `<span style="font-size:0.8rem; color:var(--text-muted); display:inline-block; margin-top:2px;">📍 ${e.direccion}</span>` : ''}
+                                <br>${bloqueNota}
                                 ${avisoEnCamino}
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 170px; flex-shrink: 0;">
-                                <div class="agenda-badge ${badgeClase}" style="display:flex; align-items:center; justify-content:center; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; text-align:center;">${badgeTexto}</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 175px; flex-shrink: 0;">
+                                ${botonCobroOPago}
                                 <button type="button" class="btn-remove" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; box-sizing:border-box;" onclick="eliminarPedido(${e.fila}, '${clienteClean}')">Eliminar</button>
                                 
                                 <button type="button" class="btn-jalea-chip" style="margin:0; padding:6px 4px; font-size:0.75rem; background:#DBEAFE; color:#1D4ED8; border-color:#BFDBFE; border-radius:10px; width:100%; box-sizing:border-box;" onclick="marcarEnCamino(${e.fila}, '${clienteClean}')">🛵 Camino</button>
-                                <button type="button" class="btn-jalea-chip active" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; box-sizing:border-box;" onclick="notificarEntrega(${e.fila}, '${clienteClean}')">Entregado</button>
+                                <button type="button" class="btn-jalea-chip active" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; box-sizing:border-box;" onclick="notificarEntrega(${e.fila}, '${clienteClean}')">✔️ Entregado</button>
                             </div>
                         `;
                         contEntrega.appendChild(div);
