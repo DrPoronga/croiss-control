@@ -2538,11 +2538,15 @@ async function cargarTodoElStock() {
     mostrarCroissLoader();
 
     try {
+        // 1. Cargar Stock Tradicional
         const resCong = await fetch('/api/stock/congelados');
         const dataCong = await resCong.json();
         if (dataCong.status === 'exito') {
             actualizarUIStockCongelados(dataCong);
         }
+
+        // 2. ¡AGREGAR ESTA LÍNEA! Cargar Stock de Pop Croiss al refrescar
+        await cargarStockPop(); 
 
         await cargarStock(true);
         await cargarInsumosYGastos();
@@ -2554,6 +2558,7 @@ async function cargarTodoElStock() {
         console.error("Error al cargar todo el stock:", err);
     }
 }
+
 
 // ==========================================
 // FORMULARIOS DE REGISTRO (SUBMIT LISTENERS)
