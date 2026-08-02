@@ -746,7 +746,7 @@ def registrar_venta():
             else:
                 rest_pop = req_pop - st_pop_cong
                 st_pop_cong = 0
-                masas_pop_romper = math.ceil(rest_pop / 30.0)
+                masas_pop_romper = math.ceil(rest_pop / 38.0)
                 st_pop_masas = max(0, st_pop_masas - masas_pop_romper)
                 st_pop_cong += (masas_pop_romper * 30) - rest_pop
 
@@ -933,7 +933,7 @@ def api_public_crear_pedido():
             else:
                 rest_pop = req_pop - st_pop_cong
                 st_pop_cong = 0
-                masas_pop_romper = math.ceil(rest_pop / 30.0)
+                masas_pop_romper = math.ceil(rest_pop / 38.0)
                 st_pop_masas = max(0, st_pop_masas - masas_pop_romper)
                 st_pop_cong += (masas_pop_romper * 30) - rest_pop
 
@@ -1151,7 +1151,7 @@ def stock_pop():
             "status": "exito",
             "pop_congelados": st_pop_cong,
             "pop_masas": st_pop_masas,
-            "capacidad_total": st_pop_cong + (st_pop_masas * 30),
+            "capacidad_total": st_pop_cong + (st_pop_masas * 38),
             "mensaje": "Stock Pop actualizado"
         }), 200
     except Exception as error:
@@ -1174,7 +1174,7 @@ def fijar_stock_pop():
             "status": "exito", 
             "pop_congelados": st_pop_cong,
             "pop_masas": st_pop_masas,
-            "capacidad_total": st_pop_cong + (st_pop_masas * 30),
+            "capacidad_total": st_pop_cong + (st_pop_masas * 38),
             "mensaje": "Valores Pop fijados correctamente"
         }), 200
     except Exception as error:
