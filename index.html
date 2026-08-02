@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CROISS Control</title>
+    
+    <!-- Ícono para la pantalla de inicio de iPhone / iPad -->
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icono.png') }}">
+
+    <!-- Ícono para la pestaña del navegador -->
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
+    
+    <!-- Estilos CSS Principales -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=3">
+    
+    <!-- Librerias Externas -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+    <!-- ESTRUCTURA PRINCIPAL -->
+    <div class="app-layout">
+        
+        <!-- BARRA NAVEGACION -->
+        <div class="sidebar">
+            <div class="sidebar-nav">
+                <button class="nav-btn" onclick="cambiarTab(event, 'ventas')">Pedidos</button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'entregas')">Agenda</button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'stock')">Stock</button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'gastos')">Compras / Egresos</button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'balance')">Métricas / Balance</button>
+                <button class="nav-btn" onclick="cambiarTab(event, 'clientes')">Clientes</button>
+            </div>
+        </div>
+
+        <!-- CONTENIDO CENTRAL -->
+        <div class="main-content">
+            <div class="content-wrapper">
+
+                <!-- 1. HOME -->
+                <div id="sec-home" class="section active">
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 70vh; text-align: center; padding: 10px;">
+                        <img src="{{ url_for('static', filename='logo.png') }}" alt="CROISS Logo" style="width: 100%; max-width: 460px; height: auto; filter: drop-shadow(0 20px 40px rgba(45, 30, 24, 0.15)); user-select: none;">
+                    </div>
+                </div>
+
+                <!-- 2. NUEVO PEDIDO -->
+                <div id="sec-ventas" class="section">
+                    <div class="card ios-card">
+                        <h3 style="font-size: 1.3rem; font-weight: 800; margin-bottom: 16px; color: var(--text-main);">Registrar Nuevo Pedido</h3>
+                        
+                        <div class="add-product-box">
+                            <div class="form-group">
+                                <label>Seleccionar Croissant</label>
+                                <select id="vProductoSelect"></select>
+                            </div>
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Cantidad</label>
+                                    <input type="number" id="vCantidadItem" value="1" min="1">
+                                </div>
+                                <div class="form-group" style="display: flex; align-items: flex-end;">
+                                    <button type="button" class="btn-add-item" onclick="agregarAlPedido()">+ Agregar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Ticket Temporal -->
+                        <div class="cart-box">
+                            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Resumen del Ticket</h4>
+                            <div id="cartList"><p style="color: #94a3b8; text-align: center;">El ticket está vacío</p></div>
+                            <div class="total-banner">Total: $<span id="cartTotal">0</span></div>
+                        </div>
+
+                        <!-- Formulario Cliente -->
+                        <form id="formFinalizarPedido">
+                            <div class="form-group">
+                                <label>Cliente</label>
+                                <input type="text" id="vCliente" list="listaClientesDatalist" placeholder="Nombre completo" oninput="autocompletarDatosCliente()">
+                                <datalist id="listaClientesDatalist"></datalist>
+                            </div>
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Teléfono</label>
+                                    <input type="text" id="vTelefonoCliente" placeholder="099 123 456">
+                                </div>
+                                <div class="form-group">
+                                    <label>Email</label>
+                                    <input type="email" id="vEmailCliente" placeholder="cliente@email.com">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Dirección de Entrega</label>
+                                <div style="display: flex; gap: 6px;">
+                                    <input type="text" id="vDireccionCliente" placeholder="Calle, número y apto" style="flex: 1;">
+                                    <button type="button" class="btn-jalea-chip" style="margin: 0; padding: 0 12px;" onclick="abrirGoogleMapsIngresado()">Map</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Notas / Aclaraciones del Pedido (Opcional)</label>
+                                <input type="text" id="vNotasCliente" placeholder="Ej: Separar dulces de salados, entregar con moño rojo...">
+                            </div>
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Fecha Pedido</label>
+                                    <input type="date" id="vFecha">
+                                </div>
+                                <div class="form-group">
+                                    <label>Fecha Entrega</label>
+                                    <input type="date" id="vFechaEntrega">
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="form-group">
+                                    <label>Descuento</label>
+                                    <select id="vDescuento" onchange="renderizarCarrito()">
+                                        <option value="0">Sin Descuento (0%)</option>
+                                        <option value="10">10% OFF</option>
+                                        <option value="15">15% OFF</option>
+                                        <option value="20">20% OFF</option>
+                                        <option value="25">25% OFF</option>
+                                        <option value="50">50% OFF</option>
+                                        <option value="100">100% Gratis</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Estado Pago</label>
+                                    <select id="vEstado" onchange="actualizarMedioPagoSegunEstado()">
+                                        <option value="Pendiente">Pendiente</option>
+                                        <option value="Pagado">Pagado</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Medio de Pago</label>
+                                    <select id="vMedio">
+                                        <option value="-">-</option>
+                                        <option value="Efectivo">Efectivo</option>
+                                        <option value="Transferencia">Transferencia</option>
+                                        <option value="MercadoPago">MercadoPago</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn-submit">Confirmar y Guardar Orden</button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- 3. AGENDA -->
+               <div id="sec-entregas" class="section">
+					<div class="card ios-card">
+						<!-- Pestañas (Botones) -->
+						<div class="ios-segmented-control">
+							<button id="segBtnEntregas" class="seg-btn" onclick="cambiarSegmentoEntrega('entregas')">Entregas</button>
+							<button id="segBtnCuentas" class="seg-btn active" onclick="cambiarSegmentoEntrega('cuentas')">Deudores</button>
+							<button id="segBtnAgenda" class="seg-btn" onclick="cambiarSegmentoEntrega('agenda')">Agenda Semanal</button>
+						</div>
+						
+						<!-- PESTAÑA 1: PENDIENTES DE COBRO -->
+						<div id="subSecCuentas" class="sub-seccion active">
+							<div class="cuentas-total-banner">
+								<small>Total Pendiente de Cobro</small>
+								<strong id="cMontoPendienteTotal">$0</strong>
+							</div>
+							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Por Cobrar</h4>
+							<div id="listaPendientesPago">Cargando cuentas...</div>
+						</div>
+
+						<!-- PESTAÑA 2: PRÓXIMAS ENTREGAS (NUEVO) -->
+						<div id="subSecEntregas" class="sub-seccion">
+							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Próximas Entregas</h4>
+							<div id="listaPendientesEntrega">Cargando entregas...</div>
+						</div>
+
+						<!-- PESTAÑA 3: AGENDA SEMANAL -->
+						<div id="subSecAgenda" class="sub-seccion">
+							<div id="listaAgenda">Cargando agenda de horno...</div>
+						</div>
+					</div>
+				</div>
+
+                <!-- 4. CONTROL DE STOCK -->
+                <div id="sec-stock" class="section">
+                    <div class="card ios-card">
+                        <div class="ios-segmented-control">
+                            <button id="segBtnStockCongelados" class="seg-btn active" onclick="cambiarSegmentoStock('congelados')">Congelados</button>
+                            <button id="segBtnStockMateriaPrima" class="seg-btn" onclick="cambiarSegmentoStock('materiaprima')">Materia Prima</button>
+                            <button id="segBtnStockEmpaque" class="seg-btn" onclick="cambiarSegmentoStock('empaque')">Empaques</button>
+                        </div>
+                        <div id="subSecStockCongelados" class="sub-seccion active">
+                           <div id="subSecStockCongelados" class="sub-seccion active">
+								<!-- STOCK CROISSANTS TRADICIONALES -->
+								<div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 14px;">
+									<h4 style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px;">Croissants Tradicionales</h4>
+									<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+										<div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 14px; padding: 10px;">
+											<small style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block;">En Freezer 🧊</small>
+											<div id="cantCroissCongelados" style="font-size: 1.3rem; font-weight: 800; color: var(--accent); margin-top: 2px;">0 un.</div>
+										</div>
+										<div id="boxSobrevendidosContainer" style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 14px; padding: 10px;">
+											<small id="lblSobrevendidosTitulo" style="font-size: 0.65rem; font-weight: 700; color: #166534; text-transform: uppercase; display: block;">Masas Heladera 🥣</small>
+											<div id="cantSobrevendidos" style="font-size: 1.1rem; font-weight: 800; color: #15803D; margin-top: 2px;">0 masas</div>
+										</div>
+									</div>
+									<div style="display: flex; gap: 8px; justify-content: center;">
+										<button type="button" class="btn-add-item" style="margin: 0; flex: 1; padding: 10px;" onclick="abrirModalSumarCongelados()">+ Sumar Masas</button>
+										<button type="button" class="btn-jalea-chip active" style="margin: 0; padding: 10px 14px;" onclick="abrirModalEditarCongeladosDirecto()">✏️ Fijar Stock</button>
+									</div>
+								</div>
+
+								<!-- NUEVA TARJETA: STOCK POP CROISS -->
+								<div style="background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 16px;">
+									<h4 style="font-size: 0.8rem; font-weight: 800; color: #B45309; text-transform: uppercase; margin-bottom: 10px;">🍿 Pop Croiss (Unidades Sueltas)</h4>
+									<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+										<div style="background: #FFFFFF; border: 1px solid #FDE68A; border-radius: 14px; padding: 10px;">
+											<small style="font-size: 0.65rem; font-weight: 700; color: #D97706; text-transform: uppercase; display: block;">Pop en Freezer 🧊</small>
+											<div id="cantPopCongelados" style="font-size: 1.3rem; font-weight: 800; color: #D97706; margin-top: 2px;">0 un.</div>
+										</div>
+										<div style="background: #FFFFFF; border: 1px solid #FDE68A; border-radius: 14px; padding: 10px;">
+											<small style="font-size: 0.65rem; font-weight: 700; color: #D97706; text-transform: uppercase; display: block;">Masas Pop 🥣</small>
+											<div id="cantMasasPop" style="font-size: 1.1rem; font-weight: 800; color: #B45309; margin-top: 2px;">0 masas</div>
+										</div>
+									</div>
+									<div style="display: flex; gap: 8px; justify-content: center;">
+										<button type="button" class="btn-add-item" style="margin: 0; flex: 1; padding: 10px; background: #D97706;" onclick="abrirModalSumarPop()">+ Sumar Pop</button>
+										<button type="button" class="btn-jalea-chip active" style="margin: 0; padding: 10px 14px; background: #FEF3C7; color: #B45309; border-color: #FCD34D;" onclick="abrirModalEditarPopDirecto()">✏️ Fijar Stock Pop</button>
+									</div>
+								</div>
+
+								<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Precios del Menú</h4>
+								<div id="listaStock">Cargando productos...</div>
+							</div>
+                            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Precios del Menú</h4>
+                            <div id="listaStock">Cargando productos...</div>
+                        </div>
+                        <div id="subSecStockMateriaPrima" class="sub-seccion">
+                            <button type="button" class="btn-add-item" style="margin-bottom: 14px;" onclick="abrirModalSumarStock('Materia Prima')">+ Cargar Materia Prima</button>
+                            <div id="listaMateriaPrimaStock">Cargando materia prima...</div>
+                        </div>
+                        <div id="subSecStockEmpaque" class="sub-seccion">
+                            <button type="button" class="btn-add-item" style="margin-bottom: 14px;" onclick="abrirModalSumarStock('Empaque')">+ Cargar Empaque / Cajas</button>
+                            <div id="listaEmpaqueStock">Cargando cajas y empaques...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. GASTOS Y COMPRAS -->
+                <div id="sec-gastos" class="section">
+                    <div class="card ios-card">
+                        <div class="ios-segmented-control">
+                            <button id="segBtnNuevoGasto" class="seg-btn active" onclick="cambiarSegmentoGasto('nuevo')">Cargar Gasto / Sueldo</button>
+                            <button id="segBtnHistorialGasto" class="seg-btn" onclick="cambiarSegmentoGasto('historial')">Historial</button>
+                        </div>
+                        <div id="subSecNuevoGasto" class="sub-seccion active">
+                            <form id="formGasto">
+                                <div class="form-group">
+                                    <label>Fecha</label>
+                                    <input type="date" id="gFecha">
+                                </div>
+                                <div class="form-group">
+                                    <label>Categoría</label>
+                                    <select id="gCategoria" onchange="toggleCamposMateriaPrima()">
+                                        <option value="Materia Prima">Materia Prima</option>
+                                        <option value="Embalaje">Embalaje / Cajas</option>
+                                        <option value="Sueldos">Sueldos / Retiro de Socios</option>
+                                        <option value="Servicios">Servicios (Luz, Gas, Agua)</option>
+                                        <option value="Publicidad">Publicidad / Marketing</option>
+                                        <option value="Otros">Otros Egresos</option>
+                                    </select>
+                                </div>
+                                <div id="boxSugerenciasMateriaPrima" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Harina 000', 'kg')">Harina 000</button>
+                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Manteca', 'kg')">Manteca</button>
+                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Dulce de Leche', 'kg')">Dulce de Leche</button>
+                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Jamon', 'kg')">Jamon</button>
+                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Queso', 'kg')">Queso</button>
+                                </div>
+                                <div id="boxSugerenciasCajas" style="display: none; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja X6', 'un')">Caja X6</button>
+                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja X3', 'un')">Caja X3</button>
+                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja X1', 'un')">Caja X1</button>
+                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Papel Manteca', 'un')">Papel Manteca</button>
+                                </div>
+                                <div class="form-group">
+                                    <label>Descripción / Comentario del Gasto o Sueldo</label>
+                                    <input type="text" id="gDescripcion" placeholder="Ej: Sueldo Nico / Compra 10kg Harina / Retiro Tati" required>
+                                </div>
+                                <div id="boxCamposInsumo" class="row">
+                                    <div class="form-group">
+                                        <label>Cantidad</label>
+                                        <input type="number" id="gCantidad" value="1" step="0.1">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Unidad</label>
+                                        <select id="gUnidad">
+                                            <option value="kg">kg (Kilos)</option>
+                                            <option value="gr">gr (Gramos)</option>
+                                            <option value="un">un (Unidades)</option>
+                                            <option value="ml">ml (Mililitros)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label>Vencimiento (Opcional)</label>
+                                    <input type="date" id="gVencimiento">
+                                </div>
+                                <div class="form-group">
+                                    <label>Monto Total ($)</label>
+                                    <input type="number" id="gMonto" placeholder="Ej: 4000" required>
+                                </div>
+                                <button type="submit" class="btn-submit">Guardar Registro</button>
+                            </form>
+                        </div>
+                        <div id="subSecHistorialGasto" class="sub-seccion">
+                            <div id="listaGastosHistorico">Cargando historial...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. METRICAS Y BALANCE -->
+                <div id="sec-balance" class="section">
+                    <div class="card ios-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                            <h3 style="font-size: 1.3rem; font-weight: 800; color: var(--text-main); margin: 0;">Resumen Financiero</h3>
+                            <input type="month" id="bMesFilter" onchange="cargarBalance()" style="width: auto; padding: 6px 10px; font-size: 0.8rem;" />
+                        </div>
+                        <div class="ios-segmented-control">
+                            <button id="segBtnBalance" class="seg-btn active" onclick="cambiarSegmentoBalance('balance')">Métricas</button>
+                            <button id="segBtnSabores" class="seg-btn" onclick="cambiarSegmentoBalance('sabores')">Sabores</button>
+                            <button id="segBtnEvolucion" class="seg-btn" onclick="cambiarSegmentoBalance('evolucion')">Evolución</button>
+                        </div>
+                        <div id="subSecBalance" class="sub-seccion active">
+                            <div class="balance-grid">
+                                <div class="balance-item pos"><small>Ingresos Brut.</small><strong id="bIngresos">$0</strong></div>
+                                <div class="balance-item neg"><small>Cost. Masa+Emp</small><strong id="bCostos">$0</strong></div>
+                                <div class="balance-item neg"><small>Gastos Fijos/Sueldos</small><strong id="bGastos">$0</strong></div>
+                                <div class="balance-item"><small>Ticket Prom.</small><strong id="bTicketPromedio">$0</strong></div>
+                                <div class="balance-item" style="grid-column: span 2; display: flex; justify-content: space-between; align-items: center; border-color: #FCA5A5; background: #FEF2F2;">
+                                    <small style="color: #991B1B;">Regalías / Dto. Entregados</small>
+                                    <strong id="bDescuentos" style="color: #DC2626; font-size: 1.1rem;">$0</strong>
+                                </div>
+                                <div class="balance-item total"><small>Ganancia Neta del Mes</small><strong id="bGanancia">$0</strong></div>
+                            </div>
+
+                            <!-- Módulo Origen de Ventas (Web vs Manual) -->
+                            <div style="margin-top: 14px; background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; display: flex; gap: 10px;">
+                                <div style="flex: 1; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; text-align: center;">
+                                    <small style="font-size: 0.68rem; font-weight: 700; color: var(--accent); text-transform: uppercase;">🌐 Ventas Web</small>
+                                    <div id="bWebMonto" style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">$0</div>
+                                    <small id="bWebDetalle" style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">0 ped. (0 un.)</small>
+                                </div>
+                                <div style="flex: 1; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px; text-align: center;">
+                                    <small style="font-size: 0.68rem; font-weight: 700; color: #475569; text-transform: uppercase;">📝 Ventas Manuales</small>
+                                    <div id="bManualMonto" style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin-top: 2px;">$0</div>
+                                    <small id="bManualDetalle" style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">0 ped. (0 un.)</small>
+                                </div>
+                            </div>
+
+                            <!-- Proyección Cierre de Mes -->
+                            <div style="margin-top: 16px; background: #FAF0EB; border: 1px solid #F7DFC8; border-radius: 16px; padding: 14px; text-align: center;">
+                                <small style="color: var(--accent); font-weight: 800; text-transform: uppercase; font-size: 0.72rem;">Proyección Cierre de Mes</small>
+                                <div id="txtProyeccionCroiss" style="font-size: 1.1rem; font-weight: 800; color: #2D1E18; margin-top: 2px;">~0 Croissants</div>
+                                <small id="txtProyeccionIngresos" style="color: #64748b; font-weight: 600;">Estimación calculada por ritmo de ventas diario</small>
+                            </div>
+
+                            <div id="boxTopClientesBalance" style="margin-top: 16px;"></div>
+
+                            <div style="margin-top: 16px; text-align: center;">
+                                <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px;">Desglose de Gastos</h4>
+                                <canvas id="chartGastosCatCanvas" style="max-height: 220px;"></canvas>
+                            </div>
+                        </div>
+                        
+                        <div id="subSecSabores" class="sub-seccion">
+                            <div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; text-align: center; margin-bottom: 14px;">
+                                <small style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Pedidos con Jalea</small>
+                                <div id="txtPorcentajeJalea" style="font-size: 1.2rem; font-weight: 800; color: var(--accent);">0%</div>
+                            </div>
+                            <canvas id="chartSaboresCanvas" style="max-height: 220px; margin-bottom: 16px;"></canvas>
+                            <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Detalle por Sabor</h4>
+                            <div id="listaRankingSabores">Cargando sabores...</div>
+                            <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin: 16px 0 8px 0;">Entregas por Día de la Semana</h4>
+                            <canvas id="chartDiasCanvas" style="max-height: 200px;"></canvas>
+                        </div>
+                        
+                        <div id="subSecEvolucion" class="sub-seccion">
+                            <!-- NUEVO: Gráfico Diario mudado aquí -->
+                            <div style="margin-bottom: 16px; background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 14px; display: flex; justify-content: space-around; text-align: center;">
+                                <div onclick="cambiarModoFlujoPrincipal('diario')" style="cursor: pointer; flex: 1; padding: 6px; border-radius: 12px; transition: all 0.2s;">
+                                    <small style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Vendidos Mes 📊</small>
+                                    <div id="bTotalCroissMes" style="font-size: 1.25rem; font-weight: 800; color: var(--accent);">0 un.</div>
+                                    <small style="font-size: 0.65rem; color: var(--accent); font-weight: 700;">Día a Día ↓</small>
+                                </div>
+                                <div style="border-left: 1px dashed #E2D9D3;"></div>
+                                <div onclick="cambiarModoFlujoPrincipal('semanal')" style="cursor: pointer; flex: 1; padding: 6px; border-radius: 12px; transition: all 0.2s;">
+                                    <small style="font-size: 0.72rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total Histórico 📈</small>
+                                    <div id="bTotalCroissHist" style="font-size: 1.25rem; font-weight: 800; color: var(--text-main);">0 un.</div>
+                                    <small style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700;">Semanal ↓</small>
+                                </div>
+                            </div>
+
+                            <div id="cardFlujoPrincipal" style="margin-bottom: 24px; background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 20px; padding: 18px; box-shadow: 0 4px 14px rgba(45, 30, 24, 0.03);">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
+                                    <div>
+                                        <h4 id="tituloFlujoPrincipal" style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Flujo Diario de Ventas</h4>
+                                        <small id="subtituloFlujoPrincipal" style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Evolución día por día durante el mes</small>
+                                    </div>
+                                    <div class="ios-segmented-control" style="margin: 0; width: auto; font-size: 0.75rem;">
+                                        <button id="btnFlujoDiario" class="seg-btn active" style="padding: 6px 12px; font-size: 0.75rem;" onclick="cambiarModoFlujoPrincipal('diario')">Día a Día</button>
+                                        <button id="btnFlujoSemanal" class="seg-btn" style="padding: 6px 12px; font-size: 0.75rem;" onclick="cambiarModoFlujoPrincipal('semanal')">Semanal</button>
+                                    </div>
+                                </div>
+                                <div style="position: relative; width: 100%; height: 320px;">
+                                    <canvas id="chartFlujoPrincipalCanvas"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Gráfico de Evolución Mensual General -->
+                            <div style="margin-bottom: 24px; padding-top: 16px; border-top: 1px dashed var(--border-color);">
+                                <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin: 0;">Evolución Mensual General</h4>
+                                <small style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600; display: block; margin-bottom: 14px;">Ingresos vs Ganancia Neta mes a mes</small>
+                                <canvas id="chartEvolucionLineaCanvas" style="max-height: 220px;"></canvas>
+                            </div>
+                            
+                            <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Historial de Meses</h4>
+                            <div id="listaEvolucionMeses">Cargando historial...</div>
+                        </div>
+                        <div id="subSecSabores" class="sub-seccion">
+                            <div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 16px; padding: 12px; text-align: center; margin-bottom: 14px;">
+                                <small style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Pedidos con Jalea</small>
+                                <div id="txtPorcentajeJalea" style="font-size: 1.2rem; font-weight: 800; color: var(--accent);">0%</div>
+                            </div>
+                            <canvas id="chartSaboresCanvas" style="max-height: 220px; margin-bottom: 16px;"></canvas>
+                            <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Detalle por Sabor</h4>
+                            <div id="listaRankingSabores">Cargando sabores...</div>
+                            <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin: 16px 0 8px 0;">Entregas por Día de la Semana</h4>
+                            <canvas id="chartDiasCanvas" style="max-height: 200px;"></canvas>
+                        </div>
+                        <div id="subSecEvolucion" class="sub-seccion">
+                            <canvas id="chartEvolucionLineaCanvas" style="max-height: 220px; margin-bottom: 16px;"></canvas>
+                            <h4 style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-bottom: 8px;">Historial de Meses</h4>
+                            <div id="listaEvolucionMeses">Cargando historial...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. CLIENTES Y RANKING -->
+                <div id="sec-clientes" class="section">
+                    <div class="card ios-card">
+                        <div class="ios-segmented-control" style="margin-bottom: 20px;">
+                            <button id="segBtnLista" class="seg-btn active" onclick="cambiarSegmentoCliente('lista')">Directorio General</button>
+                            <button id="segBtnPromo" class="seg-btn" onclick="cambiarSegmentoCliente('promo')">Cliente del Mes</button>
+                        </div>
+                        <div id="subSecLista" class="sub-seccion active">
+							<div style="margin-bottom: 12px; width: 100%;">
+								<input type="text" id="inputBuscarCliente" placeholder="Buscar cliente..." onkeyup="filtrarDirectorioClientes()" style="margin: 0; width: 100%; padding: 12px 14px; border-radius: 14px; font-size: 0.88rem; border: 1.5px solid var(--border-color); background: #FAF9F8; outline: none; box-sizing: border-box;">
+							</div>
+							<h4 id="cantClientesLabel" style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Directorio General</h4>
+							<div id="listaClientesDirectorio" class="ios-list-container">Cargando clientes...</div>
+						</div>
+                        
+						<div id="subSecPromo" class="sub-seccion">
+    						<div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+								<input type="month" id="cMesFilter" onchange="cargarClientes()" style="width: 140px; padding: 8px 12px; border-radius: 12px; font-size: 0.85rem; border: 1.5px solid var(--border-color); background: #FAF9F8; outline: none; cursor: pointer; text-align: center;">
+							</div>
+							
+							<!-- TARJETA ÚNICA E INTERACTIVA DEL CLIENTE DEL MES -->
+							<div onclick="abrirPlacaGanador()" style="background: linear-gradient(135deg, #C86D28, #9A4D15); color: white; padding: 22px 18px; border-radius: 20px; text-align: center; box-shadow: 0 8px 20px rgba(200, 109, 40, 0.25); margin-bottom: 20px; cursor: pointer; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+								<small style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; background: rgba(255, 255, 255, 0.2); padding: 4px 12px; border-radius: 12px; display: inline-block; margin-bottom: 6px;">Cliente del Mes</small>
+								<h2 id="topNombre" style="font-size: 1.8rem; font-weight: 800; margin: 4px 0;">Cargando...</h2>
+								<p id="topDetalle" style="font-size: 0.82rem; opacity: 0.9; margin-bottom: 0;">Procesando ventas...</p>
+								<div style="margin-top: 10px; font-size: 0.72rem; font-weight: 800; background: rgba(0,0,0,0.25); padding: 5px 12px; border-radius: 10px; display: inline-block;">📸 Toca aquí para ver la Placa de Instagram</div>
+							</div>
+
+							<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+								<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin: 0; text-transform: uppercase;">Podio del Mes</h4>
+								<button type="button" id="btnModoPrivado" onclick="toggleModoPrivacidad()" style="background: #FAF0EB; border: 1px solid #F7DFC8; color: var(--accent); font-weight: 800; padding: 6px 12px; border-radius: 10px; font-size: 0.78rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"><span id="txtModoPrivado">Ocultar para Historia</span></button>
+							</div>
+							<div id="listaClientesRanking" class="ios-list-container">Cargando ranking del mes...</div>
+						</div>
+						
+						<div id="subSecDetalle" class="sub-seccion">
+                            <button type="button" class="btn-jalea-chip active" style="margin-bottom: 14px;" onclick="volverASeccionAnterior()">Volver</button>
+                            <div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 18px; padding: 16px; margin-bottom: 16px;">
+                                <h3 id="detClienteNombre" style="font-size: 1.3rem; font-weight: 800; color: var(--text-main); margin: 0 0 4px 0;">Cliente</h3>
+                                <p id="detClienteStats" style="font-size: 0.82rem; color: var(--accent); font-weight: 700; margin: 0 0 10px 0;">Histórico...</p>
+                                <div id="detClienteContacto" style="font-size: 0.82rem; color: #64748b; border-top: 1px dashed #E2D9D3; padding-top: 10px;">Cargando contacto...</div>
+                            </div>
+                            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Historial de Compras</h4>
+                            <div id="detClienteHistorial" class="ios-list-container">Cargando historial...</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Logica App -->
+    <script src="{{ url_for('static', filename='app.js') }}?v=3"></script>
+</body>
+</html>
