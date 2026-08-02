@@ -2346,12 +2346,19 @@ function cambiarTab(e, tab) {
 }
 
 function cambiarSegmentoEntrega(segmento) {
+    // 1. Apaga/Prende los botones según el seleccionado
     document.getElementById('segBtnCuentas').classList.toggle('active', segmento === 'cuentas');
+    document.getElementById('segBtnEntregas').classList.toggle('active', segmento === 'entregas');
     document.getElementById('segBtnAgenda').classList.toggle('active', segmento === 'agenda');
+    
+    // 2. Muestra u oculta las listas según la pestaña
     document.getElementById('subSecCuentas').classList.toggle('active', segmento === 'cuentas');
+    document.getElementById('subSecEntregas').classList.toggle('active', segmento === 'entregas');
     document.getElementById('subSecAgenda').classList.toggle('active', segmento === 'agenda');
 
-    if (segmento === 'cuentas') cargarCuentas();
+    // 3. Carga la información desde el servidor
+    // 'cargarCuentas' ya trae los datos tanto de pagos como de entregas
+    if (segmento === 'cuentas' || segmento === 'entregas') cargarCuentas(); 
     if (segmento === 'agenda') cargarAgenda();
 }
 
