@@ -1452,7 +1452,7 @@ async function cargarCuentas() {
                         // BOTÓN COBRAR DINÁMICO (Si debe, muestra el botón. Si pagó, muestra etiqueta)
                         const botonCobroOPago = esPagado 
                             ? `<div class="agenda-badge badge-ok" style="display:flex; align-items:center; justify-content:center; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; text-align:center; height:100%; box-sizing:border-box;">Pagado</div>`
-                            : `<button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${e.fila}, '${clienteClean}')">💸 Cobrar</button>`;
+                            : `<button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${e.fila}, '${clienteClean}')">Marcar Pagado</button>`;
 
                         // Grilla 2x2 para los botones + Dirección
                         div.innerHTML = `
