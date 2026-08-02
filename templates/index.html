@@ -150,28 +150,37 @@
                 </div>
 
                 <!-- 3. AGENDA -->
-                <div id="sec-entregas" class="section">
-                    <div class="card ios-card">
-                        <div class="ios-segmented-control">
-                            <button id="segBtnCuentas" class="seg-btn active" onclick="cambiarSegmentoEntrega('cuentas')">Pendientes Cobro</button>
-                            <button id="segBtnAgenda" class="seg-btn" onclick="cambiarSegmentoEntrega('agenda')">Agenda Semanal</button>
-                        </div>
-                        <div id="subSecCuentas" class="sub-seccion active">
-                            <div class="cuentas-total-banner">
-                                <small>Total Pendiente de Cobro</small>
-                                <strong id="cMontoPendienteTotal">$0</strong>
-                            </div>
-                            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Por Cobrar</h4>
-                            <div id="listaPendientesPago">Cargando cuentas...</div>
+               <div id="sec-entregas" class="section">
+					<div class="card ios-card">
+						<!-- Pestañas (Botones) -->
+						<div class="ios-segmented-control">
+							<button id="segBtnCuentas" class="seg-btn active" onclick="cambiarSegmentoEntrega('cuentas')">Pendientes Cobro</button>
+							<button id="segBtnEntregas" class="seg-btn" onclick="cambiarSegmentoEntrega('entregas')">Entregas</button>
+							<button id="segBtnAgenda" class="seg-btn" onclick="cambiarSegmentoEntrega('agenda')">Agenda Semanal</button>
+						</div>
+						
+						<!-- PESTAÑA 1: PENDIENTES DE COBRO -->
+						<div id="subSecCuentas" class="sub-seccion active">
+							<div class="cuentas-total-banner">
+								<small>Total Pendiente de Cobro</small>
+								<strong id="cMontoPendienteTotal">$0</strong>
+							</div>
+							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Por Cobrar</h4>
+							<div id="listaPendientesPago">Cargando cuentas...</div>
+						</div>
 
-                            <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin: 20px 0 10px 0; text-transform: uppercase;">Próximas Entregas</h4>
-                            <div id="listaPendientesEntrega">Cargando entregas...</div>
-                        </div>
-                        <div id="subSecAgenda" class="sub-seccion">
-                            <div id="listaAgenda">Cargando agenda de horno...</div>
-                        </div>
-                    </div>
-                </div>
+						<!-- PESTAÑA 2: PRÓXIMAS ENTREGAS (NUEVO) -->
+						<div id="subSecEntregas" class="sub-seccion">
+							<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Próximas Entregas</h4>
+							<div id="listaPendientesEntrega">Cargando entregas...</div>
+						</div>
+
+						<!-- PESTAÑA 3: AGENDA SEMANAL -->
+						<div id="subSecAgenda" class="sub-seccion">
+							<div id="listaAgenda">Cargando agenda de horno...</div>
+						</div>
+					</div>
+				</div>
 
                 <!-- 4. CONTROL DE STOCK -->
                 <div id="sec-stock" class="section">
