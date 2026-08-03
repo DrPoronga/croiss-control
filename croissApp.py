@@ -1016,7 +1016,7 @@ def api_public_crear_pedido():
         try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)[cite: 1, 6]
         except Exception: pass
 
-        return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200[cite: 1, 6]
+        return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500[cite: 1, 6]
         
