@@ -1467,13 +1467,15 @@ def obtener_balance():
         sheet_gastos = conectar_sheet("Gastos")
 
         ventas, gastos = get_clean_records(sheet_ventas), get_clean_records(sheet_gastos)
-        ingresos_mes, costos_prod_mes, pedidos_count_mes, total_croiss_mes = 0.0, 0.0, 0, 0
+        ingresos_mes, costos_prod_mes, pedidos_count_mes = 0.0, 0.0, 0
         total_descuentos_mes = 0.0
         
-        web_pedidos_mes, web_croiss_mes, web_monto_mes = 0, 0, 0.0
-        manual_pedidos_mes, manual_croiss_mes, manual_monto_mes = 0, 0, 0.0
+        # SEPARADOS CLASICOS Y POPS
+        total_croiss_mes, total_pop_mes = 0, 0
+        web_pedidos_mes, web_croiss_mes, web_pop_mes, web_monto_mes = 0, 0, 0, 0.0
+        manual_pedidos_mes, manual_croiss_mes, manual_pop_mes, manual_monto_mes = 0, 0, 0, 0.0
+        total_croiss_historico, total_pop_historico, total_pedidos_historico, total_ingresos_historico = 0, 0, 0, 0.0
 
-        total_croiss_historico, total_pedidos_historico, total_ingresos_historico = 0, 0, 0.0
         con_jalea_count, sin_jalea_count = 0, 0
         sabores_dict = {}
         dias_semana_count = {"LUNES": 0, "MARTES": 0, "MIÉRCOLES": 0, "JUEVES": 0, "VIERNES": 0, "SÁBADO": 0, "DOMINGO": 0}
@@ -1503,10 +1505,41 @@ def obtener_balance():
             except ValueError: monto = 0.0
 
             raw_cant = get_field_val(v, "Cantidad")
-            cant = int(raw_cant) if raw_cant.isdigit() else 0
+            cant_horno = int(raw_cant) if raw_cant.isdigit() else 0
             desc_prod = get_field_val(v, "Producto")
             notas = get_field_val(v, "Notas", "Nota")
             medio_pago = get_field_val(v, "Medio de Pago", "Medio Pago")
+
+            cant_clasicos = 0
+            cant_pops = 0
+
+            if desc_prod:
+                for item in desc_prod.split(","):
+                    item_clean = item.strip().lower()
+                    if not item_clean: continue
+                    
+                    tiene_jalea = "(con jalea)" in item_clean
+                    sin_jalea_str = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
+                    m = re.match(r"^(\d+)x\s+(.+)", sin_jalea_str, re.IGNORECASE)
+                    if m:
+                        c_item, sabor_item = int(m.group(1)), m.group(2).strip()
+                    else:
+                        c_item, sabor_item = 1, sin_jalea_str
+                        
+                    # Acumular para clásicos o pops reales
+                    if "pop" in sabor_item:
+                        if "27" in sabor_item: cant_pops += c_item * 27
+                        elif "18" in sabor_item: cant_pops += c_item * 18
+                        elif "9" in sabor_item: cant_pops += c_item * 9
+                        else: cant_pops += c_item * 9
+                    else:
+                        cant_clasicos += c_item
+
+                    if f_norm.startswith(mes_filtro):
+                        if sabor_item not in sabores_dict: sabores_dict[sabor_item] = {"cantidad": 0}
+                        sabores_dict[sabor_item]["cantidad"] += c_item
+                        if tiene_jalea: con_jalea_count += c_item
+                        else: sin_jalea_count += c_item
 
             monto_descontado_pedido = 0.0
             if notas and "[Dto" in notas:
@@ -1514,22 +1547,23 @@ def obtener_balance():
                 if match_dto:
                     porcentaje_dto = float(match_dto.group(1))
                     if porcentaje_dto == 100:
-                        monto_descontado_pedido = cant * 120.0
+                        monto_descontado_pedido = cant_clasicos * 120.0
                     elif porcentaje_dto > 0 and monto > 0:
                         precio_original = monto / (1 - (porcentaje_dto / 100))
                         monto_descontado_pedido = precio_original - monto
 
-            datos_costo = calcular_costo_y_empaque_pedido(desc_prod, cant)
+            datos_costo = calcular_costo_y_empaque_pedido(desc_prod, cant_horno)
             costo_pedido = datos_costo["costo_total"]
 
-            total_croiss_historico += cant
+            total_croiss_historico += cant_clasicos
+            total_pop_historico += cant_pops
             total_pedidos_historico += 1
             total_ingresos_historico += monto
 
             historico_dict[key_mes]["ingresos"] += monto
             historico_dict[key_mes]["costos"] += costo_pedido
             historico_dict[key_mes]["pedidos"] += 1
-            historico_dict[key_mes]["croissants"] += cant
+            historico_dict[key_mes]["croissants"] += cant_clasicos
 
             if len(f_norm) == 10:
                 try:
@@ -1537,7 +1571,7 @@ def obtener_balance():
                     lunes_semana = (dt_v - timedelta(days=dt_v.weekday())).strftime("%Y-%m-%d")
                     if lunes_semana not in flujo_semanal_dict:
                         flujo_semanal_dict[lunes_semana] = {"croissants": 0, "monto": 0.0}
-                    flujo_semanal_dict[lunes_semana]["croissants"] += cant
+                    flujo_semanal_dict[lunes_semana]["croissants"] += cant_clasicos
                     flujo_semanal_dict[lunes_semana]["monto"] += monto
                 except Exception: pass
 
@@ -1549,19 +1583,19 @@ def obtener_balance():
                     clientes_por_mes_dict[key_mes] = {}
                 if c_key not in clientes_por_mes_dict[key_mes]:
                     clientes_por_mes_dict[key_mes][c_key] = {"nombre": cli_nombre, "croissants": 0, "gastado": 0.0}
-                clientes_por_mes_dict[key_mes][c_key]["croissants"] += cant
+                clientes_por_mes_dict[key_mes][c_key]["croissants"] += cant_clasicos
                 clientes_por_mes_dict[key_mes][c_key]["gastado"] += monto
 
                 if c_key not in clientes_historico_dict:
                     clientes_historico_dict[c_key] = {"nombre": cli_nombre, "croissants": 0, "gastado": 0.0, "pedidos": 0}
-                clientes_historico_dict[c_key]["croissants"] += cant
+                clientes_historico_dict[c_key]["croissants"] += cant_clasicos
                 clientes_historico_dict[c_key]["gastado"] += monto
                 clientes_historico_dict[c_key]["pedidos"] += 1
 
                 if f_norm.startswith(mes_filtro):
                     if c_key not in clientes_mes_dict:
                         clientes_mes_dict[c_key] = {"nombre": cli_nombre, "croissants": 0, "gastado": 0.0, "pedidos": 0}
-                    clientes_mes_dict[c_key]["croissants"] += cant
+                    clientes_mes_dict[c_key]["croissants"] += cant_clasicos
                     clientes_mes_dict[c_key]["gastado"] += monto
                     clientes_mes_dict[c_key]["pedidos"] += 1
 
@@ -1569,45 +1603,30 @@ def obtener_balance():
                 ingresos_mes += monto
                 costos_prod_mes += costo_pedido
                 pedidos_count_mes += 1
-                total_croiss_mes += cant
+                total_croiss_mes += cant_clasicos
+                total_pop_mes += cant_pops
                 total_descuentos_mes += monto_descontado_pedido
 
                 es_web = "[web]" in notas.lower() or "web" in medio_pago.lower()
                 if es_web:
                     web_pedidos_mes += 1
-                    web_croiss_mes += cant
+                    web_croiss_mes += cant_clasicos
+                    web_pop_mes += cant_pops
                     web_monto_mes += monto
                 else:
                     manual_pedidos_mes += 1
-                    manual_croiss_mes += cant
+                    manual_croiss_mes += cant_clasicos
+                    manual_pop_mes += cant_pops
                     manual_monto_mes += monto
 
                 if f_norm in flujo_diario_mes_dict:
-                    flujo_diario_mes_dict[f_norm]["croissants"] += cant
+                    flujo_diario_mes_dict[f_norm]["croissants"] += cant_clasicos
                     flujo_diario_mes_dict[f_norm]["monto"] += monto
 
                 try:
                     dt_v = datetime.strptime(f_norm, "%Y-%m-%d")
-                    dias_semana_count[nombres_dias[dt_v.weekday()]] += cant
+                    dias_semana_count[nombres_dias[dt_v.weekday()]] += cant_clasicos
                 except Exception: pass
-
-                if desc_prod:
-                    for item in desc_prod.split(","):
-                        item_clean = item.strip()
-                        if not item_clean: continue
-                        tiene_jalea = "(con jalea)" in item_clean.lower()
-                        sin_jalea_str = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
-                        m = re.match(r"^(\d+)x\s+(.+)", sin_jalea_str, re.IGNORECASE)
-                        if m:
-                            c_item, sabor_item = int(m.group(1)), m.group(2).strip()
-                        else:
-                            c_item, sabor_item = 1, sin_jalea_str
-
-                        if sabor_item not in sabores_dict: sabores_dict[sabor_item] = {"cantidad": 0}
-                        sabores_dict[sabor_item]["cantidad"] += c_item
-
-                        if tiene_jalea: con_jalea_count += c_item
-                        else: sin_jalea_count += c_item
 
         gastos_mes = 0.0
         gastos_cat_dict = {}
@@ -1636,11 +1655,12 @@ def obtener_balance():
         ticket_promedio = round(ingresos_mes / pedidos_count_mes, 2) if pedidos_count_mes > 0 else 0.0
 
         es_mes_actual = (mes_filtro == datetime.now().strftime("%Y-%m"))
-        proy_croiss, proy_ingresos = total_croiss_mes, ingresos_mes
+        proy_croiss, proy_pops, proy_ingresos = total_croiss_mes, total_pop_mes, ingresos_mes
 
         if es_mes_actual and datetime.now().day > 0:
             dias_totales = calendar.monthrange(datetime.now().year, datetime.now().month)[1]
             proy_croiss = int(round((total_croiss_mes / datetime.now().day) * dias_totales))
+            proy_pops = int(round((total_pop_mes / datetime.now().day) * dias_totales))
             proy_ingresos = round((ingresos_mes / datetime.now().day) * dias_totales, 2)
 
         top_mes = max(clientes_mes_dict.values(), key=lambda x: x["croissants"]) if clientes_mes_dict else None
@@ -1662,7 +1682,7 @@ def obtener_balance():
         ranking_mes_actual.sort(key=lambda x: (x["croissants"], x["gastado"]), reverse=True)
         for c in ranking_mes_actual: c["gastado"] = round(c["gastado"], 2)
 
-        ranking_sabores = [{"sabor": sab, "cantidad": vals["cantidad"], "porcentaje": round((vals["cantidad"] / total_croiss_mes * 100), 1) if total_croiss_mes > 0 else 0} for sab, vals in sabores_dict.items()]
+        ranking_sabores = [{"sabor": sab, "cantidad": vals["cantidad"], "porcentaje": round((vals["cantidad"] / (total_croiss_mes + total_pop_mes) * 100), 1) if (total_croiss_mes + total_pop_mes) > 0 else 0} for sab, vals in sabores_dict.items()]
         lista_historica = [{"mes_key": m_key, "ingresos": round(v["ingresos"], 2), "gastos_totales": round(v["costos"] + v["gastos"], 2), "ganancia_neta": round(v["ingresos"] - (v["costos"] + v["gastos"]), 2), "pedidos": v["pedidos"], "croissants": v["croissants"]} for m_key, v in sorted(historico_dict.items())]
 
         flujo_diario_lista = [{"etiqueta": f"Día {k.split('-')[2]}", "croissants": v["croissants"], "monto": round(v["monto"], 2)} for k, v in sorted(flujo_diario_mes_dict.items())]
@@ -1672,16 +1692,19 @@ def obtener_balance():
             "status": "exito", "mes_filtrado": mes_filtro, "ingresos": round(ingresos_mes, 2),
             "costos_produccion": round(costos_prod_mes, 2), "gastos_varios": round(gastos_mes, 2),
             "gastos_por_categoria": gastos_por_categoria, "ganancia_neta": round(ganancia_neta_mes, 2),
-            "ticket_promedio": ticket_promedio, "total_croissants_mes": total_croiss_mes,
+            "ticket_promedio": ticket_promedio, 
+            "total_croissants_mes": total_croiss_mes,
+            "total_pop_mes": total_pop_mes,
             "total_descuentos": round(total_descuentos_mes, 2),
             "total_croissants_historico": total_croiss_historico,
+            "total_pop_historico": total_pop_historico,
             "origen_ventas": {
-                "web": {"pedidos": web_pedidos_mes, "croissants": web_croiss_mes, "monto": round(web_monto_mes, 2)},
-                "manual": {"pedidos": manual_pedidos_mes, "croissants": manual_croiss_mes, "monto": round(manual_monto_mes, 2)}
+                "web": {"pedidos": web_pedidos_mes, "croissants": web_croiss_mes, "pops": web_pop_mes, "monto": round(web_monto_mes, 2)},
+                "manual": {"pedidos": manual_pedidos_mes, "croissants": manual_croiss_mes, "pops": manual_pop_mes, "monto": round(manual_monto_mes, 2)}
             },
             "flujo_diario_mes": flujo_diario_lista,
             "flujo_semanal_historico": flujo_semanal_lista,
-            "proyeccion": {"es_mes_actual": es_mes_actual, "croissants_estimados": proy_croiss, "ingresos_estimados": proy_ingresos},
+            "proyeccion": {"es_mes_actual": es_mes_actual, "croissants_estimados": proy_croiss, "pops_estimados": proy_pops, "ingresos_estimados": proy_ingresos},
             "top_clientes": {"mes": top_mes, "historico": top_historico},
             "ranking_mes_actual": ranking_mes_actual,
             "ganadores_por_mes": ganadores_por_mes,
@@ -1700,6 +1723,7 @@ def editar_pedido():
         nueva_cantidad = datos.get("cantidad")
         nuevas_notas = datos.get("notas")
         nueva_fecha_entrega = datos.get("fecha_entrega")
+        nuevo_monto = datos.get("monto_total") # NUEVO MONTO RECALCULADO
 
         if not num_fila or nuevo_producto is None:
             return jsonify({"status": "error", "mensaje": "Faltan datos requeridos"}), 400
@@ -1711,6 +1735,7 @@ def editar_pedido():
         col_producto = headers.index("producto") + 1 if "producto" in headers else 5
         col_cantidad = headers.index("cantidad") + 1 if "cantidad" in headers else 6
         col_fecha_entrega = headers.index("fecha entrega") + 1 if "fecha entrega" in headers else 3
+        col_monto = headers.index("monto total") + 1 if "monto total" in headers else 7
 
         col_notas = 14
         for idx, h in enumerate(headers, start=1):
@@ -1719,6 +1744,7 @@ def editar_pedido():
                 break
 
         ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_producto, str(nuevo_producto))
+        
         if nueva_cantidad is not None:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_cantidad, int(nueva_cantidad))
 
@@ -1727,11 +1753,14 @@ def editar_pedido():
             
         if nueva_fecha_entrega:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_fecha_entrega, str(nueva_fecha_entrega))
+            
+        if nuevo_monto is not None:
+            ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_monto, float(nuevo_monto))
 
         return jsonify({"status": "exito", "mensaje": "Pedido actualizado correctamente"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/cuentas', methods=['GET'])
 def obtener_cuentas():
     try:

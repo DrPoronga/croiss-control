@@ -847,7 +847,9 @@ button.btn-submit:active {
     margin-top: 18px !important;
 }
 
-.croiss-swal-popup .swal2-actions button {
+.croiss-swal-popup .swal2-actions button:not([style*="display: none"]) {
+    display: flex !important;
+    justify-content: center !important;
     width: 100% !important;
     margin: 0 !important;
     padding: 12px 16px !important;
@@ -855,8 +857,6 @@ button.btn-submit:active {
     font-weight: 700 !important;
     border-radius: 14px !important;
     box-sizing: border-box !important;
-    display: flex !important;
-    justify-content: center !important;
     align-items: center !important;
 }
 

@@ -534,8 +534,8 @@ async function cargarBalance() {
 
             const elCroissMes = document.getElementById('bTotalCroissMes');
             const elCroissHist = document.getElementById('bTotalCroissHist');
-            if (elCroissMes) elCroissMes.innerText = `${data.total_croissants_mes} un.`;
-            if (elCroissHist) elCroissHist.innerText = `${data.total_croissants_historico} un.`;
+            if (elCroissMes) elCroissMes.innerHTML = `${data.total_croissants_mes} cl.<br><span style="font-size: 0.9rem; color: #D97706;">${data.total_pop_mes} pops</span>`;
+            if (elCroissHist) elCroissHist.innerHTML = `${data.total_croissants_historico} cl.<br><span style="font-size: 0.9rem; color: #D97706;">${data.total_pop_historico} pops</span>`;
 
             document.getElementById('bIngresos').innerText = `$${data.ingresos}`;
             document.getElementById('bCostos').innerText = `$${data.costos_produccion}`;
@@ -547,8 +547,8 @@ async function cargarBalance() {
                 descuentosEl.innerText = `-$${data.total_descuentos || 0}`;
             }
             if (data.origen_ventas) {
-                const web = data.origen_ventas.web || { pedidos: 0, croissants: 0, monto: 0 };
-                const manual = data.origen_ventas.manual || { pedidos: 0, croissants: 0, monto: 0 };
+                const web = data.origen_ventas.web || { pedidos: 0, croissants: 0, pops: 0, monto: 0 };
+                const manual = data.origen_ventas.manual || { pedidos: 0, croissants: 0, pops: 0, monto: 0 };
 
                 const elWebMonto = document.getElementById('bWebMonto');
                 const elWebDet = document.getElementById('bWebDetalle');
@@ -556,9 +556,9 @@ async function cargarBalance() {
                 const elManDet = document.getElementById('bManualDetalle');
 
                 if (elWebMonto) elWebMonto.innerText = `$${web.monto}`;
-                if (elWebDet) elWebDet.innerText = `${web.pedidos} ped. (${web.croissants} un.)`;
+                if (elWebDet) elWebDet.innerText = `${web.pedidos} ped. (${web.croissants} cl. | ${web.pops} pop)`;
                 if (elManMonto) elManMonto.innerText = `$${manual.monto}`;
-                if (elManDet) elManDet.innerText = `${manual.pedidos} ped. (${manual.croissants} un.)`;
+                if (elManDet) elManDet.innerText = `${manual.pedidos} ped. (${manual.croissants} cl. | ${manual.pops} pop)`;
             }
             const gananciaEl = document.getElementById('bGanancia');
             gananciaEl.innerText = `$${data.ganancia_neta}`;
@@ -571,14 +571,13 @@ async function cargarBalance() {
             const txtIng = document.getElementById('txtProyeccionIngresos');
 
             if (proy && proy.es_mes_actual) {
-                txtCroiss.innerText = `~${proy.croissants_estimados} Croissants`;
+                txtCroiss.innerText = `~${proy.croissants_estimados} Clásicos | ~${proy.pops_estimados} Pops`;
                 txtIng.innerText = `Ingresos estimados: $${proy.ingresos_estimados} al cierre del mes`;
             } else {
-                txtCroiss.innerText = `${data.total_croissants_mes} Croissants Vendidos`;
+                txtCroiss.innerText = `${data.total_croissants_mes} Clásicos | ${data.total_pop_mes} Pops Vendidos`;
                 txtIng.innerText = `Total final del período cerrado`;
             }
 
-            // TARJETAS INTERACTIVAS: LÍDER DEL MES & LÍDER HISTÓRICO
             const contTop = document.getElementById('boxTopClientesBalance');
             if (contTop && data.top_clientes) {
                 const topM = data.top_clientes.mes;
@@ -1171,12 +1170,43 @@ function refrescarDomEdicion() {
     if (cont) cont.innerHTML = generarHtmlListaEdicion();
 }
 
+// Calcula automáticamente el precio al editar
+function recalcularTotalEdicion() {
+    let total = 0;
+    let cantNormales = 0;
+    
+    itemsEdicionTemp.forEach(item => {
+        if(!item.producto.toLowerCase().includes('pop')) cantNormales += item.cantidad;
+    });
+    
+    let precioBase = calcularPrecioBase(cantNormales);
+
+    itemsEdicionTemp.forEach(item => {
+        let esPop = item.producto.toLowerCase().includes('pop');
+        let pUnit = 0;
+        if(esPop) {
+            let pMatch = catalogoProductos.find(p => obtenerNombreDesdeObjeto(p).toLowerCase() === item.producto.toLowerCase().trim());
+            if(pMatch) {
+                let rawP = obtenerPrecioDesdeObjeto(pMatch);
+                pUnit = parseFloat(String(rawP).replace('$', '').replace(',', '.').trim()) || 0;
+            }
+        } else {
+            pUnit = precioBase + obtenerExtraRelleno(item.producto);
+        }
+        total += (pUnit * item.cantidad);
+    });
+    const elTotal = document.getElementById('editMontoInput');
+    if (elTotal) elTotal.value = total;
+}
+
 function actualizarCantEdicion(idx, val) {
     if(itemsEdicionTemp[idx]) itemsEdicionTemp[idx].cantidad = Math.max(1, parseInt(val) || 1);
+    recalcularTotalEdicion();
 }
 
 function actualizarProdEdicion(idx, val) {
     if(itemsEdicionTemp[idx]) itemsEdicionTemp[idx].producto = val.trim();
+    recalcularTotalEdicion();
 }
 
 function toggleJaleaEdicion(idx) {
@@ -1193,6 +1223,7 @@ function eliminarItemEdicion(idx) {
     }
     itemsEdicionTemp.splice(idx, 1);
     refrescarDomEdicion();
+    recalcularTotalEdicion();
 }
 
 function agregarItemEdicion() {
@@ -1207,13 +1238,13 @@ function agregarItemEdicion() {
     }
     itemsEdicionTemp.push({ cantidad: 1, producto: primerProducto, con_jalea: false });
     refrescarDomEdicion();
+    recalcularTotalEdicion();
 }
-
 
 function abrirEdicionPedido(numFila) {
     if (!numFila) return;
     let pEncontrado = null;
-    let fechaActual = ''; // NUEVO: Para guardar la fecha en la que está el pedido
+    let fechaActual = '';
 
     if (Array.isArray(agendaGlobalData)) {
         for (let dia of agendaGlobalData) {
@@ -1221,7 +1252,7 @@ function abrirEdicionPedido(numFila) {
                 let p = dia.pedidos.find(item => item.fila === numFila);
                 if (p) { 
                     pEncontrado = p; 
-                    fechaActual = dia.fecha; // NUEVO: Extraemos la fecha del día
+                    fechaActual = dia.fecha;
                     break; 
                 }
             }
@@ -1244,16 +1275,21 @@ function abrirEdicionPedido(numFila) {
             <button type="button" class="btn-jalea-chip active" style="margin-top:8px; width:100%; padding:8px;" onclick="agregarItemEdicion()">+ Agregar otro producto</button>
             
             <div style="margin-top:14px; text-align:left;">
-                <!-- NUEVO: Selector de Fecha de Entrega -->
                 <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">FECHA DE ENTREGA</label>
                 <input type="date" id="editFechaEntregaInput" value="${fechaActual}" class="croiss-swal-input" style="margin:0 0 10px 0 !important;">
 
                 <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOTAS / COMENTARIOS DEL PEDIDO</label>
                 <input type="text" id="editNotasInput" value="${pEncontrado.notas || ''}" placeholder="Ej: Separar salados, entregar con moño rojo..." class="croiss-swal-input" style="margin:0 !important;">
+                
+                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px; margin-top:10px;">MONTO TOTAL ($)</label>
+                <input type="number" id="editMontoInput" value="${pEncontrado.monto || 0}" class="croiss-swal-input" style="margin:0 0 10px 0 !important;">
             </div>
         `,
         showCancelButton: true, confirmButtonText: 'Guardar Cambios', cancelButtonText: 'Cancelar',
         customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' },
+        didOpen: () => {
+            recalcularTotalEdicion();
+        },
         preConfirm: () => {
             if (!itemsEdicionTemp || itemsEdicionTemp.length === 0) return false;
             let resumen = [];
@@ -1269,16 +1305,19 @@ function abrirEdicionPedido(numFila) {
             let campoNotas = document.getElementById('editNotasInput');
             let nuevasNotas = campoNotas ? campoNotas.value.trim() : '';
 
-            // NUEVO: Capturamos la fecha del input
             let campoFecha = document.getElementById('editFechaEntregaInput');
             let nuevaFecha = campoFecha ? campoFecha.value.trim() : '';
+
+            let campoMonto = document.getElementById('editMontoInput');
+            let nuevoMonto = campoMonto ? parseFloat(campoMonto.value) : pEncontrado.monto;
 
             return { 
                 fila: numFila, 
                 producto: resumen.join(', '), 
                 cantidad: totalCant,
                 notas: nuevasNotas,
-                fecha_entrega: nuevaFecha // NUEVO: Enviamos la fecha en el payload
+                fecha_entrega: nuevaFecha,
+                monto_total: nuevoMonto
             };
         }
     }).then(async (result) => {
@@ -1295,7 +1334,7 @@ function abrirEdicionPedido(numFila) {
 
                 if(data.status === 'exito') {
                     mostrarCroissExito('Pedido Actualizado', 'Se guardaron los cambios.');
-                    cargarAgenda(); // Esto refrescará la agenda y moverá el pedido al día nuevo automáticamente
+                    cargarAgenda();
                 } else { Swal.fire('Error', data.mensaje, 'error'); }
             } catch(e) { Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error'); }
         }
