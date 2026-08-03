@@ -1809,28 +1809,45 @@ def obtener_cuentas():
             cant_real = calcular_unidades_reales_desde_descripcion(prod) or cant_horno
             
             direccion_item = get_field_val(reg, "Dirección", "Direccion")
-            
-            # NUEVO: Obtenemos las notas
             notas_item = get_field_val(reg, "Notas", "Nota", "Comentario", "Observaciones")
             
-            try: monto = float(get_field_val(reg, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
-            except ValueError: monto = 0.0
+            try: 
+                monto = float(get_field_val(reg, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
+            except ValueError: 
+                monto = 0.0
 
             estado_pago = get_field_val(reg, "Estado")
             estado_entrega = get_field_val(reg, "Entrega", "Estado Entrega")
             f_entrega = normalizar_fecha(get_field_val(reg, "Fecha Entrega", "Fecha"))
 
-            # NUEVO: Pasamos "notas" al diccionario
-            item = {"fila": idx, "cliente": cliente, "producto": prod, "cantidad": cant_real, "monto": monto, "estado": estado_pago, "fecha_entrega": f_entrega, "entrega": estado_entrega, "direccion": direccion_item, "notas": notas_item}
+            item = {
+                "fila": idx, 
+                "cliente": cliente, 
+                "producto": prod, 
+                "cantidad": cant_real, 
+                "monto": monto, 
+                "estado": estado_pago, 
+                "fecha_entrega": f_entrega, 
+                "entrega": estado_entrega, 
+                "direccion": direccion_item, 
+                "notas": notas_item
+            }
 
-            if estado_pago.lower() == "pendiente":
+            # 🟢 FILTRO CORREGIDO: Solo ingresa a Deudores si debe dinero (Monto mayor a 0)
+            if estado_pago.lower() == "pendiente" and monto > 0:
                 pendientes_pago.append(item)
                 total_por_cobrar += monto
 
+            # Próximas entregas (sigue mostrando los pedidos pendientes de entregar, tengan costo o $0)
             if f_entrega and f_entrega >= hoy_str and estado_entrega.lower() != "entregado":
                 pendientes_entrega.append(item)
 
-        return jsonify({"status": "exito", "pendientes_pago": pendientes_pago, "pendientes_entrega": pendientes_entrega, "total_por_cobrar": round(total_por_cobrar, 2)}), 200
+        return jsonify({
+            "status": "exito", 
+            "pendientes_pago": pendientes_pago, 
+            "pendientes_entrega": pendientes_entrega, 
+            "total_por_cobrar": round(total_por_cobrar, 2)
+        }), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
