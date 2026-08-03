@@ -1170,7 +1170,6 @@ function refrescarDomEdicion() {
     if (cont) cont.innerHTML = generarHtmlListaEdicion();
 }
 
-// Calcula automáticamente el precio al editar
 function recalcularTotalEdicion() {
     let total = 0;
     let cantNormales = 0;
@@ -1185,7 +1184,9 @@ function recalcularTotalEdicion() {
         let esPop = item.producto.toLowerCase().includes('pop');
         let pUnit = 0;
         if(esPop) {
-            let pMatch = catalogoProductos.find(p => obtenerNombreDesdeObjeto(p).toLowerCase() === item.producto.toLowerCase().trim());
+            // Limpiamos el texto de las salsas para que coincida con el catálogo
+            let nombreLimpio = item.producto.replace(/\(salsas:.*?\)/gi, '').trim().toLowerCase();
+            let pMatch = catalogoProductos.find(p => obtenerNombreDesdeObjeto(p).toLowerCase() === nombreLimpio);
             if(pMatch) {
                 let rawP = obtenerPrecioDesdeObjeto(pMatch);
                 pUnit = parseFloat(String(rawP).replace('$', '').replace(',', '.').trim()) || 0;
@@ -1195,8 +1196,14 @@ function recalcularTotalEdicion() {
         }
         total += (pUnit * item.cantidad);
     });
+
+    // Lógica nueva para leer el descuento del modal
+    const dtoSelect = document.getElementById('editDescuentoInput');
+    const descuento = dtoSelect ? parseFloat(dtoSelect.value) : 0;
+    const totalConDescuento = Math.max(0, Math.round(total * (1 - (descuento / 100))));
+
     const elTotal = document.getElementById('editMontoInput');
-    if (elTotal) elTotal.value = total;
+    if (elTotal) elTotal.value = totalConDescuento;
 }
 
 function actualizarCantEdicion(idx, val) {
@@ -1281,7 +1288,19 @@ function abrirEdicionPedido(numFila) {
                 <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOTAS / COMENTARIOS DEL PEDIDO</label>
                 <input type="text" id="editNotasInput" value="${pEncontrado.notas || ''}" placeholder="Ej: Separar salados, entregar con moño rojo..." class="croiss-swal-input" style="margin:0 !important;">
                 
-                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px; margin-top:10px;">MONTO TOTAL ($)</label>
+                <!-- NUEVO: Selector de Descuento -->
+                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px; margin-top:10px;">DESCUENTO (OPCIONAL)</label>
+                <select id="editDescuentoInput" class="croiss-swal-input" style="margin:0 0 10px 0 !important;" onchange="recalcularTotalEdicion()">
+                    <option value="0">0% (Sin descuento)</option>
+                    <option value="10">10% OFF</option>
+                    <option value="15">15% OFF</option>
+                    <option value="20">20% OFF</option>
+                    <option value="25">25% OFF</option>
+                    <option value="50">50% OFF</option>
+                    <option value="100">100% Gratis (Regalo)</option>
+                </select>
+
+                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">MONTO TOTAL ($)</label>
                 <input type="number" id="editMontoInput" value="${pEncontrado.monto || 0}" class="croiss-swal-input" style="margin:0 0 10px 0 !important;">
             </div>
         `,
@@ -1304,6 +1323,13 @@ function abrirEdicionPedido(numFila) {
 
             let campoNotas = document.getElementById('editNotasInput');
             let nuevasNotas = campoNotas ? campoNotas.value.trim() : '';
+
+            // Leemos si se aplicó un descuento para agregarlo a la nota si es necesario
+            let dtoSelect = document.getElementById('editDescuentoInput');
+            let descSeleccionado = dtoSelect ? parseFloat(dtoSelect.value) : 0;
+            if (descSeleccionado > 0 && !nuevasNotas.includes(`[Dto ${descSeleccionado}%]`)) {
+                nuevasNotas = `[Dto ${descSeleccionado}%] ${nuevasNotas}`.trim();
+            }
 
             let campoFecha = document.getElementById('editFechaEntregaInput');
             let nuevaFecha = campoFecha ? campoFecha.value.trim() : '';
