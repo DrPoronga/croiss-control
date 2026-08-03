@@ -1267,7 +1267,7 @@ def obtener_clientes():
             key_norm = nom.lower()
             clientes_historico[key_norm] = {
                 "id_cliente": id_cli, "nombre": nom, "email": email, "telefono": tel, "direccion": direccion,
-                "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": [],
+                "total_gastado": 0.0, "total_croissants": 0, "total_pops": 0, "score_ranking": 0, "total_pedidos": 0, "historial": [],
                 "sabores_count": {}
             }
 
@@ -1290,12 +1290,35 @@ def obtener_clientes():
             try: monto = float(get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
             except ValueError: monto = 0.0
 
-            cant = int(get_field_val(v, "Cantidad")) if get_field_val(v, "Cantidad").isdigit() else 0
+            # ESTE ES EL EQUIVALENTE (usado para desempatar/ordenar el ranking)
+            cant_horno = int(get_field_val(v, "Cantidad")) if get_field_val(v, "Cantidad").isdigit() else 0
             key_norm = cliente_nombre.lower()
+
+            # SEPARAMOS CLÁSICOS Y POPS PARA MOSTRAR LA REALIDAD
+            cant_clasicos = 0
+            cant_pops = 0
+            if desc_prod:
+                for item in desc_prod.split(","):
+                    item_clean = item.strip().lower()
+                    if not item_clean: continue
+                    sin_jalea_str = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
+                    m = re.match(r"^(\d+)x\s+(.+)", sin_jalea_str, re.IGNORECASE)
+                    if m:
+                        c_item, sabor_item = int(m.group(1)), m.group(2).strip()
+                    else:
+                        c_item, sabor_item = 1, sin_jalea_str
+
+                    if "pop" in sabor_item:
+                        if "27" in sabor_item: cant_pops += c_item * 27
+                        elif "18" in sabor_item: cant_pops += c_item * 18
+                        elif "9" in sabor_item: cant_pops += c_item * 9
+                        else: cant_pops += c_item * 9
+                    else:
+                        cant_clasicos += c_item
 
             pedido_item = {
                 "fila": idx, "id": get_field_val(v, "ID Venta", "ID"), "fecha": fecha_norm,
-                "producto": desc_prod, "cantidad": cant, "monto": monto,
+                "producto": desc_prod, "cantidad": cant_clasicos, "pops": cant_pops, "monto": monto,
                 "estado_pago": get_field_val(v, "Estado") or "Pendiente",
                 "estado_entrega": get_field_val(v, "Entrega", "Estado Entrega") or "Sin Registrar",
                 "direccion": dir_c
@@ -1304,12 +1327,14 @@ def obtener_clientes():
             if key_norm not in clientes_historico:
                 clientes_historico[key_norm] = {
                     "id_cliente": "", "nombre": cliente_nombre, "email": email_c, "telefono": tel_c, "direccion": dir_c,
-                    "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": [],
+                    "total_gastado": 0.0, "total_croissants": 0, "total_pops": 0, "score_ranking": 0, "total_pedidos": 0, "historial": [],
                     "sabores_count": {}
                 }
 
             clientes_historico[key_norm]["total_gastado"] += monto
-            clientes_historico[key_norm]["total_croissants"] += cant
+            clientes_historico[key_norm]["total_croissants"] += cant_clasicos
+            clientes_historico[key_norm]["total_pops"] += cant_pops
+            clientes_historico[key_norm]["score_ranking"] += cant_horno
             clientes_historico[key_norm]["total_pedidos"] += 1
             clientes_historico[key_norm]["historial"].append(pedido_item)
 
@@ -1334,11 +1359,13 @@ def obtener_clientes():
                         "email": clientes_historico[key_norm]["email"],
                         "telefono": clientes_historico[key_norm]["telefono"],
                         "direccion": clientes_historico[key_norm]["direccion"],
-                        "total_gastado": 0.0, "total_croissants": 0, "total_pedidos": 0, "historial": []
+                        "total_gastado": 0.0, "total_croissants": 0, "total_pops": 0, "score_ranking": 0, "total_pedidos": 0, "historial": []
                     }
 
                 clientes_mes[key_norm]["total_gastado"] += monto
-                clientes_mes[key_norm]["total_croissants"] += cant
+                clientes_mes[key_norm]["total_croissants"] += cant_clasicos
+                clientes_mes[key_norm]["total_pops"] += cant_pops
+                clientes_mes[key_norm]["score_ranking"] += cant_horno
                 clientes_mes[key_norm]["total_pedidos"] += 1
                 clientes_mes[key_norm]["historial"].append(pedido_item)
 
@@ -1365,7 +1392,7 @@ def obtener_clientes():
             else:
                 c["sabor_favorito"] = "Variado"
 
-            if c["total_croissants"] >= 30:
+            if c["score_ranking"] >= 30:
                 c["categoria"] = "🌟 Cliente VIP"
             elif c["dias_sin_comprar"] != 999 and c["dias_sin_comprar"] <= 30:
                 c["categoria"] = "🔄 Frecuente"
@@ -1387,7 +1414,8 @@ def obtener_clientes():
         lista_historico.sort(key=lambda x: x["nombre"].lower())
 
         lista_mes = list(clientes_mes.values())
-        lista_mes.sort(key=lambda x: (x["total_croissants"], x["total_gastado"]), reverse=True)
+        # ORDEN DE PRIORIDAD: PRIMERO POR EQUIVALENCIA Y LUEGO POR GASTADO
+        lista_mes.sort(key=lambda x: (x["score_ranking"], x["total_gastado"]), reverse=True)
         for c in lista_mes: c["total_gastado"] = round(c["total_gastado"], 2)
 
         return jsonify({
@@ -1398,7 +1426,7 @@ def obtener_clientes():
 
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/cliente/editar', methods=['POST'])
 def editar_cliente():
     try:
