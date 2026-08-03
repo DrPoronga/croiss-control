@@ -2043,7 +2043,6 @@ async function cargarClientes() {
     mostrarCroissLoader();
 
     try {
-        // Vuelve a leer el filtro (que ahora está en la pestaña "Cliente del Mes")
         const elMes = document.getElementById('cMesFilter');
         const mesVal = elMes ? elMes.value : hoy.substring(0, 7);
 
@@ -2063,9 +2062,13 @@ async function cargarClientes() {
             const bannerDetalle = document.getElementById('topDetalle');
 
             if (data.top_cliente_mes) {
-                // AQUÍ APLICAMOS LA FUNCIÓN PARA CORTAR EL APELLIDO
                 if (bannerNombre) bannerNombre.innerText = formatNombrePrivado(data.top_cliente_mes.nombre);
-                if (bannerDetalle) bannerDetalle.innerHTML = `Lidera el mes con <span class="cifra-sensible" style="font-weight:800;">${data.top_cliente_mes.total_croissants} croissants</span> comprados`;
+                
+                let textoBanner = '';
+                if(data.top_cliente_mes.total_croissants > 0) textoBanner += `${data.top_cliente_mes.total_croissants} Clásicos`;
+                if(data.top_cliente_mes.total_pops > 0) textoBanner += (textoBanner ? ' y ' : '') + `${data.top_cliente_mes.total_pops} Pops`;
+
+                if (bannerDetalle) bannerDetalle.innerHTML = `Lidera el mes con <span class="cifra-sensible" style="font-weight:800;">${textoBanner}</span> comprados`;
             } else {
                 if (bannerNombre) bannerNombre.innerText = 'Sin Compradores';
                 if (bannerDetalle) bannerDetalle.innerText = 'Aún no se registraron ventas en este mes.';
@@ -2099,11 +2102,13 @@ function renderizarRankingMes(rankingLista) {
         div.innerHTML = `
             <div style="display:flex; align-items:center; gap:8px;">
                 <span style="font-size:1.2rem;">${medallas[idx] || `#${idx + 1}`}</span>
-                <!-- AQUÍ APLICAMOS LA FUNCIÓN PARA CORTAR EL APELLIDO -->
                 <div><strong>${formatNombrePrivado(c.nombre) || 'Cliente'}</strong></div>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
-                <strong class="cifra-sensible" style="color:var(--accent); font-size:0.9rem; background: var(--accent-light); padding: 4px 10px; border-radius: 12px;">${c.total_croissants || 0} croiss.</strong>
+                <strong class="cifra-sensible" style="color:var(--accent); font-size:0.85rem; background: var(--accent-light); padding: 4px 8px; border-radius: 12px; display:inline-block; text-align:center; min-width: 70px;">
+                    ${c.total_croissants || 0} Clás.<br>
+                    <span style="font-size:0.75rem; color:#B45309;">${c.total_pops || 0} Pops</span>
+                </strong>
                 <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
             </div>
         `;
@@ -2135,7 +2140,7 @@ function renderizarListaDirectorio(lista) {
         div.innerHTML = `
             <div>
                 <strong>${idTag}${c.nombre || 'Sin nombre'}</strong><br>
-                <small style="color:var(--text-muted);">${c.total_pedidos || 0} pedido(s) - ${c.total_croissants || 0} croiss.</small>
+                <small style="color:var(--text-muted);">${c.total_pedidos || 0} ped. - ${c.total_croissants || 0} cl. | ${c.total_pops || 0} pop</small>
             </div>
             <div style="display:flex; align-items:center; gap:6px;">
                 <strong style="color:var(--text-main); font-size:0.9rem;">$${c.total_gastado || 0}</strong>
@@ -2185,8 +2190,8 @@ function verDetalleCliente(clienteObj) {
                     <strong style="color: #16A34A; font-size: 0.88rem;">$${clienteObj.ticket_promedio || 0} / pedido</strong>
                 </div>
                 <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
-                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">📊 Croissants Totales</small>
-                    <strong style="color: var(--accent); font-size: 0.88rem;">${clienteObj.total_croissants || 0} un. (${clienteObj.total_pedidos || 0} pedidos)</strong>
+                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">📊 Cantidades</small>
+                    <strong style="color: var(--accent); font-size: 0.88rem;">${clienteObj.total_croissants || 0} cl. | ${clienteObj.total_pops || 0} pop</strong>
                 </div>
                 <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
                     <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">🗓️ Última Compra</small>
