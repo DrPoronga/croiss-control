@@ -27,6 +27,7 @@ ADMIN_PASS = os.environ.get("ADMIN_PASSWORD", "croisscamigera")
 
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "pedidos@croissuy.com")
+EMAIL_ADMIN = os.environ.get("EMAIL_ADMIN", "croiss.uy@gmail.com")
 NUMERO_WHATSAPP = os.environ.get("NUMERO_WHATSAPP", "59899526301") 
 
 SCOPES = [
@@ -878,42 +879,42 @@ def api_public_crear_pedido():
         fecha_entrega = datos.get("fecha_entrega")
         items = datos.get("items", [])
 
-        req_normales = calcular_unidades_normales(items)
-        req_pop = calcular_unidades_pop_reales(items)
-        total_equivalente_horno = calcular_croissants_congelados_equivalentes(items)
+        req_normales = calcular_unidades_normales(items)[cite: 1, 6]
+        req_pop = calcular_unidades_pop_reales(items)[cite: 1, 6]
+        total_equivalente_horno = calcular_croissants_congelados_equivalentes(items)[cite: 1, 6]
 
         if not fecha_entrega or total_equivalente_horno <= 0:
-            return jsonify({"status": "error", "mensaje": "Datos de pedido inválidos."}), 400
+            return jsonify({"status": "error", "mensaje": "Datos de pedido inválidos."}), 400[cite: 1, 6]
 
-        sheet_ventas = conectar_sheet("Ventas")
-        asegurar_encabezados_ventas(sheet_ventas)
-        registros = get_clean_records(sheet_ventas)
+        sheet_ventas = conectar_sheet("Ventas")[cite: 1, 6]
+        asegurar_encabezados_ventas(sheet_ventas)[cite: 1, 6]
+        registros = get_clean_records(sheet_ventas)[cite: 1, 6]
 
         acumulado_dia = sum(
             int(get_field_val(r, "Cantidad"))
             for r in registros
             if normalizar_fecha(get_field_val(r, "Fecha Entrega", "Fecha")) == fecha_entrega and get_field_val(r, "Cantidad").isdigit()
-        )
+        )[cite: 1, 6]
 
         if (acumulado_dia + total_equivalente_horno) > 35:
             return jsonify({
                 "status": "error",
                 "mensaje": f"🚫 ¡Cupo excedido! Para el día {fecha_entrega} quedan solo {max(0, 35 - acumulado_dia)} lugares y estás pidiendo el equivalente a {total_equivalente_horno} croissants."
-            }), 400
+            }), 400[cite: 1, 6]
 
-        sheet_stock = conectar_sheet("Productos_Stock")
+        sheet_stock = conectar_sheet("Productos_Stock")[cite: 1, 6]
 
-        row_cong, row_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
-        capacidad_normal = st_cong + (st_masas * 10)
+        row_cong, row_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)[cite: 1, 6]
+        capacidad_normal = st_cong + (st_masas * 10)[cite: 1, 6]
 
-        row_pop_cong, row_pop_masas, col_st_pop, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
-        capacidad_pop = st_pop_cong + (st_pop_masas * 30)
+        row_pop_cong, row_pop_masas, col_st_pop, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)[cite: 1, 6]
+        capacidad_pop = st_pop_cong + (st_pop_masas * 30)[cite: 1, 6]
 
         if req_normales > capacidad_normal:
-            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin croissants tradicionales suficientes."}), 400
+            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin croissants tradicionales suficientes."}), 400[cite: 1, 6]
 
         if req_pop > capacidad_pop:
-            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin Pop Croiss suficientes."}), 400
+            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin Pop Croiss suficientes."}), 400[cite: 1, 6]
 
         # Descontar stock Normal
         if req_normales > 0:
@@ -924,7 +925,7 @@ def api_public_crear_pedido():
                 st_cong = 0
                 masas_a_romper = math.ceil(restante / 10.0)
                 st_masas = max(0, st_masas - masas_a_romper)
-                st_cong += (masas_a_romper * 10) - restante
+                st_cong += (masas_a_romper * 10) - restante[cite: 1, 6]
 
         # Descontar stock Pop
         if req_pop > 0:
@@ -935,72 +936,90 @@ def api_public_crear_pedido():
                 st_pop_cong = 0
                 masas_pop_romper = math.ceil(rest_pop / 38.0)
                 st_pop_masas = max(0, st_pop_masas - masas_pop_romper)
-                st_pop_cong += (masas_pop_romper * 30) - rest_pop
+                st_pop_cong += (masas_pop_romper * 30) - rest_pop[cite: 1, 6]
 
         batch_stock = []
         if req_normales > 0:
-            if row_cong: batch_stock.append({'range': f'D{row_cong}', 'values': [[st_cong]]})
-            if row_masas: batch_stock.append({'range': f'D{row_masas}', 'values': [[st_masas]]})
+            if row_cong: batch_stock.append({'range': f'D{row_cong}', 'values': [[st_cong]]})[cite: 1, 6]
+            if row_masas: batch_stock.append({'range': f'D{row_masas}', 'values': [[st_masas]]})[cite: 1, 6]
         if req_pop > 0:
-            if row_pop_cong: batch_stock.append({'range': f'D{row_pop_cong}', 'values': [[st_pop_cong]]})
-            if row_pop_masas: batch_stock.append({'range': f'D{row_pop_masas}', 'values': [[st_pop_masas]]})
+            if row_pop_cong: batch_stock.append({'range': f'D{row_pop_cong}', 'values': [[st_pop_cong]]})[cite: 1, 6]
+            if row_pop_masas: batch_stock.append({'range': f'D{row_pop_masas}', 'values': [[st_pop_masas]]})[cite: 1, 6]
 
         if batch_stock:
-            ejecutar_con_reintento(sheet_stock.batch_update, batch_stock)
+            ejecutar_con_reintento(sheet_stock.batch_update, batch_stock)[cite: 1, 6]
 
-        nuevo_id = f"V-{len(registros) + 1:04d}"
+        nuevo_id = f"V-{len(registros) + 1:04d}"[cite: 1, 6]
         resumen_productos = []
         for item in items:
             prod_nombre = item.get("producto")
             cant = int(item.get("cantidad", 1))
             jalea_str = " (Con Jalea)" if item.get("con_jalea") else ""
-            resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
+            resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")[cite: 1, 6]
 
-        descripcion_final = ", ".join(resumen_productos)
-        modificar_stock_empaque(descripcion_final, total_equivalente_horno, es_devolucion=False)
+        descripcion_final = ", ".join(resumen_productos)[cite: 1, 6]
+        modificar_stock_empaque(descripcion_final, total_equivalente_horno, es_devolucion=False)[cite: 1, 6]
 
-        cliente_nombre = datos.get("cliente", "Cliente Web")
-        email_cliente = str(datos.get("email", "")).strip()
-        telefono_cliente = str(datos.get("telefono", "")).strip()
-        direccion_cliente = str(datos.get("direccion", "")).strip()
-        hoy_str = datetime.now().strftime("%Y-%m-%d")
-        monto_total = datos.get("monto_total", 0)
-        notas_cliente = f"[WEB] {str(datos.get('notas', '')).strip()}".strip()
+        cliente_nombre = datos.get("cliente", "Cliente Web")[cite: 1, 6]
+        email_cliente = str(datos.get("email", "")).strip()[cite: 1, 6]
+        telefono_cliente = str(datos.get("telefono", "")).strip()[cite: 1, 6]
+        direccion_cliente = str(datos.get("direccion", "")).strip()[cite: 1, 6]
+        hoy_str = datetime.now().strftime("%Y-%m-%d")[cite: 1, 6]
+        monto_total = datos.get("monto_total", 0)[cite: 1, 6]
+        notas_cliente = str(datos.get('notas', '')).strip()
+        notas_guardar = f"[WEB] {notas_cliente}".strip()[cite: 1, 6]
 
         nueva_fila = [
             nuevo_id, hoy_str, fecha_entrega, cliente_nombre,
             descripcion_final, total_equivalente_horno, monto_total, "Pendiente",
             "Web / WhatsApp", email_cliente, telefono_cliente,
-            direccion_cliente, "Pendiente", notas_cliente
-        ]
-        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
+            direccion_cliente, "Pendiente", notas_guardar
+        ][cite: 1, 6]
+        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)[cite: 1, 6]
 
+        # 1. Mail de confirmación para el cliente
         if email_cliente:
             try:
-                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, "Pendiente")
-                enviar_email_async(email_cliente, f"🥐 ¡Pedido {nuevo_id} Registrado en CROISS!", html)
+                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, "Pendiente")[cite: 1, 6]
+                enviar_email_async(email_cliente, f"🥐 ¡Pedido {nuevo_id} Registrado en CROISS!", html)[cite: 1, 6]
             except Exception: pass
 
+        # 2. Mail de ALERTA INMEDIATA para ti (croiss.uy@gmail.com)
         try:
             cuerpo_admin = f"""
-            <h2>🚨 ¡Nuevo Pedido Web Recibido!</h2>
-            <p><strong>ID Orden:</strong> {nuevo_id}</p>
-            <p><strong>Cliente:</strong> {cliente_nombre}</p>
-            <p><strong>Teléfono:</strong> {telefono_cliente}</p>
-            <p><strong>Fecha Solicitada:</strong> {fecha_entrega}</p>
-            <p><strong>Productos:</strong> {descripcion_final}</p>
-            <p><strong>Monto Total:</strong> ${monto_total}</p>
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background-color: #F9F3EE; color: #2D1E18;">
+              <div style="max-width: 500px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; padding: 20px; border: 1px solid #EFEAE6;">
+                <h2 style="color: #C86D28; font-size: 20px; margin-top: 0; text-align: center;">🚨 ¡NUEVO PEDIDO WEB #{nuevo_id}!</h2>
+                <hr style="border: 0; border-top: 1px dashed #E2D9D3; margin: 15px 0;">
+                
+                <p style="margin: 8px 0;"><strong>👤 Cliente:</strong> {cliente_nombre}</p>
+                <p style="margin: 8px 0;"><strong>📞 Teléfono:</strong> <a href="tel:{telefono_cliente}">{telefono_cliente}</a></p>
+                <p style="margin: 8px 0;"><strong>✉️ Email:</strong> {email_cliente if email_cliente else 'Sin email'}</p>
+                <p style="margin: 8px 0;"><strong>📅 Fecha Solicitada:</strong> <span style="color: #C86D28; font-weight: 800;">{fecha_entrega}</span></p>
+                <p style="margin: 8px 0;"><strong>📍 Dirección / Zona:</strong> {direccion_cliente}</p>
+                
+                <div style="background-color: #FAF9F8; padding: 12px; border-radius: 10px; margin: 15px 0;">
+                  <p style="margin: 0 0 6px 0; font-weight: 800; color: #2D1E18;">🥐 Detalle del Pedido:</p>
+                  <p style="margin: 0; font-size: 14px; color: #7A6B63;">{descripcion_final}</p>
+                </div>
+                
+                <p style="margin: 8px 0; font-size: 16px;"><strong>💵 Monto Total:</strong> <span style="color: #16A34A; font-weight: 800;">${monto_total}</span></p>
+                <p style="margin: 8px 0; font-size: 13px; color: #7A6B63;"><strong>📝 Notas:</strong> {notas_cliente if notas_cliente else 'Sin notas'}</p>
+              </div>
+            </div>
             """
-            enviar_email_async(EMAIL_EMISOR, f"🚨 NUEVO PEDIDO WEB #{nuevo_id} - {cliente_nombre}", cuerpo_admin)
+            destinatario_admin = getattr(os.environ, 'get', lambda k, d: d)("EMAIL_ADMIN", "croiss.uy@gmail.com")[cite: 6]
+            enviar_email_async("croiss.uy@gmail.com", f"🚨 NUEVO PEDIDO WEB #{nuevo_id} - {cliente_nombre}", cuerpo_admin)
+        except Exception as err:
+            print(f"❌ Error notificando al admin: {err}", flush=True)
+
+        try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)[cite: 1, 6]
         except Exception: pass
 
-        try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)
-        except Exception: pass
-
-        return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200
+        return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200[cite: 1, 6]
     except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        return jsonify({"status": "error", "mensaje": str(error)}), 500[cite: 1, 6]
+        
 def calcular_unidades_reales_desde_descripcion(desc_str):
     if not desc_str:
         return 0
