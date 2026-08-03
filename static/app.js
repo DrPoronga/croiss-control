@@ -1288,7 +1288,6 @@ function abrirEdicionPedido(numFila) {
                 <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOTAS / COMENTARIOS DEL PEDIDO</label>
                 <input type="text" id="editNotasInput" value="${pEncontrado.notas || ''}" placeholder="Ej: Separar salados, entregar con moño rojo..." class="croiss-swal-input" style="margin:0 !important;">
                 
-                <!-- NUEVO: Selector de Descuento -->
                 <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px; margin-top:10px;">DESCUENTO (OPCIONAL)</label>
                 <select id="editDescuentoInput" class="croiss-swal-input" style="margin:0 0 10px 0 !important;" onchange="recalcularTotalEdicion()">
                     <option value="0">0% (Sin descuento)</option>
@@ -1324,7 +1323,6 @@ function abrirEdicionPedido(numFila) {
             let campoNotas = document.getElementById('editNotasInput');
             let nuevasNotas = campoNotas ? campoNotas.value.trim() : '';
 
-            // Leemos si se aplicó un descuento para agregarlo a la nota si es necesario
             let dtoSelect = document.getElementById('editDescuentoInput');
             let descSeleccionado = dtoSelect ? parseFloat(dtoSelect.value) : 0;
             if (descSeleccionado > 0 && !nuevasNotas.includes(`[Dto ${descSeleccionado}%]`)) {
@@ -1343,7 +1341,7 @@ function abrirEdicionPedido(numFila) {
                 cantidad: totalCant,
                 notas: nuevasNotas,
                 fecha_entrega: nuevaFecha,
-                monto_total: nuevoMonto
+                monto_total: nuevoMonto // <--- Se envía el total re-calculado
             };
         }
     }).then(async (result) => {
@@ -1361,6 +1359,7 @@ function abrirEdicionPedido(numFila) {
                 if(data.status === 'exito') {
                     mostrarCroissExito('Pedido Actualizado', 'Se guardaron los cambios.');
                     cargarAgenda();
+                    if (typeof cargarCuentas === 'function') cargarCuentas(); // Refresca cuentas/deudores al editar
                 } else { Swal.fire('Error', data.mensaje, 'error'); }
             } catch(e) { Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error'); }
         }
