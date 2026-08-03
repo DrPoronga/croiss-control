@@ -965,30 +965,42 @@
         }
 
         function updateSubtotal() {
-            try {
-                const calc = calculatePrices();
-                const subtotalEl = document.getElementById('shopSubtotalText');
-                if(subtotalEl) subtotalEl.innerText = `$${calc.totalMoney}`;
-                
-                const msgEl = document.getElementById('shopPromoMsg');
-                if(msgEl) {
-                    if(calc.totalCroissants === 0) {
-                        msgEl.innerText = 'Agrega croissants para continuar';
-                    } else if(calc.totalCroissants < 3) {
-                        msgEl.innerText = `Llevas ${calc.totalCroissants}. Agrega ${3 - calc.totalCroissants} mas para precio promo ($110 c/u)!`;
-                    } else if(calc.totalCroissants < 6) {
-                        msgEl.innerText = `Precio promo activado ($110)! Agrega ${6 - calc.totalCroissants} mas para precio mayorista ($100 c/u).`;
-                    } else {
-                        msgEl.innerText = 'Mejor precio mayorista activado!';
-                    }
-                }
+			try {
+				const calc = calculatePrices();
+				const subtotalEl = document.getElementById('shopSubtotalText');
+				if(subtotalEl) subtotalEl.innerText = `$${calc.totalMoney}`;
+				
+				// Contamos por separado para el cartel
+				let normales = 0;
+				let pops = 0;
+				for(let k in cart) {
+					if(cart[k] && cart[k].cantidad) {
+						if(k.toLowerCase().includes('pop')) pops += cart[k].cantidad;
+						else normales += cart[k].cantidad;
+					}
+				}
 
-                renderDates();
-                buildSummary();
-            } catch(e) {
-                console.error("Error al actualizar subtotal:", e);
-            }
-        }
+				const msgEl = document.getElementById('shopPromoMsg');
+				if(msgEl) {
+					if(normales === 0 && pops === 0) {
+						msgEl.innerText = 'Agrega productos para continuar';
+					} else if (normales === 0 && pops > 0) {
+						msgEl.innerText = '¡A disfrutar esos Pop Croiss! 🍿';
+					} else if(normales > 0 && normales < 3) {
+						msgEl.innerText = `Llevás ${normales} clásicos. ¡Agregá ${3 - normales} más para precio promo ($110 c/u)!`;
+					} else if(normales >= 3 && normales < 6) {
+						msgEl.innerText = `¡Promo activada ($110)! Agregá ${6 - normales} más para precio mayorista ($100 c/u).`;
+					} else {
+						msgEl.innerText = '¡Mejor precio mayorista activado! 🥐';
+					}
+				}
+
+				renderDates();
+				buildSummary();
+			} catch(e) {
+				console.error("Error al actualizar subtotal:", e);
+			}
+		}
 
         function renderDates() {
             const container = document.getElementById('datesContainer');
