@@ -202,15 +202,16 @@
 
             <!-- SELECCIÓN DE ZONA / BARRIO -->
             <div class="web-field">
-                <label>Zona / Barrio de Envío *</label>
-                <select id="custZonaSelect" onchange="alCambiarZona()" style="width:100%; border-bottom: 1.5px solid #C86D28; font-weight:700; color:#2D1E18;">
-                    <option value="" disabled selected>-- Selecciona tu barrio / zona --</option>
-                    <option value="zona_1">Malvín / Punta Gorda / Carrasco / C. de la Costa (Lun, Jue, Sáb - Mañana)</option>
-                    <option value="zona_2">Pocitos / Punta Carretas (Lunes o Jueves - Mañana)</option>
-                    <option value="zona_3">Zonamerica (Lunes, Miércoles o Jueves)</option>
-                    <option value="zona_4">Pinamar / El Pinar / Salinas (Lun, Mié, Jue, Vie, Sáb)</option>
-                </select>
-            </div>
+				<label>Zona / Barrio de Envío *</label>
+				<select id="custZonaSelect" onchange="alCambiarZona()" style="width:100%; border-bottom: 1.5px solid #C86D28; font-weight:700; color:#2D1E18;">
+					<option value="" disabled selected>-- Selecciona tu barrio / zona --</option>
+					<option value="zona_1">Malvín / Punta Gorda / Carrasco / C. de la Costa (Lun, Jue, Sáb - Mañana)</option>
+					<option value="zona_2">Pocitos / Punta Carretas (Lunes o Jueves - Mañana)</option>
+					<option value="zona_3">Zonamerica (Lunes, Miércoles o Jueves)</option>
+					<option value="zona_4">Pinamar / El Pinar / Salinas (Lun, Mié, Jue, Vie, Sáb)</option>
+					<option value="zona_otra">📍 Otra zona / Barrio diferente (Consultar por WhatsApp)</option>
+				</select>
+			</div>
 
             <div class="web-field">
                 <label>Dirección / Calle y Número *</label>
@@ -318,12 +319,133 @@
         let datesCapacity = [];
 
         // REGLAS DE DÍAS POR ZONA (0 = Domingo, 1 = Lunes, 2 = Martes, 3 = Miércoles, 4 = Jueves, 5 = Viernes, 6 = Sábado)
-        const REGLAS_ZONAS = {
-            "zona_1": { nombre: "Malvín / P. Gorda / Carrasco / C. de la Costa", diasValidos: [1, 4, 6], nota: "Lunes, Jueves o Sábado (Mañana)" },
-            "zona_2": { nombre: "Pocitos / Punta Carretas", diasValidos: [1, 4], nota: "Lunes o Jueves (Mañana)" },
-            "zona_3": { nombre: "Zonamerica", diasValidos: [1, 3, 4], nota: "Lunes, Miércoles o Jueves" },
-            "zona_4": { nombre: "Pinamar / El Pinar / Salinas", diasValidos: [1, 3, 4, 5, 6], nota: "Toda la semana (excepto Martes y Domingos)" }
-        };
+		const REGLAS_ZONAS = {
+			"zona_1": { nombre: "Malvín / P. Gorda / Carrasco / C. de la Costa", diasValidos: [1, 4, 6], nota: "Lunes, Jueves o Sábado (Mañana)" },
+			"zona_2": { nombre: "Pocitos / Punta Carretas", diasValidos: [1, 4], nota: "Lunes o Jueves (Mañana)" },
+			"zona_3": { nombre: "Zonamerica", diasValidos: [1, 3, 4], nota: "Lunes, Miércoles o Jueves" },
+			"zona_4": { nombre: "Pinamar / El Pinar / Salinas", diasValidos: [1, 3, 4, 5, 6], nota: "Toda la semana (excepto Martes y Domingos)" },
+			"zona_otra": { nombre: "Otra Zona (A coordinar)", diasValidos: [], nota: "Coordinación directa por WhatsApp" }
+		};
+
+		function renderDates() {
+			const container = document.getElementById('datesContainer');
+			const descZonaEl = document.getElementById('txtDescZonaSeleccionada');
+			if (!container) return;
+			container.innerHTML = '';
+
+			const zonaSel = document.getElementById('custZonaSelect')?.value;
+
+			if (!zonaSel || !REGLAS_ZONAS[zonaSel]) {
+				if (descZonaEl) descZonaEl.innerText = "Por favor seleccioná tu zona arriba en el Paso 2 para ver las fechas permitidas.";
+				container.innerHTML = `<div style="grid-column: span 2; text-align: center; color: #DC2626; font-weight: 700; padding: 20px 0;">⚠️ Volvé al Paso 2 y elegí tu Zona / Barrio.</div>`;
+				return;
+			}
+
+			// CASO ESPECIAL: "OTRA ZONA"
+			if (zonaSel === "zona_otra") {
+				selectedDate = "A coordinar por WhatsApp";
+				if (descZonaEl) descZonaEl.innerText = "Zona especial o diferente.";
+				container.innerHTML = `
+					<div style="grid-column: span 2; background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 16px; padding: 18px; text-align: center;">
+						<strong style="color: #B45309; font-size: 0.98rem; display: block; margin-bottom: 6px;">💬 Coordinación Especial</strong>
+						<p style="font-size: 0.82rem; color: #7A6B63; margin-bottom: 12px; line-height: 1.4;">
+							Al estar en otra zona, la fecha de entrega y la viabilidad del envío las confirmamos personalmente por WhatsApp.
+						</p>
+						<a href="https://wa.me/59899526301?text=${encodeURIComponent('Hola CROISS! Quisiera consultar si hacen envíos a mi zona.')}" target="_blank" class="btn-jalea-chip" style="background: #25D366; color: white; border: none; padding: 10px 18px; font-weight: 800; text-decoration: none; border-radius: 20px; display: inline-block;">
+							💬 Hablar por WhatsApp Ahora
+						</a>
+					</div>
+				`;
+				return;
+			}
+
+			const reglaZona = REGLAS_ZONAS[zonaSel];
+			if (descZonaEl) descZonaEl.innerText = `Días disponibles para ${reglaZona.nombre}: ${reglaZona.nota}. (Mínimo 48hs de anticipación)`;
+
+			const calc = calculatePrices();
+			const croissantsPedidos = calc.totalCroissants;
+
+			// CÁLCULO DE FECHA LÍMITE (HOY + 48 Horas Mínimas)
+			const fechaMinima48h = new Date();
+			fechaMinima48h.setDate(fechaMinima48h.getDate() + 2); // Suma 2 días enteros
+			fechaMinima48h.setHours(0, 0, 0, 0); // Limpia la hora para comparar solo fechas
+
+			let hayFechasDisponibles48h = false;
+
+			(datesCapacity || []).forEach(d => {
+				// Parse de fecha local YYYY-MM-DD
+				const partes = d.fecha.split('-');
+				const fechaDt = new Date(partes[0], partes[1] - 1, partes[2]);
+				fechaDt.setHours(0, 0, 0, 0);
+
+				// REGLA 1: ¿Cumple las 48hs mínimas? (Es posterior o igual a Hoy + 2 Días)
+				const cumple48hs = fechaDt >= fechaMinima48h;
+
+				// REGLA 2: ¿El día de la semana está habilitado para la zona?
+				const diaSemana = fechaDt.getDay();
+				const esDiaPermitidoZona = reglaZona.diasValidos.includes(diaSemana);
+
+				const div = document.createElement('div');
+				const acumulado = d.ocupados || 0;
+				const disponible = 35 - acumulado;
+
+				const esLleno = acumulado >= 35;
+				const esInsuficiente = !esLleno && (croissantsPedidos > disponible);
+				let isSel = d.fecha === selectedDate;
+
+				if (isSel && (!cumple48hs || !esDiaPermitidoZona || esLleno || esInsuficiente)) {
+					selectedDate = "";
+					isSel = false;
+				}
+
+				let statusText = "Disponible";
+				let extraClass = "";
+
+				if (!cumple48hs) {
+					statusText = "Consultar por WhatsApp";
+					extraClass = "disabled";
+				} else if (!esDiaPermitidoZona) {
+					statusText = "Sin envíos a tu zona";
+					extraClass = "disabled";
+				} else if (esLleno) {
+					statusText = "Agotado";
+					extraClass = "disabled";
+				} else if (esInsuficiente) {
+					statusText = `Quedan ${disponible}`;
+					extraClass = "disabled";
+				}
+
+				if (cumple48hs && esDiaPermitidoZona) {
+					hayFechasDisponibles48h = true;
+				}
+
+				div.className = `web-date-btn ${isSel ? 'selected' : ''} ${extraClass}`;
+				div.innerHTML = `
+					<div style="font-size:0.92rem; font-weight:800;">${d.nombre_dia}</div>
+					<small style="font-size:0.72rem; margin-top:2px; display:block; color: ${cumple48hs && esDiaPermitidoZona ? '#7A6B63' : '#DC2626'};">${statusText}</small>
+				`;
+
+				if (cumple48hs && esDiaPermitidoZona && !esLleno && !esInsuficiente) {
+					div.onclick = () => {
+						selectedDate = d.fecha;
+						renderDates();
+						buildSummary();
+					};
+				}
+				container.appendChild(div);
+			});
+
+			// Cartel informativo adicional si quieren pedir rápido
+			const avisoUrgencia = document.createElement('div');
+			avisoUrgencia.style.cssText = "grid-column: span 2; margin-top: 12px; background: #FAF9F8; border: 1px dashed #D8CFC8; border-radius: 12px; padding: 10px; text-align: center; font-size: 0.8rem; color: #7A6B63;";
+			avisoUrgencia.innerHTML = `
+				¿Lo necesitás con urgencia para hoy o mañana? 🥐<br>
+				<a href="https://wa.me/59899526301?text=${encodeURIComponent('Hola CROISS! Quisiera consultar si tienen disponibilidad de pedidos urgentes para hoy o mañana.')}" target="_blank" style="color: #C86D28; font-weight: 800; text-decoration: underline;">
+					Consultar disponibilidad urgente por WhatsApp
+				</a>
+			`;
+			container.appendChild(avisoUrgencia);
+		}
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchCatalogo();
@@ -584,78 +706,7 @@
 			buildSummary();
 		}
 
-        function renderDates() {
-            const container = document.getElementById('datesContainer');
-            const descZonaEl = document.getElementById('txtDescZonaSeleccionada');
-            if (!container) return;
-            container.innerHTML = '';
-
-            const zonaSel = document.getElementById('custZonaSelect')?.value;
-
-            if (!zonaSel || !REGLAS_ZONAS[zonaSel]) {
-                if (descZonaEl) descZonaEl.innerText = "Por favor seleccioná tu zona arriba en el Paso 2 para ver las fechas permitidas.";
-                container.innerHTML = `<div style="grid-column: span 2; text-align: center; color: #DC2626; font-weight: 700; padding: 20px 0;">⚠️ Volvé al Paso 2 y elegí tu Zona / Barrio.</div>`;
-                return;
-            }
-
-            const reglaZona = REGLAS_ZONAS[zonaSel];
-            if (descZonaEl) descZonaEl.innerText = `Días disponibles para ${reglaZona.nombre}: ${reglaZona.nota}.`;
-
-            const calc = calculatePrices();
-            const croissantsPedidos = calc.totalCroissants;
-
-            (datesCapacity || []).forEach(d => {
-                // Parse de fecha local YYYY-MM-DD
-                const partes = d.fecha.split('-');
-                const fechaDt = new Date(partes[0], partes[1] - 1, partes[2]);
-                const diaSemana = fechaDt.getDay(); // 0 es Domingo, 1 Lunes...
-
-                const esDiaPermitidoZona = reglaZona.diasValidos.includes(diaSemana);
-
-                const div = document.createElement('div');
-                const acumulado = d.ocupados || 0;
-                const disponible = 35 - acumulado;
-
-                const esLleno = acumulado >= 35;
-                const esInsuficiente = !esLleno && (croissantsPedidos > disponible);
-                let isSel = d.fecha === selectedDate;
-
-                if (isSel && (!esDiaPermitidoZona || esLleno || esInsuficiente)) {
-                    selectedDate = "";
-                    isSel = false;
-                }
-
-                let statusText = "Disponible";
-                let extraClass = "";
-
-                if (!esDiaPermitidoZona) {
-                    statusText = "Sin envíos a tu zona";
-                    extraClass = "disabled";
-                } else if (esLleno) {
-                    statusText = "Agotado";
-                    extraClass = "disabled";
-                } else if (esInsuficiente) {
-                    statusText = `Quedan ${disponible}`;
-                    extraClass = "disabled";
-                }
-
-                div.className = `web-date-btn ${isSel ? 'selected' : ''} ${extraClass}`;
-                div.innerHTML = `
-                    <div style="font-size:0.92rem; font-weight:800;">${d.nombre_dia}</div>
-                    <small style="font-size:0.72rem; margin-top:2px; display:block; color: ${esDiaPermitidoZona ? '#7A6B63' : '#DC2626'};">${statusText}</small>
-                `;
-
-                if (esDiaPermitidoZona && !esLleno && !esInsuficiente) {
-                    div.onclick = () => {
-                        selectedDate = d.fecha;
-                        renderDates();
-                        buildSummary();
-                    };
-                }
-                container.appendChild(div);
-            });
-        }
-
+        
         function toggleOpcionRegalo() {
 			const chk = document.getElementById('chkEsRegalo');
 			const box = document.getElementById('boxRegaloCampos');
