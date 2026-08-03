@@ -5,10 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>CROISS - Artesanos del Croissant</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='icono.png') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=12">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=13">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        /* DESBLOQUEO DE SCROLL OBLIGATORIO */
         html, body { 
             height: auto !important;
             min-height: 100vh !important;
@@ -22,13 +21,11 @@
             scroll-behavior: smooth;
         }
 
-        html.swal2-shown, 
-        body.swal2-shown {
+        html.swal2-shown, body.swal2-shown {
             height: auto !important;
             overflow-y: auto !important;
         }
 		
-		/* ESTETICA UNIFICADA DE POP-UPS (SWEETALERT2) */
 		.swal2-popup:not(.croiss-swal-popup-transparent) {
 			border-radius: 28px !important;
 			padding: 24px 20px !important;
@@ -37,8 +34,7 @@
 			box-shadow: 0 20px 50px rgba(45, 30, 24, 0.18) !important;
 		}
 
-		.croiss-swal-popup-transparent,
-        .croiss-swal-popup-transparent .swal2-popup {
+		.croiss-swal-popup-transparent, .croiss-swal-popup-transparent .swal2-popup {
 			background: transparent !important;
 			background-color: transparent !important;
 			box-shadow: none !important;
@@ -46,376 +42,92 @@
 			padding: 0 !important;
 		}
 
-		.swal2-title {
-			color: #2D1E18 !important;
-			font-size: 1.35rem !important;
-			font-weight: 800 !important;
-			letter-spacing: -0.3px !important;
-		}
-
-		.swal2-html-container, .swal2-content {
-			color: #7A6B63 !important;
-			font-size: 0.9rem !important;
-			font-weight: 600 !important;
-			line-height: 1.5 !important;
-		}
-
-		.swal2-deny, button.swal2-deny {
-			display: none !important;
-            visibility: hidden !important;
-            height: 0 !important;
-            width: 0 !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            opacity: 0 !important;
-            pointer-events: none !important;
-		}
-
-		.swal2-actions {
-			gap: 10px !important;
-			margin-top: 20px !important;
-		}
+		.swal2-title { color: #2D1E18 !important; font-size: 1.35rem !important; font-weight: 800 !important; }
+		.swal2-html-container, .swal2-content { color: #7A6B63 !important; font-size: 0.9rem !important; font-weight: 600 !important; }
+		.swal2-deny, button.swal2-deny { display: none !important; }
 
 		.croiss-swal-confirm, .swal2-confirm {
-			background: #C86D28 !important;
-			color: #FFFFFF !important;
-			border-radius: 25px !important;
-			padding: 12px 28px !important;
-			font-size: 0.95rem !important;
-			font-weight: 800 !important;
-			border: none !important;
-			box-shadow: 0 4px 14px rgba(200, 109, 40, 0.3) !important;
-			cursor: pointer !important;
-			transition: transform 0.15s ease !important;
+			background: #C86D28 !important; color: #FFFFFF !important; border-radius: 25px !important;
+			padding: 12px 28px !important; font-size: 0.95rem !important; font-weight: 800 !important; border: none !important;
 		}
 
 		.croiss-swal-cancel, .swal2-cancel {
-			background: transparent !important;
-			color: #7A6B63 !important;
-			border: 1.5px solid #D8CFC8 !important;
-			border-radius: 25px !important;
-			padding: 12px 28px !important;
-			font-size: 0.9rem !important;
-			font-weight: 700 !important;
-			cursor: pointer !important;
-			transition: transform 0.15s ease !important;
+			background: transparent !important; color: #7A6B63 !important; border: 1.5px solid #D8CFC8 !important;
+			border-radius: 25px !important; padding: 12px 28px !important; font-size: 0.9rem !important; font-weight: 700 !important;
 		}
 
-		.swal2-confirm:active, .swal2-cancel:active {
-			transform: scale(0.96) !important;
-		}
-
-		.web-site-wrapper {
-            max-width: 580px;
-            margin: 0 auto;
-            padding: 0 16px 60px 16px;
-        }
+		.web-site-wrapper { max-width: 580px; margin: 0 auto; padding: 0 16px 60px 16px; }
 
         .web-hero {
-            position: relative;
-            padding: 45px 20px 36px 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(45, 30, 24, 0.12);
-            margin-bottom: 36px;
-            overflow: hidden;
+            position: relative; padding: 45px 20px 36px 20px; text-align: center;
+            border-bottom: 1px solid rgba(45, 30, 24, 0.12); margin-bottom: 36px; overflow: hidden;
         }
 
         .web-hero-bg {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background: linear-gradient(180deg, rgba(45, 30, 24, 0.65) 0%, rgba(45, 30, 24, 0.92) 100%), url("{{ url_for('static', filename='croiss10.png') }}") center 25% / cover no-repeat;
-            border-radius: 0 0 32px 32px;
-            z-index: 0;
+            border-radius: 0 0 32px 32px; z-index: 0;
         }
 
-        .web-hero-content {
-            position: relative;
-            z-index: 1;
-            color: #FFFFFF;
-        }
-
-        .hero-main-title {
-            font-size: 2.8rem;
-            font-weight: 800;
-            line-height: 1;
-            letter-spacing: 4px;
-            margin: 0 0 8px 0;
-            color: #FFFFFF;
-            text-transform: uppercase;
-        }
-
-        .hero-subtitle {
-            font-size: 0.95rem;
-            font-weight: 300;
-            letter-spacing: 3px;
-            text-transform: uppercase;
-            color: rgba(255, 255, 255, 0.9);
-            margin-bottom: 22px;
-            display: block;
-        }
-
-        .hero-story-text {
-            font-size: 0.9rem;
-            line-height: 1.6;
-            color: rgba(255, 255, 255, 0.9);
-            max-width: 460px;
-            margin: 0 auto 28px auto;
-            font-weight: 400;
-        }
-
-        .hero-actions {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
+        .web-hero-content { position: relative; z-index: 1; color: #FFFFFF; }
+        .hero-main-title { font-size: 2.8rem; font-weight: 800; letter-spacing: 4px; margin: 0 0 8px 0; color: #FFFFFF; text-transform: uppercase; }
+        .hero-subtitle { font-size: 0.95rem; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; color: rgba(255, 255, 255, 0.9); margin-bottom: 22px; display: block; }
+        .hero-story-text { font-size: 0.9rem; line-height: 1.6; color: rgba(255, 255, 255, 0.9); max-width: 460px; margin: 0 auto 28px auto; }
+        .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
 
         .btn-web-main {
-            background: #C86D28;
-            color: #FFFFFF;
-            border: none;
-            padding: 16px 28px;
-            font-size: 0.95rem;
-            font-weight: 800;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 6px 20px rgba(200, 109, 40, 0.35);
-            transition: all 0.2s ease;
-            text-decoration: none;
-            display: inline-block;
+            background: #C86D28; color: #FFFFFF; border: none; padding: 16px 28px; font-size: 0.95rem; font-weight: 800; border-radius: 30px; cursor: pointer; text-decoration: none;
         }
-        .btn-web-main:active { transform: scale(0.97); }
-
         .btn-web-outline {
-            background: transparent;
-            color: #FFFFFF;
-            border: 1.5px solid rgba(255, 255, 255, 0.5);
-            padding: 14px 24px;
-            font-size: 0.9rem;
-            font-weight: 700;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        .btn-web-outline:active { background: rgba(255, 255, 255, 0.15); }
-
-        .web-section-title {
-            font-size: 1.25rem;
-            font-weight: 800;
-            color: #2D1E18;
-            margin-bottom: 4px;
-            letter-spacing: -0.3px;
+            background: transparent; color: #FFFFFF; border: 1.5px solid rgba(255, 255, 255, 0.5); padding: 14px 24px; font-size: 0.9rem; font-weight: 700; border-radius: 30px; cursor: pointer;
         }
 
-        .web-section-desc {
-            font-size: 0.85rem;
-            color: #7A6B63;
-            margin-bottom: 20px;
-        }
+        .web-section-title { font-size: 1.25rem; font-weight: 800; color: #2D1E18; margin-bottom: 4px; letter-spacing: -0.3px; }
+        .web-section-desc { font-size: 0.85rem; color: #7A6B63; margin-bottom: 20px; }
 
-        .reveal-on-scroll {
-            opacity: 0;
-            transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease-out;
-            will-change: transform, opacity;
-        }
-
+        .reveal-on-scroll { opacity: 0; transition: transform 0.8s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.8s ease-out; }
         .reveal-left { transform: translateX(-70px); }
         .reveal-right { transform: translateX(70px); }
-
-        .reveal-on-scroll.visible {
-            opacity: 1;
-            transform: translateX(0);
-        }
+        .reveal-on-scroll.visible { opacity: 1; transform: translateX(0); }
 
         .scroll-photo-card {
-            margin: 32px 0;
-            border-radius: 22px;
-            overflow: hidden;
-            box-shadow: 0 12px 30px rgba(45, 30, 24, 0.12);
-            border: 1px solid rgba(45, 30, 24, 0.08);
-            background: #EFEAE6;
+            margin: 32px 0; border-radius: 22px; overflow: hidden; box-shadow: 0 12px 30px rgba(45, 30, 24, 0.12);
+            border: 1px solid rgba(45, 30, 24, 0.08); background: #EFEAE6;
         }
+        .scroll-photo-card img { width: 100%; height: 240px; object-fit: cover; display: block; }
 
-        .scroll-photo-card img {
-            width: 100%;
-            height: 240px;
-            object-fit: cover;
-            display: block;
-        }
-
-        .menu-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 14px 0;
-            border-bottom: 1px solid rgba(45, 30, 24, 0.1);
-        }
-
-        .menu-item-info strong {
-            font-size: 0.98rem;
-            font-weight: 700;
-            color: #2D1E18;
-            display: block;
-        }
-
-        .menu-qty-selector {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
+        .menu-row { display: flex; justify-content: space-between; align-items: center; padding: 14px 0; border-bottom: 1px solid rgba(45, 30, 24, 0.1); }
+        .menu-item-info strong { font-size: 0.98rem; font-weight: 700; color: #2D1E18; display: block; }
+        .menu-qty-selector { display: flex; align-items: center; gap: 10px; }
 
         .btn-qty-flat {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            border: 1px solid #D8CFC8;
-            background: #FFFFFF;
-            color: #2D1E18;
-            font-weight: 700;
-            font-size: 1.1rem;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s;
+            width: 32px; height: 32px; border-radius: 50%; border: 1px solid #D8CFC8; background: #FFFFFF;
+            color: #2D1E18; font-weight: 700; font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center;
         }
-        .btn-qty-flat:active { background: #EFEAE6; transform: scale(0.92); }
+        .qty-number { font-weight: 800; font-size: 0.98rem; min-width: 18px; text-align: center; color: #2D1E18; }
 
-        .qty-number {
-            font-weight: 800;
-            font-size: 0.98rem;
-            min-width: 18px;
-            text-align: center;
-            color: #2D1E18;
-        }
+        .subtotal-web-bar { margin-top: 20px; padding: 16px 0; border-top: 2px solid #2D1E18; display: flex; justify-content: space-between; align-items: center; }
+        .subtotal-web-bar .label { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: #7A6B63; }
+        .subtotal-web-bar .amount { font-size: 1.6rem; font-weight: 800; color: #C86D28; }
 
-        .subtotal-web-bar {
-            margin-top: 20px;
-            padding: 16px 0;
-            border-top: 2px solid #2D1E18;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .subtotal-web-bar .label {
-            font-size: 0.8rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #7A6B63;
-        }
-
-        .subtotal-web-bar .amount {
-            font-size: 1.6rem;
-            font-weight: 800;
-            color: #C86D28;
-        }
-
-        .web-dates-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-        }
-
-        .web-date-btn {
-            background: #FFFFFF;
-            border: 1px solid rgba(45, 30, 24, 0.12);
-            border-radius: 14px;
-            padding: 14px 10px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        .web-date-btn.selected {
-            border-color: #C86D28;
-            background: #FCEFE6;
-            box-shadow: 0 4px 12px rgba(200, 109, 40, 0.15);
-        }
-        .web-date-btn.disabled {
-            opacity: 0.35;
-            cursor: not-allowed;
-            background: #EFEAE6;
-        }
+        .web-dates-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .web-date-btn { background: #FFFFFF; border: 1px solid rgba(45, 30, 24, 0.12); border-radius: 14px; padding: 14px 10px; text-align: center; cursor: pointer; transition: all 0.2s; }
+        .web-date-btn.selected { border-color: #C86D28; background: #FCEFE6; box-shadow: 0 4px 12px rgba(200, 109, 40, 0.15); }
+        .web-date-btn.disabled { opacity: 0.35; cursor: not-allowed; background: #EFEAE6; }
 
         .web-field { margin-bottom: 18px; }
-
-        .web-field label {
-            display: block;
-            font-size: 0.75rem;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: #7A6B63;
-            margin-bottom: 4px;
+        .web-field label { display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px; color: #7A6B63; margin-bottom: 4px; }
+        .web-field input, .web-field select {
+            width: 100%; padding: 12px 0; border: none; border-bottom: 1.5px solid #D8CFC8; background: transparent;
+            font-size: 0.98rem; font-weight: 600; color: #2D1E18; outline: none; border-radius: 0; box-sizing: border-box;
         }
 
-        .web-field input {
-            width: 100%;
-            padding: 12px 0;
-            border: none;
-            border-bottom: 1.5px solid #D8CFC8;
-            background: transparent;
-            font-size: 0.98rem;
-            font-weight: 600;
-            color: #2D1E18;
-            outline: none;
-            border-radius: 0;
-            box-sizing: border-box;
-            transition: border-color 0.2s;
-        }
-        .web-field input:focus { border-color: #C86D28; }
-
-        .summary-ticket-clean {
-            padding: 18px 0;
-            border-top: 1px dashed #D8CFC8;
-            border-bottom: 1px dashed #D8CFC8;
-            margin-bottom: 24px;
-            font-size: 0.9rem;
-            line-height: 1.6;
-        }
-
-        .btn-submit-order-final {
-            width: 100%;
-            background: #16A34A;
-            color: #FFFFFF;
-            border: none;
-            padding: 18px;
-            font-size: 1.05rem;
-            font-weight: 800;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 8px 24px rgba(22, 163, 74, 0.3);
-            transition: transform 0.2s ease;
-        }
-        .btn-submit-order-final:active { transform: scale(0.98); }
+        .summary-ticket-clean { padding: 18px 0; border-top: 1px dashed #D8CFC8; border-bottom: 1px dashed #D8CFC8; margin-bottom: 24px; font-size: 0.9rem; line-height: 1.6; }
+        .btn-submit-order-final { width: 100%; background: #16A34A; color: #FFFFFF; border: none; padding: 18px; font-size: 1.05rem; font-weight: 800; border-radius: 30px; cursor: pointer; }
 		
-		.jalea-toggle-group {
-			display: inline-flex;
-			background: #EFEAE6;
-			border-radius: 12px;
-			padding: 2px;
-			margin-top: 6px;
-			border: 1px solid #D8CFC8;
-		}
-
-		.btn-jalea-pill {
-			border: none;
-			background: transparent;
-			padding: 4px 10px;
-			font-size: 0.72rem;
-			font-weight: 700;
-			color: #7A6B63;
-			border-radius: 10px;
-			cursor: pointer;
-			transition: all 0.2s ease;
-		}
-
-		.btn-jalea-pill.active {
-			background: #FFFFFF;
-			color: #C86D28;
-			box-shadow: 0 2px 6px rgba(45, 30, 24, 0.12);
-		}
+		.jalea-toggle-group { display: inline-flex; background: #EFEAE6; border-radius: 12px; padding: 2px; margin-top: 6px; border: 1px solid #D8CFC8; }
+		.btn-jalea-pill { border: none; background: transparent; padding: 4px 10px; font-size: 0.72rem; font-weight: 700; color: #7A6B63; border-radius: 10px; cursor: pointer; }
+		.btn-jalea-pill.active { background: #FFFFFF; color: #C86D28; box-shadow: 0 2px 6px rgba(45, 30, 24, 0.12); }
     </style>
 </head>
 <body>
@@ -426,15 +138,11 @@
             <h1 class="hero-main-title">CROISS</h1>
             <span class="hero-subtitle">Artesanos del Croissant</span>
             <p class="hero-story-text">
-                Nacimos con una pasion: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante fermentacion lenta e ingredientes seleccionados, horneando cada lote para lograr esa textura crocante por fuera y suave por dentro.
+                Nacimos con una pasión: dominar el arte del verdadero croissant hojaldrado. Elaboramos nuestras masas mediante fermentación lenta e ingredientes seleccionados, horneando cada lote para lograr esa textura crocante por fuera y suave por dentro.
             </p>
             <div class="hero-actions">
-                <button type="button" class="btn-web-main" onclick="scrollToSection('step-card-1')">
-                    Crea tu Pedido
-                </button>
-                <button type="button" class="btn-web-outline" onclick="verMenuPublico()">
-                    Menu
-                </button>
+                <button type="button" class="btn-web-main" onclick="scrollToSection('step-card-1')">Crea tu Pedido</button>
+                <button type="button" class="btn-web-outline" onclick="verMenuPublico()">Menú</button>
             </div>
         </div>
     </header>
@@ -445,22 +153,22 @@
     <section class="web-step-card" id="step-card-1">
         <div class="web-step-header" id="step-header-1" onclick="irAlPaso(1)">
             <span class="step-badge step-active" id="step-badge-1">Paso 1</span>
-            <h2 class="web-section-title">Elegi tus Croissants</h2>
+            <h2 class="web-section-title">Elegí tus Croissants</h2>
         </div>
         
         <div class="web-step-body" id="step-body-1" style="display: block;">
-            <p class="web-section-desc">Selecciona las variedades para tu caja recien horneada.</p>
-            <div id="shopProductsList">Cargando menu...</div>
+            <p class="web-section-desc">Selecciona las variedades para tu caja recién horneada.</p>
+            <div id="shopProductsList">Cargando menú...</div>
 
             <div class="subtotal-web-bar">
                 <div>
                     <span class="label">Subtotal Pedido</span>
-                    <small id="shopPromoMsg" style="display: block; font-size: 0.72rem; color: #7A6B63; font-weight: 600;">Llevas 0 croissants</small>
+                    <small id="shopPromoMsg" style="display: block; font-size: 0.72rem; color: #7A6B63; font-weight: 600;">Llevás 0 croissants</small>
                 </div>
                 <span class="amount" id="shopSubtotalText">$0</span>
             </div>
 
-            <button type="button" class="btn-step-next" onclick="irAlPaso(2)">Siguiente: Fecha de Entrega</button>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(2)">Siguiente: Tus Datos</button>
         </div>
     </section>
 
@@ -469,18 +177,70 @@
         <img src="{{ url_for('static', filename='croiss1.png') }}" alt="Croissant CROISS" onerror="this.onerror=null; this.src='/static/croiss1.jpg';">
     </div>
 
-    <!-- PASO 2: FECHA DE ENTREGA -->
+    <!-- PASO 2: TUS DATOS (AHORA ANTES DE LA FECHA Y ZONA) -->
     <section class="web-step-card" id="step-card-2">
         <div class="web-step-header" id="step-header-2" onclick="irAlPaso(2)">
             <span class="step-badge" id="step-badge-2">Paso 2</span>
-            <h2 class="web-section-title">Fecha de Entrega</h2>
+            <h2 class="web-section-title">Tus Datos & Ubicación</h2>
         </div>
 
         <div class="web-step-body" id="step-body-2" style="display: none;">
-            <p class="web-section-desc">Elegi el dia en que queres recibir tu orden.</p>
-            <p style="font-size: 0.8rem; color: #166534; font-weight: 600; margin-bottom: 14px;">La zona y el horario exacto se coordinan por WhatsApp.</p>
-            <div id="datesContainer" class="web-dates-grid">Cargando fechas disponibles...</div>
-            <button type="button" class="btn-step-next" onclick="irAlPaso(3)">Siguiente: Tus Datos</button>
+            <p class="web-section-desc">Ingresá tu información de contacto y selección de zona.</p>
+
+            <div class="web-field">
+                <label>Nombre Completo *</label>
+                <input type="text" id="custNombre" placeholder="Ej: María Silva" required>
+            </div>
+            <div class="web-field">
+                <label>Teléfono / WhatsApp *</label>
+                <input type="tel" id="custTel" placeholder="Ej: 099 123 456" required>
+            </div>
+            <div class="web-field">
+                <label>Email *</label>
+                <input type="email" id="custEmail" placeholder="ejemplo@email.com" required>
+            </div>
+
+            <!-- SELECCIÓN DE ZONA / BARRIO -->
+            <div class="web-field">
+                <label>Zona / Barrio de Envío *</label>
+                <select id="custZonaSelect" onchange="alCambiarZona()" style="width:100%; border-bottom: 1.5px solid #C86D28; font-weight:700; color:#2D1E18;">
+                    <option value="" disabled selected>-- Selecciona tu barrio / zona --</option>
+                    <option value="zona_1">Malvín / Punta Gorda / Carrasco / C. de la Costa (Lun, Jue, Sáb - Mañana)</option>
+                    <option value="zona_2">Pocitos / Punta Carretas (Lunes o Jueves - Mañana)</option>
+                    <option value="zona_3">Zonamerica (Lunes, Miércoles o Jueves)</option>
+                    <option value="zona_4">Pinamar / El Pinar / Salinas (Lun, Mié, Jue, Vie, Sáb)</option>
+                </select>
+            </div>
+
+            <div class="web-field">
+                <label>Dirección / Calle y Número *</label>
+                <input type="text" id="custDir" placeholder="Ej: Calle Falsa 123 esq. Rambla" required>
+            </div>
+
+            <!-- MODULO DE REGALO -->
+            <div style="background: #FAF0EB; border: 1px dashed #C86D28; border-radius: 16px; padding: 14px; margin: 18px 0;">
+                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 800; font-size: 0.95rem; color: #2D1E18; margin: 0;">
+                    <input type="checkbox" id="chkEsRegalo" onchange="toggleOpcionRegalo()" style="width: 20px; height: 20px; accent-color: #C86D28;">
+                    ¿Es para regalo?
+                </label>
+                <div id="boxRegaloCampos" style="display: none; margin-top: 14px; border-top: 1px dashed #E2D9D3; padding-top: 12px;">
+                    <div class="web-field">
+                        <label>Nombre de quien recibe</label>
+                        <input type="text" id="custRegaloDestinatario" placeholder="Ej: Valentina">
+                    </div>
+                    <div class="web-field">
+                        <label>Mensaje para la tarjetita</label>
+                        <textarea id="custRegaloMensaje" rows="3" placeholder="Ej: ¡Feliz cumple Valen! Espero que disfrutes mucho este regalito..." style="width: 100%; padding: 12px; border: 1.5px solid #D8CFC8; border-radius: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box; outline: none; background: #FFFFFF;"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="web-field">
+                <label>Notas / Aclaraciones Adicionales (Opcional)</label>
+                <input type="text" id="custNotas" placeholder="Ej: Golpear portón negro, dejar en portería...">
+            </div>
+
+            <button type="button" class="btn-step-next" onclick="irAlPaso(3)">Siguiente: Fecha de Entrega</button>
         </div>
     </section>
 
@@ -489,57 +249,17 @@
         <img src="{{ url_for('static', filename='croiss2.png') }}" alt="Variedad CROISS" onerror="this.onerror=null; this.src='/static/croiss2.jpg';">
     </div>
 
-    <!-- PASO 3: TUS DATOS + OPCION DE REGALO -->
+    <!-- PASO 3: FECHA DE ENTREGA (FILTRADA SEGUN LA ZONA) -->
     <section class="web-step-card" id="step-card-3">
         <div class="web-step-header" id="step-header-3" onclick="irAlPaso(3)">
             <span class="step-badge" id="step-badge-3">Paso 3</span>
-            <h2 class="web-section-title">Tus Datos & Detalles</h2>
+            <h2 class="web-section-title">Fecha de Entrega</h2>
         </div>
 
         <div class="web-step-body" id="step-body-3" style="display: none;">
-            <p class="web-section-desc">Ingresa tu informacion de contacto.</p>
-
-            <div class="web-field">
-                <label>Nombre Completo *</label>
-                <input type="text" id="custNombre" placeholder="Ej: Maria Silva" required>
-            </div>
-            <div class="web-field">
-                <label>Telefono / WhatsApp *</label>
-                <input type="tel" id="custTel" placeholder="Ej: 099 123 456" required>
-            </div>
-            <div class="web-field">
-                <label>Email *</label>
-                <input type="email" id="custEmail" placeholder="ejemplo@email.com" required>
-            </div>
-            <div class="web-field">
-                <label>Direccion / Barrio (Opcional)</label>
-                <input type="text" id="custDir" placeholder="Ej: Pocitos, Calle Falsa 123">
-            </div>
-
-            <!-- MODULO DE REGALO -->
-            <div style="background: #FAF0EB; border: 1px dashed #C86D28; border-radius: 16px; padding: 14px; margin: 18px 0;">
-                <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-weight: 800; font-size: 0.95rem; color: #2D1E18; margin: 0;">
-                    <input type="checkbox" id="chkEsRegalo" onchange="toggleOpcionRegalo()" style="width: 20px; height: 20px; accent-color: #C86D28;">
-                    Es para regalo?
-                </label>
-                <div id="boxRegaloCampos" style="display: none; margin-top: 14px; border-top: 1px dashed #E2D9D3; padding-top: 12px;">
-                    <div class="web-field">
-                        <label>Nombre de quien recibe</label>
-                        <input type="text" id="custRegaloDestinatario" placeholder="Ej: Valentina">
-                    </div>
-                    <div class="web-field">
-                        <label>Mensaje para la tarjetita / cartita</label>
-                        <textarea id="custRegaloMensaje" rows="3" placeholder="Ej: Feliz cumple Valen! Espero que disfrutes mucho este regalito dulce..." style="width: 100%; padding: 12px; border: 1.5px solid #D8CFC8; border-radius: 12px; font-family: inherit; font-size: 0.9rem; resize: vertical; box-sizing: border-box; outline: none; background: #FFFFFF;"></textarea>
-                    </div>
-                </div>
-            </div>
-
-            <div class="web-field">
-                <label>Notas / Aclaraciones Adicionales (Opcional)</label>
-                <input type="text" id="custNotas" placeholder="Ej: Entregar de manana, golpear porton negro...">
-            </div>
-
-            <button type="button" class="btn-step-next" onclick="irAlPaso(4)">Siguiente: Confirmacion</button>
+            <p class="web-section-desc" id="txtDescZonaSeleccionada">Elegí el día disponible para tu zona.</p>
+            <div id="datesContainer" class="web-dates-grid">Selecciona primero tu zona en el Paso 2...</div>
+            <button type="button" class="btn-step-next" onclick="irAlPaso(4)">Siguiente: Confirmación</button>
         </div>
     </section>
 
@@ -552,23 +272,21 @@
 	<section class="web-step-card" id="step-card-4">
 		<div class="web-step-header" id="step-header-4" onclick="irAlPaso(4)">
 			<span class="step-badge" id="step-badge-4">Paso 4</span>
-			<h2 class="web-section-title">Resumen & Confirmacion</h2>
+			<h2 class="web-section-title">Resumen & Confirmación</h2>
 		</div>
 
 		<div class="web-step-body" id="step-body-4" style="display: none;">
-			<p class="web-section-desc">Verifica los detalles de tu compra antes de confirmar.</p>
+			<p class="web-section-desc">Verificá los detalles de tu compra antes de confirmar.</p>
 
 			<div style="background: #F0FDF4; border: 1.5px solid #22C55E; border-radius: 16px; padding: 14px; margin-bottom: 18px; text-align: center;">
-				<span style="font-size: 0.88rem; font-weight: 800; color: #15803D; display: block;">
-					TENE EN CUENTA
-				</span>
+				<span style="font-size: 0.88rem; font-weight: 800; color: #15803D; display: block;">TENÉ EN CUENTA</span>
 				<span style="font-size: 0.82rem; color: #166534; font-weight: 600; display: block; margin-top: 2px;">
-					El envio y sus detalles se confirmaran 100% a traves de WhatsApp.
+					El envío y horario se coordinan por WhatsApp.
 				</span>
 			</div>
 
 			<div class="summary-ticket-clean" id="orderSummaryBox">
-				<p style="color: #94a3b8; text-align: center; margin: 0;">Agrega croissants arriba para ver el resumen</p>
+				<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>
 			</div>
 
 			<button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
@@ -579,25 +297,33 @@
 
 </div>
 
-    <!-- LOGICA JAVASCRIPT Y ANIMACIONES -->
+    <!-- LOGICA JAVASCRIPT CORREGIDA -->
     <script>
         const croissImagePreload = new Image();
         croissImagePreload.src = '/static/croissant.png';
         let croissAnimFrameId = null;
 
         const defaultMenu = [
-			{ nombre: "Croissant Clasico", relleno: "ninguno" },
+			{ nombre: "Croissant Clásico", relleno: "ninguno" },
 			{ nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
-			{ nombre: "Croissant c/ Jamon y Queso (+ $50)", relleno: "salado" },
-			{ nombre: "Croisstzel (Tu Croissant Clasico con pequenas piedras de sal por encima)", relleno: "ninguno" },
+			{ nombre: "Croissant c/ Jamón y Queso (+ $50)", relleno: "salado" },
+			{ nombre: "Croisstzel (Tu Croissant Clásico con sal en escamas)", relleno: "ninguno" },
 			{ nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" },
-			{ nombre: "Croisstzel c/ Jamon y Queso (+ $50)", relleno: "salado" }
+			{ nombre: "Croisstzel c/ Jamón y Queso (+ $50)", relleno: "salado" }
 		];
 
         let menuItems = defaultMenu;
         let cart = {}; 
         let selectedDate = "";
         let datesCapacity = [];
+
+        // REGLAS DE DÍAS POR ZONA (0 = Domingo, 1 = Lunes, 2 = Martes, 3 = Miércoles, 4 = Jueves, 5 = Viernes, 6 = Sábado)
+        const REGLAS_ZONAS = {
+            "zona_1": { nombre: "Malvín / P. Gorda / Carrasco / C. de la Costa", diasValidos: [1, 4, 6], nota: "Lunes, Jueves o Sábado (Mañana)" },
+            "zona_2": { nombre: "Pocitos / Punta Carretas", diasValidos: [1, 4], nota: "Lunes o Jueves (Mañana)" },
+            "zona_3": { nombre: "Zonamerica", diasValidos: [1, 3, 4], nota: "Lunes, Miércoles o Jueves" },
+            "zona_4": { nombre: "Pinamar / El Pinar / Salinas", diasValidos: [1, 3, 4, 5, 6], nota: "Toda la semana (excepto Martes y Domingos)" }
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchCatalogo();
@@ -608,11 +334,8 @@
         function iniciarObservadorScroll() {
             const observer = new IntersectionObserver((entries) => {
                 entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        entry.target.classList.add('visible');
-                    } else {
-                        entry.target.classList.remove('visible');
-                    }
+                    if (entry.isIntersecting) entry.target.classList.add('visible');
+                    else entry.target.classList.remove('visible');
                 });
             }, { threshold: 0.15 });
 
@@ -621,28 +344,21 @@
 
         function scrollToSection(idSeccion) {
             const el = document.getElementById(idSeccion);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-		
+
         function mostrarCroissLoader() {
             if (!croissImagePreload.src) croissImagePreload.src = '/static/croissant.png';
-
             Swal.fire({
                 html: `<div class="croiss-canvas-container"><canvas id="croissBiteCanvas" width="180" height="140"></canvas></div>`,
-                showConfirmButton: false,
-                allowOutsideClick: false,
-                background: 'transparent',
+                showConfirmButton: false, allowOutsideClick: false, background: 'transparent',
                 customClass: { popup: 'croiss-swal-popup-transparent' },
                 didOpen: () => {
                     const popup = Swal.getPopup();
                     if (popup) popup.setAttribute('data-is-loader', 'true');
                     iniciarAnimacionCanvasCroissant();
                 },
-                willClose: () => {
-                    if (croissAnimFrameId) cancelAnimationFrame(croissAnimFrameId);
-                }
+                willClose: () => { if (croissAnimFrameId) cancelAnimationFrame(croissAnimFrameId); }
             });
         }
 
@@ -663,24 +379,18 @@
 
             function recortarMordidaDentadura(cx, cy, radius) {
                 ctx.globalCompositeOperation = 'destination-out';
-                ctx.beginPath();
-                ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-                ctx.fill();
-
+                ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
                 for (let i = 0; i < 5; i++) {
                     const angle = (Math.PI / 3) + (i * (Math.PI / 4.2));
                     const tx = cx + Math.cos(angle) * (radius - 2);
                     const ty = cy + Math.sin(angle) * (radius - 2);
-                    ctx.beginPath();
-                    ctx.arc(tx, ty, radius * 0.28, 0, Math.PI * 2);
-                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(tx, ty, radius * 0.28, 0, Math.PI * 2); ctx.fill();
                 }
             }
 
             function render() {
                 const elapsed = (Date.now() - startTime) % duration;
                 const progress = elapsed / duration;
-
                 ctx.globalCompositeOperation = 'source-over';
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -690,9 +400,7 @@
                     for (let b of bites) {
                         if (progress >= b.t) {
                             recortarMordidaDentadura(b.x, b.y, b.r);
-                            if (progress >= b.t && progress < b.t + 0.10) {
-                                currentShake = b.shake;
-                            }
+                            if (progress >= b.t && progress < b.t + 0.10) currentShake = b.shake;
                         }
                     }
                     canvas.className = currentShake;
@@ -709,17 +417,15 @@
 				if(data.status === 'exito' && Array.isArray(data.productos) && data.productos.length > 0) {
 					menuItems = data.productos.map(p => {
 						let nombreLimpio = p.nombre || '';
-						
 						if (nombreLimpio.toLowerCase().includes('sal') && !nombreLimpio.toLowerCase().includes('croisstzel')) {
 							if (nombreLimpio.toLowerCase().includes('jamon') || nombreLimpio.toLowerCase().includes('queso')) {
-								nombreLimpio = "Croisstzel c/ Jamon y Queso (+ $50)";
+								nombreLimpio = "Croisstzel c/ Jamón y Queso (+ $50)";
 							} else if (nombreLimpio.toLowerCase().includes('dulce') || nombreLimpio.toLowerCase().includes('ddl')) {
 								nombreLimpio = "Croisstzel c/ Dulce de Leche (+ $30)";
 							} else {
-								nombreLimpio = "Croisstzel (Tu Croiss Clasico pero con pequenas piedras de sal por encima)";
+								nombreLimpio = "Croisstzel (Tu Croiss Clásico con sal en escamas)";
 							}
 						}
-						
 						return { ...p, nombre: nombreLimpio };
 					});
 				}
@@ -738,103 +444,23 @@
             renderDates();
         }
 
-        function verMenuPublico() {
-			Swal.fire({
-				html: `
-					<div style="text-align: center; max-width: 100%;">
-						<!-- Selector Estilo iOS (Segmented Control) -->
-						<div style="display: flex; background: rgba(239, 234, 230, 0.95); padding: 4px; border-radius: 16px; margin-bottom: 14px; border: 1px solid rgba(45, 30, 24, 0.1); backdrop-filter: blur(10px);">
-							<button type="button" id="tabMenuTradicional" onclick="cambiarImagenMenu('tradicional')" style="flex: 1; border: none; background: #FFFFFF; color: #2D1E18; padding: 10px 0; font-size: 0.85rem; font-weight: 800; border-radius: 12px; cursor: pointer; box-shadow: 0 3px 8px rgba(45, 30, 24, 0.12); transition: all 0.25s ease;">
-								🥐 Clásicos
-							</button>
-							<button type="button" id="tabMenuPop" onclick="cambiarImagenMenu('pop')" style="flex: 1; border: none; background: transparent; color: #7A6B63; padding: 10px 0; font-size: 0.85rem; font-weight: 700; border-radius: 12px; cursor: pointer; transition: all 0.25s ease;">
-								🍿 Pop Croiss
-							</button>
-						</div>
-
-						<!-- Visor de Imágenes -->
-						<div style="position: relative; width: 100%; border-radius: 20px; overflow: hidden; box-shadow: 0 12px 30px rgba(45, 30, 24, 0.18);">
-							<img id="imgMenuTradicional" 
-								 src="{{ url_for('static', filename='menu.png') }}" 
-								 alt="Menú CROISS Tradicional" 
-								 style="width: 100%; height: auto; display: block; border-radius: 20px; transition: opacity 0.25s ease;"
-								 onclick="Swal.close()">
-							
-							<img id="imgMenuPop" 
-								 src="{{ url_for('static', filename='menu2.jpg') }}" 
-								 alt="Menú Pop Croiss" 
-								 style="width: 100%; height: auto; display: none; border-radius: 20px; transition: opacity 0.25s ease;"
-								 onerror="this.onerror=null; this.src='/static/menu2.png';"
-								 onclick="Swal.close()">
-						</div>
-					</div>
-				`,
-				showConfirmButton: false,
-				showCloseButton: true,
-				background: 'transparent',
-				customClass: { popup: 'croiss-swal-popup-transparent' }
-			});
-		}
-
-		function cambiarImagenMenu(tipo) {
-			const imgTrad = document.getElementById('imgMenuTradicional');
-			const imgPop = document.getElementById('imgMenuPop');
-			const btnTrad = document.getElementById('tabMenuTradicional');
-			const btnPop = document.getElementById('tabMenuPop');
-
-			if (!imgTrad || !imgPop) return;
-
-			if (tipo === 'tradicional') {
-				imgTrad.style.display = 'block';
-				imgPop.style.display = 'none';
-
-				btnTrad.style.background = '#FFFFFF';
-				btnTrad.style.color = '#2D1E18';
-				btnTrad.style.fontWeight = '800';
-				btnTrad.style.boxShadow = '0 3px 8px rgba(45, 30, 24, 0.12)';
-
-				btnPop.style.background = 'transparent';
-				btnPop.style.color = '#7A6B63';
-				btnPop.style.fontWeight = '700';
-				btnPop.style.boxShadow = 'none';
-			} else {
-				imgTrad.style.display = 'none';
-				imgPop.style.display = 'block';
-
-				btnPop.style.background = '#FFFFFF';
-				btnPop.style.color = '#C86D28';
-				btnPop.style.fontWeight = '800';
-				btnPop.style.boxShadow = '0 3px 8px rgba(45, 30, 24, 0.12)';
-
-				btnTrad.style.background = 'transparent';
-				btnTrad.style.color = '#7A6B63';
-				btnTrad.style.fontWeight = '700';
-				btnTrad.style.boxShadow = 'none';
-			}
-		}
+        function alCambiarZona() {
+            selectedDate = "";
+            renderDates();
+            buildSummary();
+        }
 
         function updateQty(name, change) {
-            try {
-                if(!cart[name]) cart[name] = { cantidad: 0, con_jalea: false };
-                cart[name].cantidad += change;
-                if(cart[name].cantidad <= 0) delete cart[name];
-                renderProducts();
-            } catch(e) {
-                console.error("Error actualizando cantidad:", e);
-            }
+            if(!cart[name]) cart[name] = { cantidad: 0, con_jalea: false };
+            cart[name].cantidad += change;
+            if(cart[name].cantidad <= 0) delete cart[name];
+            renderProducts();
         }
 
 		function setJaleaShop(name, conJaleaVal) {
-			try {
-				if (!cart[name]) {
-					cart[name] = { cantidad: 0, con_jalea: conJaleaVal };
-				} else {
-					cart[name].con_jalea = conJaleaVal;
-				}
-				renderProducts();
-			} catch(e) {
-				console.error("Error cambiando jalea:", e);
-			}
+			if (!cart[name]) cart[name] = { cantidad: 0, con_jalea: conJaleaVal };
+			else cart[name].con_jalea = conJaleaVal;
+			renderProducts();
 		}
 
         function setSalsaShop(name, index, val) {
@@ -848,7 +474,6 @@
 			if(!container) return;
 			container.innerHTML = '';
 
-			const MOSTRAR_POP = true; 
 			const OpcionesSalsas = ["Dulce de Leche", "Frutilla", "Jalea"];
 
 			menuItems.forEach(p => {
@@ -858,8 +483,6 @@
 				const nameLower = name.toLowerCase();
 				const qty = cart[name] ? cart[name].cantidad : 0;
 				const conJalea = cart[name] ? cart[name].con_jalea : false;
-
-				if (!MOSTRAR_POP && nameLower.includes('pop')) return;
 
 				const displayName = name.replace(
 					/\(([^)]+)\)/g, 
@@ -871,23 +494,12 @@
 
 				if (nameLower.includes('pop')) {
 					const numSalsas = nameLower.includes('9') ? 1 : 2;
-					
-					if (nameLower.includes('9')) {
-						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">9 Pop Croiss - Todos para mi!!! </small>';
-					} else if (nameLower.includes('18')) {
-						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">18 Pop Croiss - Capaz comparto 1 o 2 ... </small>';
-					} else if (nameLower.includes('27')) {
-						badgeAhorro = '<small style="display:block; color:#16A34A; font-weight:700; font-size:0.75rem; margin-top:2px;">27 Pop Croiss !! Me la juego con la banda </small>';
-					}
-
 					if (qty > 0) {
 						if (!cart[name].salsas) cart[name].salsas = Array(numSalsas).fill("Dulce de Leche");
-						
 						let selectores = '';
 						for (let i = 0; i < numSalsas; i++) {
 							const salsaActual = cart[name].salsas[i] || "Dulce de Leche";
 							let opcionesHtml = OpcionesSalsas.map(s => `<option value="${s}" ${s === salsaActual ? 'selected' : ''}>${s}</option>`).join('');
-							
 							selectores += `
 								<div style="margin-top:4px;">
 									<small style="font-size:0.7rem; font-weight:700; color:#7A6B63;">Salsa ${i + 1}:</small>
@@ -930,7 +542,6 @@
 	  
         function calculatePrices() {
             let totalCroissantsNormales = 0;
-            
             for(let k in cart) {
                 if(cart[k] && cart[k].cantidad && !k.toLowerCase().includes('pop')) {
                     totalCroissantsNormales += cart[k].cantidad;
@@ -955,7 +566,7 @@
                     totalMoney += precioFijo * cart[k].cantidad;
                 } else {
                     let extra = 0;
-                    if(kLower.includes('jamon') || kLower.includes('queso') || kLower.includes('salado')) extra = 50;
+                    if(kLower.includes('jamon') || kLower.includes('jamón') || kLower.includes('queso') || kLower.includes('salado')) extra = 50;
                     else if(kLower.includes('dulce') || kLower.includes('ddl')) extra = 30;
 
                     totalMoney += (basePrice + extra) * cart[k].cantidad;
@@ -965,52 +576,42 @@
         }
 
         function updateSubtotal() {
-			try {
-				const calc = calculatePrices();
-				const subtotalEl = document.getElementById('shopSubtotalText');
-				if(subtotalEl) subtotalEl.innerText = `$${calc.totalMoney}`;
-				
-				// Contamos por separado para el cartel
-				let normales = 0;
-				let pops = 0;
-				for(let k in cart) {
-					if(cart[k] && cart[k].cantidad) {
-						if(k.toLowerCase().includes('pop')) pops += cart[k].cantidad;
-						else normales += cart[k].cantidad;
-					}
-				}
+			const calc = calculatePrices();
+			const subtotalEl = document.getElementById('shopSubtotalText');
+			if(subtotalEl) subtotalEl.innerText = `$${calc.totalMoney}`;
 
-				const msgEl = document.getElementById('shopPromoMsg');
-				if(msgEl) {
-					if(normales === 0 && pops === 0) {
-						msgEl.innerText = 'Agrega productos para continuar';
-					} else if (normales === 0 && pops > 0) {
-						msgEl.innerText = '¡A disfrutar esos Pop Croiss! 🍿';
-					} else if(normales > 0 && normales < 3) {
-						msgEl.innerText = `Llevás ${normales} clásicos. ¡Agregá ${3 - normales} más para precio promo ($110 c/u)!`;
-					} else if(normales >= 3 && normales < 6) {
-						msgEl.innerText = `¡Promo activada ($110)! Agregá ${6 - normales} más para precio mayorista ($100 c/u).`;
-					} else {
-						msgEl.innerText = '¡Mejor precio mayorista activado! 🥐';
-					}
-				}
-
-				renderDates();
-				buildSummary();
-			} catch(e) {
-				console.error("Error al actualizar subtotal:", e);
-			}
+			renderDates();
+			buildSummary();
 		}
 
         function renderDates() {
             const container = document.getElementById('datesContainer');
+            const descZonaEl = document.getElementById('txtDescZonaSeleccionada');
             if (!container) return;
             container.innerHTML = '';
+
+            const zonaSel = document.getElementById('custZonaSelect')?.value;
+
+            if (!zonaSel || !REGLAS_ZONAS[zonaSel]) {
+                if (descZonaEl) descZonaEl.innerText = "Por favor seleccioná tu zona arriba en el Paso 2 para ver las fechas permitidas.";
+                container.innerHTML = `<div style="grid-column: span 2; text-align: center; color: #DC2626; font-weight: 700; padding: 20px 0;">⚠️ Volvé al Paso 2 y elegí tu Zona / Barrio.</div>`;
+                return;
+            }
+
+            const reglaZona = REGLAS_ZONAS[zonaSel];
+            if (descZonaEl) descZonaEl.innerText = `Días disponibles para ${reglaZona.nombre}: ${reglaZona.nota}.`;
 
             const calc = calculatePrices();
             const croissantsPedidos = calc.totalCroissants;
 
             (datesCapacity || []).forEach(d => {
+                // Parse de fecha local YYYY-MM-DD
+                const partes = d.fecha.split('-');
+                const fechaDt = new Date(partes[0], partes[1] - 1, partes[2]);
+                const diaSemana = fechaDt.getDay(); // 0 es Domingo, 1 Lunes...
+
+                const esDiaPermitidoZona = reglaZona.diasValidos.includes(diaSemana);
+
                 const div = document.createElement('div');
                 const acumulado = d.ocupados || 0;
                 const disponible = 35 - acumulado;
@@ -1019,7 +620,7 @@
                 const esInsuficiente = !esLleno && (croissantsPedidos > disponible);
                 let isSel = d.fecha === selectedDate;
 
-                if (isSel && (esLleno || esInsuficiente)) {
+                if (isSel && (!esDiaPermitidoZona || esLleno || esInsuficiente)) {
                     selectedDate = "";
                     isSel = false;
                 }
@@ -1027,7 +628,10 @@
                 let statusText = "Disponible";
                 let extraClass = "";
 
-                if (esLleno) {
+                if (!esDiaPermitidoZona) {
+                    statusText = "Sin envíos a tu zona";
+                    extraClass = "disabled";
+                } else if (esLleno) {
                     statusText = "Agotado";
                     extraClass = "disabled";
                 } else if (esInsuficiente) {
@@ -1038,10 +642,10 @@
                 div.className = `web-date-btn ${isSel ? 'selected' : ''} ${extraClass}`;
                 div.innerHTML = `
                     <div style="font-size:0.92rem; font-weight:800;">${d.nombre_dia}</div>
-                    <small style="font-size:0.72rem; margin-top:2px; display:block; color: #7A6B63;">${statusText}</small>
+                    <small style="font-size:0.72rem; margin-top:2px; display:block; color: ${esDiaPermitidoZona ? '#7A6B63' : '#DC2626'};">${statusText}</small>
                 `;
 
-                if (!esLleno && !esInsuficiente) {
+                if (esDiaPermitidoZona && !esLleno && !esInsuficiente) {
                     div.onclick = () => {
                         selectedDate = d.fecha;
                         renderDates();
@@ -1052,40 +656,10 @@
             });
         }
 
-        function reiniciarTienda() {
-			cart = {};
-			selectedDate = "";
-			
-			if(document.getElementById('custNombre')) document.getElementById('custNombre').value = "";
-			if(document.getElementById('custTel')) document.getElementById('custTel').value = "";
-			if(document.getElementById('custEmail')) document.getElementById('custEmail').value = "";
-			if(document.getElementById('custDir')) document.getElementById('custDir').value = "";
-			if(document.getElementById('custNotas')) document.getElementById('custNotas').value = "";
-			
-			if(document.getElementById('chkEsRegalo')) {
-				document.getElementById('chkEsRegalo').checked = false;
-				toggleOpcionRegalo();
-			}
-			if(document.getElementById('custRegaloDestinatario')) document.getElementById('custRegaloDestinatario').value = "";
-			if(document.getElementById('custRegaloMensaje')) document.getElementById('custRegaloMensaje').value = "";
-
-			renderProducts();
-			renderDates();
-			
-			setTimeout(() => {
-				irAlPaso(1);
-				scrollToSection('topHeader');
-			}, 300);
-		}
-
-        let currentStep = 1;
-
-		function toggleOpcionRegalo() {
+        function toggleOpcionRegalo() {
 			const chk = document.getElementById('chkEsRegalo');
 			const box = document.getElementById('boxRegaloCampos');
-			if (box) {
-				box.style.display = (chk && chk.checked) ? 'block' : 'none';
-			}
+			if (box) box.style.display = (chk && chk.checked) ? 'block' : 'none';
 		}
 
 		function buildSummary() {
@@ -1095,12 +669,15 @@
 
 			const nom = (document.getElementById('custNombre')?.value || '').trim();
 			const tel = (document.getElementById('custTel')?.value || '').trim();
+            const zonaVal = document.getElementById('custZonaSelect')?.value;
+            const zonaNombre = REGLAS_ZONAS[zonaVal] ? REGLAS_ZONAS[zonaVal].nombre : '';
+			const dir = (document.getElementById('custDir')?.value || '').trim();
 			const esRegalo = document.getElementById('chkEsRegalo')?.checked;
 			const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
 			const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
 
 			if (calc.totalCroissants === 0) {
-				box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agrega croissants arriba para ver el resumen</p>`;
+				box.innerHTML = `<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>`;
 				return;
 			}
 
@@ -1125,12 +702,14 @@
 
 			let clienteHtml = nom ? '<strong>Cliente:</strong> ' + nom + '<br>' : '';
 			let contactoHtml = tel ? '<strong>Contacto:</strong> ' + tel + '<br>' : '';
+            let zonaHtml = zonaNombre ? '<strong>Zona:</strong> ' + zonaNombre + '<br>' : '';
 			let fechaHtml = selectedDate ? selectedDate : '<span style="color:#DC2626;">(Seleccionar arriba)</span>';
 
 			box.innerHTML = `
 				<div style="margin-bottom: 8px;">
 					${clienteHtml}
 					${contactoHtml}
+                    ${zonaHtml}
 					<strong>Fecha Entrega:</strong> ${fechaHtml}<br>
 				</div>
 				${bloqueRegaloHtml}
@@ -1146,42 +725,39 @@
 
 		function mostrarAlertaCliente(titulo, texto, icono = 'warning') {
 			Swal.fire({
-				title: titulo,
-				text: texto,
-				icon: icono,
-				confirmButtonText: 'Entendido',
-				customClass: {
-					popup: 'croiss-swal-popup',
-					confirmButton: 'croiss-swal-confirm'
-				}
+				title: titulo, text: texto, icon: icono, confirmButtonText: 'Entendido',
+				customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
 			});
 		}
 
 		function irAlPaso(paso) {
 			const calc = calculatePrices();
 
+            // Validar Paso 1 (Menú)
 			if (paso > 1 && calc.totalCroissants === 0) {
-				mostrarAlertaCliente('Elegi tus croissants', 'Agrega al menos 1 croissant a tu pedido antes de continuar.');
+				mostrarAlertaCliente('Elegí tus croissants', 'Agregá al menos 1 croissant a tu pedido antes de continuar.');
 				return;
 			}
 
-			if (paso > 2 && !selectedDate) {
-				mostrarAlertaCliente('Selecciona la fecha', 'Por favor marca el dia de entrega antes de continuar.');
-				return;
-			}
-
-			if (paso > 3) {
+            // Validar Paso 2 (Datos del cliente y Zona)
+			if (paso > 2) {
 				const nom = (document.getElementById('custNombre')?.value || '').trim();
 				const tel = (document.getElementById('custTel')?.value || '').trim();
 				const email = (document.getElementById('custEmail')?.value || '').trim();
+                const zona = (document.getElementById('custZonaSelect')?.value || '').trim();
+                const dir = (document.getElementById('custDir')?.value || '').trim();
 
-				if (!nom || !tel || !email) {
-					mostrarAlertaCliente('Campos Obligatorios', 'Por favor completa Nombre, Telefono y Email.');
+				if (!nom || !tel || !email || !zona || !dir) {
+					mostrarAlertaCliente('Campos Obligatorios', 'Por favor completa Nombre, Teléfono, Email, Zona y Dirección antes de elegir la fecha.');
 					return;
 				}
 			}
 
-			currentStep = paso;
+            // Validar Paso 3 (Fecha)
+			if (paso > 3 && !selectedDate) {
+				mostrarAlertaCliente('Selecciona la fecha', 'Por favor marca el día de entrega disponible para tu zona.');
+				return;
+			}
 
 			for (let i = 1; i <= 4; i++) {
 				const body = document.getElementById(`step-body-${i}`);
@@ -1198,13 +774,10 @@
 			}
 
 			const stepHeader = document.getElementById(`step-header-${paso}`);
-			if (stepHeader) {
-				stepHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
-			}
+			if (stepHeader) stepHeader.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
-			if (paso === 4) {
-				buildSummary();
-			}
+			if (paso === 3) renderDates();
+			if (paso === 4) buildSummary();
 		}
 
 		async function confirmarPedidoTienda() {
@@ -1212,9 +785,14 @@
 			const nom = (document.getElementById('custNombre')?.value || '').trim();
 			const tel = (document.getElementById('custTel')?.value || '').trim();
 			const email = (document.getElementById('custEmail')?.value || '').trim();
+            const zonaKey = (document.getElementById('custZonaSelect')?.value || '').trim();
+            const dir = (document.getElementById('custDir')?.value || '').trim();
 
 			let notasCliente = (document.getElementById('custNotas')?.value || '').trim();
 			const esRegalo = document.getElementById('chkEsRegalo')?.checked;
+
+            const zonaNombre = REGLAS_ZONAS[zonaKey] ? REGLAS_ZONAS[zonaKey].nombre : 'Zona';
+            const direccionCompleta = `[${zonaNombre}] ${dir}`;
 
 			if (esRegalo) {
 				const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
@@ -1242,7 +820,7 @@
 				cliente: nom,
 				telefono: tel,
 				email: email,
-				direccion: (document.getElementById('custDir')?.value || '').trim(),
+				direccion: direccionCompleta,
 				fecha_entrega: selectedDate,
 				notas: notasCliente,
 				items: itemsArr,
@@ -1260,73 +838,30 @@
 				const data = await res.json();
 
 				if(data.status === 'exito') {
-					const msgWp = encodeURIComponent(`Hola CROISS! Registre el pedido ${data.id} a nombre de ${payload.cliente} para el dia ${selectedDate}. Como coordinamos los detalles y el pago?`);
+					const msgWp = encodeURIComponent(`Hola CROISS! Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate} en ${zonaNombre}. ¿Cómo coordinamos el pago y horario?`);
 					const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
 
 					Swal.fire({
-						title: 'Pedido Recibido!',
+						title: '¡Pedido Recibido!',
 						html: `
 							<p style="font-size:0.88rem; color:#7A6B63;">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
-							<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">Queres coordinar los detalles por WhatsApp ahora?</p>
+							<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">¿Querés coordinar los detalles por WhatsApp ahora?</p>
 						`,
 						icon: 'success',
-						showConfirmButton: true,
-						confirmButtonText: 'Si',
-						showCancelButton: true,
-						cancelButtonText: 'No',
-						showDenyButton: false,
-						allowOutsideClick: false,
-						customClass: { 
-							popup: 'croiss-swal-popup', 
-							confirmButton: 'croiss-swal-confirm',
-							cancelButton: 'croiss-swal-cancel'
-						},
-						didOpen: () => {
-							const btnDeny = Swal.getDenyButton();
-							if (btnDeny) btnDeny.remove();
-						}
+						showConfirmButton: true, confirmButtonText: 'Sí',
+						showCancelButton: true, cancelButtonText: 'No',
+						customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' }
 					}).then((result) => {
-						if (result.isConfirmed) {
-							window.open(wpUrl, '_blank');
-						}
-						reiniciarTienda();
+						if (result.isConfirmed) window.open(wpUrl, '_blank');
+						window.location.reload();
 					});
 				} else {
-					mostrarAlertaCliente('Atencion', data.mensaje, 'error');
+					mostrarAlertaCliente('Atención', data.mensaje, 'error');
 				}
 			} catch(e) {
 				mostrarAlertaCliente('Error', 'No se pudo conectar con el servidor', 'error');
 			}
 		}
-
-        let pullStartY = 0;
-        let isPullingAtTop = false;
-
-        document.addEventListener('touchstart', (e) => {
-            if (window.scrollY === 0 && e.touches && e.touches.length === 1) {
-                pullStartY = e.touches[0].pageY;
-                isPullingAtTop = true;
-            }
-        }, { passive: true });
-
-        document.addEventListener('touchend', (e) => {
-            if (!isPullingAtTop) return;
-
-            const pullEndY = e.changedTouches[0].pageY;
-            const pullDistance = pullEndY - pullStartY;
-
-            if (pullDistance > 120) {
-                if (typeof mostrarCroissLoader === 'function') {
-                    mostrarCroissLoader();
-                }
-                setTimeout(() => {
-                    window.location.reload();
-                }, 300);
-            }
-
-            isPullingAtTop = false;
-            pullStartY = 0;
-        });
     </script>
 </body>
 </html>
