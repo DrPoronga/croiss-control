@@ -1018,7 +1018,7 @@ def api_public_crear_pedido():
 
         return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200
     except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500[cite: 1, 6]
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 def calcular_unidades_reales_desde_descripcion(desc_str):
     if not desc_str:
