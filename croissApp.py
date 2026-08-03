@@ -1751,7 +1751,7 @@ def editar_pedido():
         nueva_cantidad = datos.get("cantidad")
         nuevas_notas = datos.get("notas")
         nueva_fecha_entrega = datos.get("fecha_entrega")
-        nuevo_monto = datos.get("monto_total") # NUEVO MONTO RECALCULADO
+        nuevo_monto = datos.get("monto_total") # <--- NUEVO MONTO RECALCULADO
 
         if not num_fila or nuevo_producto is None:
             return jsonify({"status": "error", "mensaje": "Faltan datos requeridos"}), 400
@@ -1782,6 +1782,7 @@ def editar_pedido():
         if nueva_fecha_entrega:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_fecha_entrega, str(nueva_fecha_entrega))
             
+        # Actualización del precio en la hoja de cálculo
         if nuevo_monto is not None:
             ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_monto, float(nuevo_monto))
 
