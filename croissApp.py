@@ -181,9 +181,14 @@ def get_field_val(record, *possible_keys):
 
 def enviar_email_async(destinatario, asunto, cuerpo_html):
     def _enviar():
-        if not destinatario or "@" not in str(destinatario): return
+        if not destinatario or "@" not in str(destinatario): 
+            print(f"⚠️ Email omitido: destinatario inválido '{destinatario}'", flush=True)
+            return
+            
         api_key = BREVO_API_KEY.strip()
-        if not api_key: return
+        if not api_key: 
+            print("⚠️ Email omitido: BREVO_API_KEY no está configurada.", flush=True)
+            return
 
         url = "https://api.brevo.com/v3/smtp/email"
         headers = {
@@ -191,20 +196,27 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
+        
+        # Se asegura un nombre de emisor reconocible
         payload = {
-            "sender": {"name": "CROISS", "email": EMAIL_EMISOR},
+            "sender": {"name": "CROISS Notificaciones", "email": EMAIL_EMISOR},
             "to": [{"email": destinatario}],
             "subject": asunto,
             "htmlContent": cuerpo_html
         }
+        
         try:
             req = urllib.request.Request(url, data=json.dumps(payload).encode("utf-8"), headers=headers, method="POST")
-            with urllib.request.urlopen(req, timeout=10) as response: pass
+            with urllib.request.urlopen(req, timeout=10) as response:
+                print(f"✅ Email enviado con éxito a {destinatario} (Status {response.status})", flush=True)
+        except urllib.error.HTTPError as e:
+            err_body = e.read().decode("utf-8", errors="ignore")
+            print(f"❌ Error HTTP enviando correo Brevo ({e.code}): {err_body}", flush=True)
         except Exception as e:
-            print(f"❌ Error enviando correo: {e}", flush=True)
+            print(f"❌ Error general enviando correo: {e}", flush=True)
 
     threading.Thread(target=_enviar).start()
-
+    
 # ==========================================
 # PLANTILLAS DE EMAIL UNIFICADAS
 # ==========================================
@@ -977,14 +989,15 @@ def api_public_crear_pedido():
         ]
         ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
 
-        # 1. Mail de confirmación para el cliente
+       # 1. Mail de confirmación para el cliente
         if email_cliente:
             try:
                 html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, "Pendiente")
                 enviar_email_async(email_cliente, f"🥐 ¡Pedido {nuevo_id} Registrado en CROISS!", html)
-            except Exception: pass
+            except Exception as e_cli:
+                print(f"Aviso enviado cliente: {e_cli}", flush=True)
 
-        # 2. Mail de ALERTA INMEDIATA para ti (croiss.uy@gmail.com)
+        # 2. Mail de ALERTA INMEDIATA para la administración
         try:
             cuerpo_admin = f"""
             <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background-color: #F9F3EE; color: #2D1E18;">
