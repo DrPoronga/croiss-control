@@ -891,42 +891,42 @@ def api_public_crear_pedido():
         fecha_entrega = datos.get("fecha_entrega")
         items = datos.get("items", [])
 
-        req_normales = calcular_unidades_normales(items)[cite: 12]
-        req_pop = calcular_unidades_pop_reales(items)[cite: 12]
-        total_equivalente_horno = calcular_croissants_congelados_equivalentes(items)[cite: 12]
+        req_normales = calcular_unidades_normales(items)
+        req_pop = calcular_unidades_pop_reales(items)
+        total_equivalente_horno = calcular_croissants_congelados_equivalentes(items)
 
         if not fecha_entrega or total_equivalente_horno <= 0:
-            return jsonify({"status": "error", "mensaje": "Datos de pedido inválidos."}), 400[cite: 12]
+            return jsonify({"status": "error", "mensaje": "Datos de pedido inválidos."}), 400
 
-        sheet_ventas = conectar_sheet("Ventas")[cite: 12]
-        asegurar_encabezados_ventas(sheet_ventas)[cite: 12]
-        registros = get_clean_records(sheet_ventas)[cite: 12]
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+        registros = get_clean_records(sheet_ventas)
 
         acumulado_dia = sum(
             int(get_field_val(r, "Cantidad"))
             for r in registros
             if normalizar_fecha(get_field_val(r, "Fecha Entrega", "Fecha")) == fecha_entrega and get_field_val(r, "Cantidad").isdigit()
-        )[cite: 12]
+        )
 
         if (acumulado_dia + total_equivalente_horno) > 35:
             return jsonify({
                 "status": "error",
                 "mensaje": f"🚫 ¡Cupo excedido! Para el día {fecha_entrega} quedan solo {max(0, 35 - acumulado_dia)} lugares y estás pidiendo el equivalente a {total_equivalente_horno} croissants."
-            }), 400[cite: 12]
+            }), 400
 
-        sheet_stock = conectar_sheet("Productos_Stock")[cite: 12]
+        sheet_stock = conectar_sheet("Productos_Stock")
 
-        row_cong, row_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)[cite: 12]
-        capacidad_normal = st_cong + (st_masas * 10)[cite: 12]
+        row_cong, row_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
+        capacidad_normal = st_cong + (st_masas * 10)
 
-        row_pop_cong, row_pop_masas, col_st_pop, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)[cite: 12]
-        capacidad_pop = st_pop_cong + (st_pop_masas * 30)[cite: 12]
+        row_pop_cong, row_pop_masas, col_st_pop, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
+        capacidad_pop = st_pop_cong + (st_pop_masas * 30)
 
         if req_normales > capacidad_normal:
-            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin croissants tradicionales suficientes."}), 400[cite: 12]
+            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin croissants tradicionales suficientes."}), 400
 
         if req_pop > capacidad_pop:
-            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin Pop Croiss suficientes."}), 400[cite: 12]
+            return jsonify({"status": "error", "mensaje": "Disculpas, nos quedamos sin Pop Croiss suficientes."}), 400
 
         # Descontar stock Normal
         if req_normales > 0:
@@ -937,7 +937,7 @@ def api_public_crear_pedido():
                 st_cong = 0
                 masas_a_romper = math.ceil(restante / 10.0)
                 st_masas = max(0, st_masas - masas_a_romper)
-                st_cong += (masas_a_romper * 10) - restante[cite: 12]
+                st_cong += (masas_a_romper * 10) - restante
 
         # Descontar stock Pop
         if req_pop > 0:
@@ -948,52 +948,52 @@ def api_public_crear_pedido():
                 st_pop_cong = 0
                 masas_pop_romper = math.ceil(rest_pop / 38.0)
                 st_pop_masas = max(0, st_pop_masas - masas_pop_romper)
-                st_pop_cong += (masas_pop_romper * 30) - rest_pop[cite: 12]
+                st_pop_cong += (masas_pop_romper * 30) - rest_pop
 
         batch_stock = []
         if req_normales > 0:
-            if row_cong: batch_stock.append({'range': f'D{row_cong}', 'values': [[st_cong]]})[cite: 12]
-            if row_masas: batch_stock.append({'range': f'D{row_masas}', 'values': [[st_masas]]})[cite: 12]
+            if row_cong: batch_stock.append({'range': f'D{row_cong}', 'values': [[st_cong]]})
+            if row_masas: batch_stock.append({'range': f'D{row_masas}', 'values': [[st_masas]]})
         if req_pop > 0:
-            if row_pop_cong: batch_stock.append({'range': f'D{row_pop_cong}', 'values': [[st_pop_cong]]})[cite: 12]
-            if row_pop_masas: batch_stock.append({'range': f'D{row_pop_masas}', 'values': [[st_pop_masas]]})[cite: 12]
+            if row_pop_cong: batch_stock.append({'range': f'D{row_pop_cong}', 'values': [[st_pop_cong]]})
+            if row_pop_masas: batch_stock.append({'range': f'D{row_pop_masas}', 'values': [[st_pop_masas]]})
 
         if batch_stock:
-            ejecutar_con_reintento(sheet_stock.batch_update, batch_stock)[cite: 12]
+            ejecutar_con_reintento(sheet_stock.batch_update, batch_stock)
 
-        nuevo_id = f"V-{len(registros) + 1:04d}"[cite: 12]
+        nuevo_id = f"V-{len(registros) + 1:04d}"
         resumen_productos = []
         for item in items:
             prod_nombre = item.get("producto")
             cant = int(item.get("cantidad", 1))
             jalea_str = " (Con Jalea)" if item.get("con_jalea") else ""
-            resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")[cite: 12]
+            resumen_productos.append(f"{cant}x {prod_nombre}{jalea_str}")
 
-        descripcion_final = ", ".join(resumen_productos)[cite: 12]
-        modificar_stock_empaque(descripcion_final, total_equivalente_horno, es_devolucion=False)[cite: 12]
+        descripcion_final = ", ".join(resumen_productos)
+        modificar_stock_empaque(descripcion_final, total_equivalente_horno, es_devolucion=False)
 
-        cliente_nombre = datos.get("cliente", "Cliente Web")[cite: 12]
-        email_cliente = str(datos.get("email", "")).strip()[cite: 12]
-        telefono_cliente = str(datos.get("telefono", "")).strip()[cite: 12]
-        direccion_cliente = str(datos.get("direccion", "")).strip()[cite: 12]
-        hoy_str = datetime.now().strftime("%Y-%m-%d")[cite: 12]
-        monto_total = datos.get("monto_total", 0)[cite: 12]
-        notas_cliente = str(datos.get('notas', '')).strip()[cite: 12]
-        notas_guardar = f"[WEB] {notas_cliente}".strip()[cite: 12]
+        cliente_nombre = datos.get("cliente", "Cliente Web")
+        email_cliente = str(datos.get("email", "")).strip()
+        telefono_cliente = str(datos.get("telefono", "")).strip()
+        direccion_cliente = str(datos.get("direccion", "")).strip()
+        hoy_str = datetime.now().strftime("%Y-%m-%d")
+        monto_total = datos.get("monto_total", 0)
+        notas_cliente = str(datos.get('notas', '')).strip()
+        notas_guardar = f"[WEB] {notas_cliente}".strip()
 
         nueva_fila = [
             nuevo_id, hoy_str, fecha_entrega, cliente_nombre,
             descripcion_final, total_equivalente_horno, monto_total, "Pendiente",
             "Web / WhatsApp", email_cliente, telefono_cliente,
             direccion_cliente, "Pendiente", notas_guardar
-        ][cite: 12]
-        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)[cite: 12]
+        ]
+        ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
 
         # 1. Enviar e-mail de confirmación al CLIENTE (si ingresó un mail válido)
         if email_cliente:
             try:
-                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, "Pendiente")[cite: 12]
-                enviar_email_async(email_cliente, f"🥐 ¡Pedido {nuevo_id} Registrado en CROISS!", html)[cite: 12]
+                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, "Pendiente")
+                enviar_email_async(email_cliente, f"🥐 ¡Pedido {nuevo_id} Registrado en CROISS!", html)
             except Exception as e_cli:
                 print(f"Aviso enviado cliente: {e_cli}", flush=True)
 
@@ -1021,16 +1021,16 @@ def api_public_crear_pedido():
               </div>
             </div>
             """
-            enviar_email_async("croiss.uy@gmail.com", f"🚨 NUEVO PEDIDO WEB #{nuevo_id} - {cliente_nombre}", cuerpo_admin)[cite: 12]
+            enviar_email_async("croiss.uy@gmail.com", f"🚨 NUEVO PEDIDO WEB #{nuevo_id} - {cliente_nombre}", cuerpo_admin)
         except Exception as err:
-            print(f"❌ Error notificando al admin: {err}", flush=True)[cite: 12]
+            print(f"❌ Error notificando al admin: {err}", flush=True)
 
-        try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)[cite: 12]
-        except Exception: pass[cite: 12]
+        try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)
+        except Exception: pass
 
-        return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200[cite: 12]
+        return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200
     except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500[cite: 12]
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 def calcular_unidades_reales_desde_descripcion(desc_str):
     if not desc_str:
