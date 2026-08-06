@@ -248,77 +248,106 @@
                 </div>
 
                 <!-- 5. GASTOS Y COMPRAS -->
-                <div id="sec-gastos" class="section">
-                    <div class="card ios-card">
-                        <div class="ios-segmented-control">
-                            <button id="segBtnNuevoGasto" class="seg-btn active" onclick="cambiarSegmentoGasto('nuevo')">Cargar Gasto / Sueldo</button>
-                            <button id="segBtnHistorialGasto" class="seg-btn" onclick="cambiarSegmentoGasto('historial')">Historial</button>
-                        </div>
-                        <div id="subSecNuevoGasto" class="sub-seccion active">
-                            <form id="formGasto">
-                                <div class="form-group">
-                                    <label>Fecha</label>
-                                    <input type="date" id="gFecha">
-                                </div>
-                                <div class="form-group">
-                                    <label>Categoría</label>
-                                    <select id="gCategoria" onchange="toggleCamposMateriaPrima()">
-                                        <option value="Materia Prima">Materia Prima</option>
-                                        <option value="Embalaje">Embalaje / Cajas</option>
-                                        <option value="Sueldos">Sueldos / Retiro de Socios</option>
-                                        <option value="Servicios">Servicios (Luz, Gas, Agua)</option>
-                                        <option value="Publicidad">Publicidad / Marketing</option>
-                                        <option value="Otros">Otros Egresos</option>
-                                    </select>
-                                </div>
-                                <div id="boxSugerenciasMateriaPrima" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
-                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Harina 000', 'kg')">Harina 000</button>
-                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Manteca', 'kg')">Manteca</button>
-                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Dulce de Leche', 'kg')">Dulce de Leche</button>
-                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Jamon', 'kg')">Jamon</button>
-                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Queso', 'kg')">Queso</button>
-                                </div>
-                                <div id="boxSugerenciasCajas" style="display: none; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
-                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja X6', 'un')">Caja X6</button>
-                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja X3', 'un')">Caja X3</button>
-                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja X1', 'un')">Caja X1</button>
-                                    <button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Papel Manteca', 'un')">Papel Manteca</button>
-                                </div>
-                                <div class="form-group">
-                                    <label>Descripción / Comentario del Gasto o Sueldo</label>
-                                    <input type="text" id="gDescripcion" placeholder="Ej: Sueldo Nico / Compra 10kg Harina / Retiro Tati" required>
-                                </div>
-                                <div id="boxCamposInsumo" class="row">
-                                    <div class="form-group">
-                                        <label>Cantidad</label>
-                                        <input type="number" id="gCantidad" value="1" step="0.1">
-                                    </div>
-                                    <div class="form-group">
-                                        <label>Unidad</label>
-                                        <select id="gUnidad">
-                                            <option value="kg">kg (Kilos)</option>
-                                            <option value="gr">gr (Gramos)</option>
-                                            <option value="un">un (Unidades)</option>
-                                            <option value="ml">ml (Mililitros)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label>Vencimiento (Opcional)</label>
-                                    <input type="date" id="gVencimiento">
-                                </div>
-                                <div class="form-group">
-                                    <label>Monto Total ($)</label>
-                                    <input type="number" id="gMonto" placeholder="Ej: 4000" required>
-                                </div>
-                                <button type="submit" class="btn-submit">Guardar Registro</button>
-                            </form>
-                        </div>
-                        <div id="subSecHistorialGasto" class="sub-seccion">
-                            <div id="listaGastosHistorico">Cargando historial...</div>
-                        </div>
-                    </div>
-                </div>
+				<div id="sec-gastos" class="section">
+					<div class="card ios-card">
+						<div class="ios-segmented-control">
+							<button id="segBtnNuevoGasto" class="seg-btn active" onclick="cambiarSegmentoGasto('nuevo')">Cargar Gasto / Sueldo</button>
+							<button id="segBtnHistorialGasto" class="seg-btn" onclick="cambiarSegmentoGasto('historial')">Historial</button>
+							<button id="segBtnPreciosInsumos" class="seg-btn" onclick="cambiarSegmentoGasto('precios')">Precios Insumos</button>
+						</div>
+
+						<!-- 1. NUEVO GASTO -->
+						<div id="subSecNuevoGasto" class="sub-seccion active">
+							<form id="formGasto">
+								<div class="form-group">
+									<label>Fecha</label>
+									<input type="date" id="gFecha">
+								</div>
+								<div class="form-group">
+									<label>Categoría</label>
+									<select id="gCategoria" onchange="toggleCamposMateriaPrima()">
+										<option value="Materia Prima">Materia Prima</option>
+										<option value="Embalaje">Embalaje / Cajas</option>
+										<option value="Sueldos">Sueldos / Retiro de Socios</option>
+										<option value="Servicios">Servicios (Luz, Gas, Agua)</option>
+										<option value="Publicidad">Publicidad / Marketing</option>
+										<option value="Otros">Otros Egresos</option>
+									</select>
+								</div>
+								<div id="boxSugerenciasMateriaPrima" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+									<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Harina 000', 'kg')">Harina 000</button>
+									<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Manteca', 'kg')">Manteca</button>
+									<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Dulce de Leche', 'kg')">Dulce de Leche</button>
+									<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Jamon', 'kg')">Jamon</button>
+									<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Queso', 'kg')">Queso</button>
+								</div>
+								<div id="boxSugerenciasCajas" style="display: none; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
+									<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja X6', 'un')">Caja X6</button>
+									<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja X3', 'un')">Caja X3</button>
+									<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Caja X1', 'un')">Caja X1</button>
+									<button type="button" class="btn-jalea-chip" onclick="seleccionarInsumoRapido('Papel Manteca', 'un')">Papel Manteca</button>
+								</div>
+								<div class="form-group">
+									<label>Descripción / Comentario del Gasto o Sueldo</label>
+									<input type="text" id="gDescripcion" placeholder="Ej: Sueldo Nico / Compra 10kg Harina / Retiro Tati" required>
+								</div>
+								<div id="boxCamposInsumo" class="row">
+									<div class="form-group">
+										<label>Cantidad</label>
+										<input type="number" id="gCantidad" value="1" step="0.1">
+									</div>
+									<div class="form-group">
+										<label>Unidad</label>
+										<select id="gUnidad">
+											<option value="kg">kg (Kilos)</option>
+											<option value="gr">gr (Gramos)</option>
+											<option value="un">un (Unidades)</option>
+											<option value="ml">ml (Mililitros)</option>
+										</select>
+									</div>
+								</div>
+								<div class="form-group">
+									<label>Vencimiento (Opcional)</label>
+									<input type="date" id="gVencimiento">
+								</div>
+								<div class="form-group">
+									<label>Monto Total ($)</label>
+									<input type="number" id="gMonto" placeholder="Ej: 4000" required>
+								</div>
+								<button type="submit" class="btn-submit">Guardar Registro</button>
+							</form>
+						</div>
+
+						<!-- 2. HISTORIAL -->
+						<div id="subSecHistorialGasto" class="sub-seccion">
+							<div id="listaGastosHistorico">Cargando historial...</div>
+						</div>
+
+						<!-- 3. PRECIOS DE INSUMOS Y COSTEO -->
+						<div id="subSecPreciosInsumos" class="sub-seccion">
+							<div style="background: #FAF0EB; border: 1px solid #F7DFC8; border-radius: 16px; padding: 14px; margin-bottom: 16px; text-align: center;">
+								<small style="color: var(--accent); font-weight: 800; text-transform: uppercase; font-size: 0.72rem;">Resumen de Costos Calculados</small>
+								<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+									<div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px;">
+										<small style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">1 Croissant Clásico</small>
+										<strong id="lblCostCroissBase" style="font-size: 1.1rem; color: var(--accent); font-weight: 800;">$0</strong>
+									</div>
+									<div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 8px;">
+										<small style="font-size: 0.65rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase; display: block;">1 Pop Croiss</small>
+										<strong id="lblCostPopBase" style="font-size: 1.1rem; color: #B45309; font-weight: 800;">$0</strong>
+									</div>
+								</div>
+							</div>
+
+							<form id="formPreciosInsumos" onsubmit="guardarPreciosInsumos(event)">
+								<h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Precios de Compra (1kg / 1L / 1un)</h4>
+								<div id="contenedorListaPreciosInsumos">Cargando precios de lista...</div>
+								<button type="submit" class="btn-submit" style="margin-top: 14px;">💾 Actualizar Precios de Insumos</button>
+							</form>
+						</div>
+
+					</div>
+				</div>
 
                 <!-- 6. METRICAS Y BALANCE -->
                 <div id="sec-balance" class="section">

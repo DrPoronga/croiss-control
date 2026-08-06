@@ -367,6 +367,112 @@ def obtener_o_crear_sheet_insumos():
         ws.append_row(["Insumo", "Stock Actual", "Unidad", "Vencimiento Proximo"])
         return ws
 
+def obtener_o_crear_sheet_precios_insumos():
+    """
+    Obtiene o crea la pestaña 'Precios_Insumos' para almacenar
+    los costos por kg/L/unidad de cada ingrediente.
+    """
+    ruta_credenciales = "credentials.json"
+    creds = Credentials.from_service_account_file(ruta_credenciales, scopes=SCOPES)
+    cliente = gspread.authorize(creds)
+    doc = cliente.open_by_key(SPREADSHEET_ID)
+    try:
+        return doc.worksheet("Precios_Insumos")
+    except Exception:
+        ws = doc.add_worksheet(title="Precios_Insumos", rows="50", cols="3")
+        ws.append_row(["Insumo", "Precio Unitario", "Unidad Base"])
+        
+        # Valores iniciales predeterminados
+        precios_defecto = [
+            ["Harina 000", 50.0, "kg"],
+            ["Manteca", 350.0, "kg"],
+            ["Leche", 45.0, "L"],
+            ["Azucar", 40.0, "kg"],
+            ["Sal", 30.0, "kg"],
+            ["Vainilla", 300.0, "L"],
+            ["Levadura (Sobre 12g)", 25.0, "un"],
+            ["Huevos (Unidad)", 8.0, "un"],
+            ["Dulce de Leche", 180.0, "kg"],
+            ["Jamon/Queso", 450.0, "kg"],
+            ["Caja X6", 41.0, "un"],
+            ["Caja X3", 27.0, "un"],
+            ["Caja X1", 18.0, "un"]
+        ]
+        for item in precios_defecto:
+            ws.append_row(item)
+        return ws
+        
+def obtener_costos_receta_dinamicos():
+    """
+    Calcula los costos exactos por unidad basados en los precios actuales
+    de la pestaña Precios_Insumos y las proporciones de la receta.
+    """
+    precios = {
+        "harina 000": 50.0,
+        "manteca": 350.0,
+        "leche": 45.0,
+        "azucar": 40.0,
+        "sal": 30.0,
+        "vainilla": 300.0,
+        "levadura (sobre 12g)": 25.0,
+        "huevos (unidad)": 8.0,
+        "dulce de leche": 180.0,
+        "jamon/queso": 450.0,
+        "caja x6": 41.0,
+        "caja x3": 27.0,
+        "caja x1": 18.0
+    }
+    
+    try:
+        sheet = obtener_o_crear_sheet_precios_insumos()
+        registros = get_clean_records(sheet)
+        for reg in registros:
+            nom = get_field_val(reg, "Insumo").lower().strip()
+            raw_p = get_field_val(reg, "Precio Unitario", "Precio").replace(",", ".").strip()
+            if nom and raw_p:
+                try:
+                    precios[nom] = float(raw_p)
+                except ValueError:
+                    pass
+    except Exception as e:
+        print(f"⚠️ Aviso leyendo precios dinámicos: {e}", flush=True)
+
+    # 1. Costo de 1 Batch de Masa (10 Croissants Tradicionales o 38 Pop Croiss)
+    p_harina   = precios.get("harina 000", 50.0) * 0.500       # 500g
+    p_manteca  = precios.get("manteca", 350.0) * 0.310        # 60g masa + 250g laminado
+    p_leche    = precios.get("leche", 45.0) * 0.250           # 200ml masa + 50ml pintada
+    p_azucar   = precios.get("azucar", 40.0) * 0.060          # 60g
+    p_sal      = precios.get("sal", 30.0) * 0.010             # 10g
+    p_vainilla = precios.get("vainilla", 300.0) * 0.003       # 3ml
+    p_levadura = precios.get("levadura (sobre 12g)", 25.0) * 1.0 # 1 sobre
+    p_huevos   = precios.get("huevos (unidad)", 8.0) * 2.0     # 1 masa + 1 pintada
+
+    costo_batch_masa = (
+        p_harina + p_manteca + p_leche + p_azucar + 
+        p_sal + p_vainilla + p_levadura + p_huevos
+    )
+
+    # 2. Costos Unitarios Base
+    costo_croissant_base = round(costo_batch_masa / 10.0, 2)
+    costo_pop_base = round(costo_batch_masa / 38.0, 2)
+
+    # 3. Costo Unitario de Jalea (1 Batch rinde para 20 pinceladas)
+    costo_batch_jalea = (precios.get("azucar", 40.0) * 0.100) + (precios.get("vainilla", 300.0) * 0.002)
+    costo_jalea_unitario = round(costo_batch_jalea / 20.0, 2)
+
+    return {
+        "costo_batch_masa": round(costo_batch_masa, 2),
+        "croissant_base": costo_croissant_base,
+        "pop_base": costo_pop_base,
+        "jalea_unitario": costo_jalea_unitario,
+        "extra_salado": round(precios.get("jamon/queso", 450.0) * 0.050, 2),  # ~50g por croissant
+        "extra_dulce": round(precios.get("dulce de leche", 180.0) * 0.080, 2),   # ~80g por croissant
+        "caja_x6": round(precios.get("caja x6", 41.0), 2),
+        "caja_x3": round(precios.get("caja x3", 27.0), 2),
+        "caja_x1": round(precios.get("caja x1", 18.0), 2),
+        "precios_lista": precios
+    }
+
 def sincronizar_cliente(nombre, email, telefono, direccion):
     if not nombre or nombre.lower() == "consumidor final": return
     if "@" in str(nombre) and "@" not in str(email): nombre, email = email, nombre
@@ -583,11 +689,23 @@ def obtener_niveles_stock_pop(sheet_stock):
     return row_pop_cong, row_pop_masas, col_stock, st_pop_cong, st_pop_masas
     
 def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
+    """
+    Calcula dinámicamente el costo total de producción y empaque de un pedido
+    utilizando los precios de insumos actualizados.
+    """
     if total_croissants <= 0:
-        return {"costo_base": 0.0, "costo_empaque": 0.0, "costo_total": 0.0, "cajas_grande": 0, "cajas_mediana": 0, "cajas_chica": 0, "papel": 0}
+        return {
+            "costo_base": 0.0, "costo_empaque": 0.0, "costo_total": 0.0,
+            "cajas_grande": 0, "cajas_mediana": 0, "cajas_chica": 0, "papel": 0
+        }
     
+    # Obtener precios dinámicos de la receta
+    costos_dinamicos = obtener_costos_receta_dinamicos()
+    c_base = costos_dinamicos["croissant_base"]
+    c_pop = costos_dinamicos["pop_base"]
+    c_jalea = costos_dinamicos["jalea_unitario"]
+
     costo_croissants = 0.0
-    c_base = COSTOS_PRODUCCION["croissant_base"]
 
     if desc_producto:
         partes = str(desc_producto).split(",")
@@ -595,7 +713,10 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
         for item in partes:
             item_clean = item.strip()
             if not item_clean: continue
+            
+            tiene_jalea = bool(re.search(r"\(con jalea\)", item_clean, re.IGNORECASE))
             sin_jalea_str = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
+            
             m = re.match(r"^(\d+)x\s+(.+)", sin_jalea_str, re.IGNORECASE)
             if m:
                 c_item = int(m.group(1))
@@ -604,12 +725,22 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
                 c_item = 1
                 sabor_item = sin_jalea_str.lower()
             
-            c_unit = c_base
+            # Asignación de costo base
+            if "pop" in sabor_item:
+                c_unit = c_pop
+            else:
+                c_unit = c_base
+
+            # Rellenos
             if "jamon" in sabor_item or "jamón" in sabor_item or "queso" in sabor_item:
-                c_unit += COSTOS_PRODUCCION["extra_salado"]
+                c_unit += costos_dinamicos["extra_salado"]
             elif "dulce" in sabor_item or "ddl" in sabor_item:
-                c_unit += COSTOS_PRODUCCION["extra_dulce"]
+                c_unit += costos_dinamicos["extra_dulce"]
             
+            # Pincelada de Jalea
+            if tiene_jalea:
+                c_unit += c_jalea
+
             costo_croissants += (c_unit * c_item)
             croissants_procesados += c_item
             
@@ -619,6 +750,7 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     else:
         costo_croissants = total_croissants * c_base
 
+    # Empaques
     cajas_grande = total_croissants // 6
     sobrante = total_croissants % 6
     cajas_mediana = 0
@@ -630,9 +762,9 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
         cajas_grande += 1
         
     papel = cajas_grande + cajas_mediana + cajas_chica
-    costo_empaque = (cajas_grande * COSTOS_PRODUCCION["caja_x6"]) + \
-                    (cajas_mediana * COSTOS_PRODUCCION["caja_x3"]) + \
-                    (cajas_chica * COSTOS_PRODUCCION["caja_x1"])
+    costo_empaque = (cajas_grande * costos_dinamicos["caja_x6"]) + \
+                    (cajas_mediana * costos_dinamicos["caja_x3"]) + \
+                    (cajas_chica * costos_dinamicos["caja_x1"])
     
     return {
         "costo_base": round(costo_croissants, 2),
@@ -643,7 +775,7 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
         "cajas_chica": cajas_chica,
         "papel": papel
     }
-
+    
 def modificar_stock_empaque(desc_producto, total_croissants, es_devolucion=False):
     alertas = []
     try:
@@ -2161,5 +2293,35 @@ def marcar_en_camino():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+@app.route('/api/precios_insumos', methods=['GET', 'POST'])
+def api_precios_insumos():
+    try:
+        sheet = obtener_o_crear_sheet_precios_insumos()
+        
+        if request.method == 'POST':
+            datos = request.json or {}
+            nuevos_precios = datos.get("precios", {})
+            
+            registros = get_clean_records(sheet)
+            batch_updates = []
+            
+            for idx, reg in enumerate(registros, start=2):
+                nom_insumo = get_field_val(reg, "Insumo").lower().strip()
+                if nom_insumo in nuevos_precios:
+                    val_nuevo = float(nuevos_precios[nom_insumo])
+                    batch_updates.append({'range': f'B{idx}', 'values': [[val_nuevo]]})
+            
+            if batch_updates:
+                ejecutar_con_reintento(sheet.batch_update, batch_updates)
+
+            return jsonify({"status": "exito", "mensaje": "Precios de insumos actualizados"}), 200
+
+        # Si es GET:
+        costos_receta = obtener_costos_receta_dinamicos()
+        return jsonify({"status": "exito", "datos": costos_receta}), 200
+
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

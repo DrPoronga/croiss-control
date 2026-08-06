@@ -2475,10 +2475,14 @@ function cambiarSegmentoEntrega(segmento) {
 function cambiarSegmentoGasto(segmento) {
     document.getElementById('segBtnNuevoGasto').classList.toggle('active', segmento === 'nuevo');
     document.getElementById('segBtnHistorialGasto').classList.toggle('active', segmento === 'historial');
+    document.getElementById('segBtnPreciosInsumos').classList.toggle('active', segmento === 'precios');
+
     document.getElementById('subSecNuevoGasto').classList.toggle('active', segmento === 'nuevo');
     document.getElementById('subSecHistorialGasto').classList.toggle('active', segmento === 'historial');
+    document.getElementById('subSecPreciosInsumos').classList.toggle('active', segmento === 'precios');
 
     if (segmento === 'historial') cargarInsumosYGastos();
+    if (segmento === 'precios') cargarPreciosInsumos();
 }
 
 // ==========================================
@@ -3033,3 +3037,104 @@ function abrirPlacaGanador() {
     win.document.close();
 }
 
+async function cargarPreciosInsumos() {
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
+    try {
+        const res = await fetch('/api/precios_insumos');
+        const responseData = await res.json();
+
+        await esperarAnimacionMinima(tInicio, 2200);
+        cerrarCroissLoaderSeguro();
+
+        if (responseData.status === 'exito') {
+            const data = responseData.datos;
+            
+            // Actualizar etiquetas superiores
+            const lblCroiss = document.getElementById('lblCostCroissBase');
+            const lblPop = document.getElementById('lblCostPopBase');
+            if (lblCroiss) lblCroiss.innerText = `$${data.croissant_base}`;
+            if (lblPop) lblPop.innerText = `$${data.pop_base}`;
+
+            // Renderizar inputs
+            const cont = document.getElementById('contenedorListaPreciosInsumos');
+            if (cont && data.precios_lista) {
+                cont.innerHTML = '';
+                
+                const labelsDict = {
+                    "harina 000": "Harina 000 (1 Kg)",
+                    "manteca": "Manteca (1 Kg)",
+                    "leche": "Leche (1 Litro)",
+                    "azucar": "Azúcar (1 Kg)",
+                    "sal": "Sal (1 Kg)",
+                    "vainilla": "Vainilla (1 Litro)",
+                    "levadura (sobre 12g)": "Levadura (1 Sobre de 12g)",
+                    "huevos (unidad)": "Huevo (1 Unidad)",
+                    "dulce de leche": "Dulce de Leche (1 Kg)",
+                    "jamon/queso": "Jamón / Queso (1 Kg)",
+                    "caja x6": "Caja X6 (1 Unidad)",
+                    "caja x3": "Caja X3 (1 Unidad)",
+                    "caja x1": "Caja X1 (1 Unidad)"
+                };
+
+                Object.keys(data.precios_lista).forEach(key => {
+                    const labelTexto = labelsDict[key] || key;
+                    const valor = data.precios_lista[key];
+
+                    const div = document.createElement('div');
+                    div.className = 'form-group';
+                    div.style.marginBottom = '10px';
+                    div.innerHTML = `
+                        <label style="font-size:0.8rem; font-weight:700;">${labelTexto}</label>
+                        <input type="number" class="input-precio-insumo" data-key="${key}" value="${valor}" step="0.1" min="0" required style="font-size:0.9rem; padding:8px 12px;">
+                    `;
+                    cont.appendChild(div);
+                });
+            }
+        }
+    } catch (err) {
+        cerrarCroissLoaderSeguro();
+        console.error("Error al cargar precios de insumos:", err);
+    }
+}
+
+async function guardarPreciosInsumos(e) {
+    e.preventDefault();
+    
+    const inputs = document.querySelectorAll('.input-precio-insumo');
+    const preciosActualizados = {};
+    
+    inputs.forEach(input => {
+        const key = input.getAttribute('data-key');
+        const val = parseFloat(input.value) || 0;
+        preciosActualizados[key] = val;
+    });
+
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
+    try {
+        const res = await fetch('/api/precios_insumos', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ precios: preciosActualizados })
+        });
+        const data = await res.json();
+
+        await esperarAnimacionMinima(tInicio, 2200);
+        cerrarCroissLoaderSeguro();
+
+        if (data.status === 'exito') {
+            mostrarCroissExito('Precios Actualizados', 'Los costos de producción se recalcularon correctamente.');
+            cargarPreciosInsumos();
+            if (typeof cargarBalance === 'function') cargarBalance();
+        } else {
+            Swal.fire('Error', data.mensaje, 'error');
+        }
+    } catch (err) {
+        cerrarCroissLoaderSeguro();
+        console.error("Error guardando precios:", err);
+        Swal.fire('Error', 'No se pudo guardar la información', 'error');
+    }
+}
