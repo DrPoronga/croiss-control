@@ -16,11 +16,27 @@ import math
 # ==========================================
 # CONFIGURACIÓN GENERAL Y FLASK
 # ==========================================
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 app = Flask(__name__)
 app.jinja_env.encoding = 'utf-8'
 
 app.secret_key = os.environ.get("FLASK_SECRET_KEY", "croiss_super_secreta_2026")
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=7)
+
+# 🔒 PUNTO 5: CONFIGURACIÓN SEGURA DE COOKIES DE SESIÓN
+app.config['SESSION_COOKIE_SECURE'] = True      # Solo transmite cookies por HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True    # Impide acceso a la cookie via JS (mitiga XSS)
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'   # Protege contra ataques CSRF
+
+# 🛡️ PUNTO 4: INICIALIZACIÓN DEL LIMITADOR DE PETICIONES (RATE LIMITER)
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=[],  # Sin límite global restrictivo, solo en endpoints públicos
+    storage_uri="memory://"
+)
 
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASS = os.environ.get("ADMIN_PASSWORD", "croisscamigera")
@@ -28,7 +44,7 @@ ADMIN_PASS = os.environ.get("ADMIN_PASSWORD", "croisscamigera")
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 EMAIL_EMISOR = os.environ.get("EMAIL_EMISOR", "pedidos@croissuy.com")
 EMAIL_ADMIN = os.environ.get("EMAIL_ADMIN", "croiss.uy@gmail.com")
-NUMERO_WHATSAPP = os.environ.get("NUMERO_WHATSAPP", "59899526301") 
+NUMERO_WHATSAPP = os.environ.get("NUMERO_WHATSAPP", "59899526301")
 
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -1013,6 +1029,7 @@ def tienda_publica():
     return render_template('tienda.html', numero_whatsapp=NUMERO_WHATSAPP)
     
 @app.route('/api/public/catalogo', methods=['GET'])
+@limiter.limit("30 per minute")
 def api_public_catalogo():
     try:
         sheet = conectar_sheet("Productos_Stock")
@@ -1038,6 +1055,7 @@ def api_public_catalogo():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/public/fechas', methods=['GET'])
+@limiter.limit("30 per minute")
 def api_public_fechas():
     try:
         sheet_ventas = conectar_sheet("Ventas")
@@ -1068,6 +1086,7 @@ def api_public_fechas():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/public/crear_pedido', methods=['POST'])
+@limiter.limit("5 per hour", error_message="Has realizado demasiados intentos. Por favor espera una hora para volver a pedir.")
 def api_public_crear_pedido():
     try:
         datos = request.json or {}
