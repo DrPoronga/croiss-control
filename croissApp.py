@@ -402,76 +402,6 @@ def obtener_o_crear_sheet_precios_insumos():
             ws.append_row(item)
         return ws
         
-def obtener_costos_receta_dinamicos():
-    """
-    Calcula los costos exactos por unidad basados en los precios actuales
-    de la pestaña Precios_Insumos y las proporciones de la receta.
-    """
-    precios = {
-        "harina 000": 50.0,
-        "manteca": 350.0,
-        "leche": 45.0,
-        "azucar": 40.0,
-        "sal": 30.0,
-        "vainilla": 300.0,
-        "levadura (sobre 12g)": 25.0,
-        "huevos (unidad)": 8.0,
-        "dulce de leche": 180.0,
-        "jamon/queso": 450.0,
-        "caja x6": 41.0,
-        "caja x3": 27.0,
-        "caja x1": 18.0
-    }
-    
-    try:
-        sheet = obtener_o_crear_sheet_precios_insumos()
-        registros = get_clean_records(sheet)
-        for reg in registros:
-            nom = get_field_val(reg, "Insumo").lower().strip()
-            raw_p = get_field_val(reg, "Precio Unitario", "Precio").replace(",", ".").strip()
-            if nom and raw_p:
-                try:
-                    precios[nom] = float(raw_p)
-                except ValueError:
-                    pass
-    except Exception as e:
-        print(f"⚠️ Aviso leyendo precios dinámicos: {e}", flush=True)
-
-    # 1. Costo de 1 Batch de Masa (10 Croissants Tradicionales o 38 Pop Croiss)
-    p_harina   = precios.get("harina 000", 50.0) * 0.500       # 500g
-    p_manteca  = precios.get("manteca", 350.0) * 0.310        # 60g masa + 250g laminado
-    p_leche    = precios.get("leche", 45.0) * 0.250           # 200ml masa + 50ml pintada
-    p_azucar   = precios.get("azucar", 40.0) * 0.060          # 60g
-    p_sal      = precios.get("sal", 30.0) * 0.010             # 10g
-    p_vainilla = precios.get("vainilla", 300.0) * 0.003       # 3ml
-    p_levadura = precios.get("levadura (sobre 12g)", 25.0) * 1.0 # 1 sobre
-    p_huevos   = precios.get("huevos (unidad)", 8.0) * 2.0     # 1 masa + 1 pintada
-
-    costo_batch_masa = (
-        p_harina + p_manteca + p_leche + p_azucar + 
-        p_sal + p_vainilla + p_levadura + p_huevos
-    )
-
-    # 2. Costos Unitarios Base
-    costo_croissant_base = round(costo_batch_masa / 10.0, 2)
-    costo_pop_base = round(costo_batch_masa / 38.0, 2)
-
-    # 3. Costo Unitario de Jalea (1 Batch rinde para 20 pinceladas)
-    costo_batch_jalea = (precios.get("azucar", 40.0) * 0.100) + (precios.get("vainilla", 300.0) * 0.002)
-    costo_jalea_unitario = round(costo_batch_jalea / 20.0, 2)
-
-    return {
-        "costo_batch_masa": round(costo_batch_masa, 2),
-        "croissant_base": costo_croissant_base,
-        "pop_base": costo_pop_base,
-        "jalea_unitario": costo_jalea_unitario,
-        "extra_salado": round(precios.get("jamon/queso", 450.0) * 0.050, 2),  # ~50g por croissant
-        "extra_dulce": round(precios.get("dulce de leche", 180.0) * 0.080, 2),   # ~80g por croissant
-        "caja_x6": round(precios.get("caja x6", 41.0), 2),
-        "caja_x3": round(precios.get("caja x3", 27.0), 2),
-        "caja_x1": round(precios.get("caja x1", 18.0), 2),
-        "precios_lista": precios
-    }
 
 def sincronizar_cliente(nombre, email, telefono, direccion):
     if not nombre or nombre.lower() == "consumidor final": return
@@ -631,7 +561,128 @@ def obtener_niveles_stock(sheet_stock):
 
     return row_cong, row_masas, col_stock, st_cong, st_masas
 
+# ==========================================
+# CACHÉ EN MEMORIA PARA PRECIOS DE INSUMOS
+# ==========================================
+CACHE_PRECIOS_RECETA = None
+CACHE_PRECIOS_TIMESTAMP = 0
 
+def obtener_costos_receta_dinamicos(forzar_refresco=False):
+    """
+    Calcula los costos exactos por unidad basados en la receta.
+    Utiliza caché en memoria RAM para evitar saturar la cuota 429 de Google Sheets.
+    """
+    global CACHE_PRECIOS_RECETA, CACHE_PRECIOS_TIMESTAMP
+    ahora = time.time()
+
+    # Si ya tenemos los precios en memoria y tienen menos de 5 minutos (300s), los usamos
+    if not forzar_refresco and CACHE_PRECIOS_RECETA and (ahora - CACHE_PRECIOS_TIMESTAMP < 300):
+        return CACHE_PRECIOS_RECETA
+
+    precios = {
+        "harina 000": 50.0,
+        "manteca": 350.0,
+        "leche": 45.0,
+        "azucar": 40.0,
+        "sal": 30.0,
+        "vainilla": 300.0,
+        "levadura (sobre 12g)": 25.0,
+        "huevos (unidad)": 8.0,
+        "dulce de leche": 180.0,
+        "jamon/queso": 450.0,
+        "caja x6": 41.0,
+        "caja x3": 27.0,
+        "caja x1": 18.0
+    }
+    
+    try:
+        sheet = obtener_o_crear_sheet_precios_insumos()
+        registros = get_clean_records(sheet)
+        for reg in registros:
+            nom = get_field_val(reg, "Insumo").lower().strip()
+            raw_p = get_field_val(reg, "Precio Unitario", "Precio").replace(",", ".").strip()
+            if nom and raw_p:
+                try:
+                    precios[nom] = float(raw_p)
+                except ValueError:
+                    pass
+    except Exception as e:
+        print(f"⚠️ Aviso leyendo precios dinámicos: {e}", flush=True)
+
+    # 1. Costo de 1 Batch de Masa (10 Croissants Tradicionales o 38 Pop Croiss)
+    p_harina   = precios.get("harina 000", 50.0) * 0.500       # 500g
+    p_manteca  = precios.get("manteca", 350.0) * 0.310        # 60g masa + 250g laminado
+    p_leche    = precios.get("leche", 45.0) * 0.250           # 200ml masa + 50ml pintada
+    p_azucar   = precios.get("azucar", 40.0) * 0.060          # 60g
+    p_sal      = precios.get("sal", 30.0) * 0.010             # 10g
+    p_vainilla = precios.get("vainilla", 300.0) * 0.003       # 3ml
+    p_levadura = precios.get("levadura (sobre 12g)", 25.0) * 1.0 # 1 sobre
+    p_huevos   = precios.get("huevos (unidad)", 8.0) * 2.0     # 1 masa + 1 pintada
+
+    costo_batch_masa = (
+        p_harina + p_manteca + p_leche + p_azucar + 
+        p_sal + p_vainilla + p_levadura + p_huevos
+    )
+
+    # 2. Costos Unitarios Base
+    costo_croissant_base = round(costo_batch_masa / 10.0, 2)
+    costo_pop_base = round(costo_batch_masa / 38.0, 2)
+
+    # 3. Costo Unitario de Jalea (1 Batch rinde para 20 pinceladas)
+    costo_batch_jalea = (precios.get("azucar", 40.0) * 0.100) + (precios.get("vainilla", 300.0) * 0.002)
+    costo_jalea_unitario = round(costo_batch_jalea / 20.0, 2)
+
+    resultado = {
+        "costo_batch_masa": round(costo_batch_masa, 2),
+        "croissant_base": costo_croissant_base,
+        "pop_base": costo_pop_base,
+        "jalea_unitario": costo_jalea_unitario,
+        "extra_salado": round(precios.get("jamon/queso", 450.0) * 0.050, 2),
+        "extra_dulce": round(precios.get("dulce de leche", 180.0) * 0.080, 2),
+        "caja_x6": round(precios.get("caja x6", 41.0), 2),
+        "caja_x3": round(precios.get("caja x3", 27.0), 2),
+        "caja_x1": round(precios.get("caja x1", 18.0), 2),
+        "precios_lista": precios
+    }
+
+    CACHE_PRECIOS_RECETA = resultado
+    CACHE_PRECIOS_TIMESTAMP = ahora
+    return resultado
+
+
+@app.route('/api/precios_insumos', methods=['GET', 'POST'])
+def api_precios_insumos():
+    try:
+        sheet = obtener_o_crear_sheet_precios_insumos()
+        
+        if request.method == 'POST':
+            datos = request.json or {}
+            nuevos_precios = datos.get("precios", {})
+            
+            registros = get_clean_records(sheet)
+            batch_updates = []
+            
+            for idx, reg in enumerate(registros, start=2):
+                nom_insumo = get_field_val(reg, "Insumo").lower().strip()
+                if nom_insumo in nuevos_precios:
+                    val_nuevo = float(nuevos_precios[nom_insumo])
+                    batch_updates.append({'range': f'B{idx}', 'values': [[val_nuevo]]})
+            
+            if batch_updates:
+                ejecutar_con_reintento(sheet.batch_update, batch_updates)
+
+            # Forzamos la actualización del caché en memoria inmediatamente tras guardar
+            obtener_costos_receta_dinamicos(forzar_refresco=True)
+
+            return jsonify({"status": "exito", "mensaje": "Precios de insumos actualizados"}), 200
+
+        # Si es GET:
+        costos_receta = obtener_costos_receta_dinamicos()
+        return jsonify({"status": "exito", "datos": costos_receta}), 200
+
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 def obtener_niveles_stock_pop(sheet_stock):
     all_values = sheet_stock.get_all_values()
     col_stock = 4
@@ -2293,35 +2344,6 @@ def marcar_en_camino():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
-@app.route('/api/precios_insumos', methods=['GET', 'POST'])
-def api_precios_insumos():
-    try:
-        sheet = obtener_o_crear_sheet_precios_insumos()
-        
-        if request.method == 'POST':
-            datos = request.json or {}
-            nuevos_precios = datos.get("precios", {})
-            
-            registros = get_clean_records(sheet)
-            batch_updates = []
-            
-            for idx, reg in enumerate(registros, start=2):
-                nom_insumo = get_field_val(reg, "Insumo").lower().strip()
-                if nom_insumo in nuevos_precios:
-                    val_nuevo = float(nuevos_precios[nom_insumo])
-                    batch_updates.append({'range': f'B{idx}', 'values': [[val_nuevo]]})
-            
-            if batch_updates:
-                ejecutar_con_reintento(sheet.batch_update, batch_updates)
-
-            return jsonify({"status": "exito", "mensaje": "Precios de insumos actualizados"}), 200
-
-        # Si es GET:
-        costos_receta = obtener_costos_receta_dinamicos()
-        return jsonify({"status": "exito", "datos": costos_receta}), 200
-
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+       
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
