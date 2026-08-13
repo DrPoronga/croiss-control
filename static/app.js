@@ -2576,7 +2576,7 @@ async function cargarStock(forzar = false) {
             // Si aún no se ha agregado manualmente a Google Sheets, lo inyecta automáticamente al menú
             if (!existeCreme) {
                 catalogoProductos.push({
-                    "Nombre": "Croiss a la Creme (+ $50)",
+                    "Nombre": "Croiss a la Creme",
                     "Precio Venta": 190
                 });
             }
@@ -2671,17 +2671,42 @@ function actualizarUIStockCongelados(data) {
         }
     }
 }
+async function cargarStock(forzar = false) {
+    if (isFetchingStock) return;
+    cargarSugerenciasClientes();
 
-async function cargarStockCongelados() {
+    if (catalogoProductos.length > 0 && !forzar) {
+        renderizarMenuYStock();
+        return;
+    }
+
+    isFetchingStock = true;
     try {
-        const resCong = await fetch('/api/stock/congelados');
-        const dataCong = await resCong.json();
-        if (dataCong.status === 'exito') {
-            actualizarUIStockCongelados(dataCong);
+        const res = await fetch('/api/stock');
+        const data = await res.json();
+        if (data.status === 'exito' && Array.isArray(data.productos)) {
+            catalogoProductos = data.productos;
+
+            // Verificamos si "Croiss a la Creme" ya existe en la lista de la planilla
+            const existeCreme = catalogoProductos.some(p => {
+                const nom = obtenerNombreDesdeObjeto(p).toLowerCase();
+                return nom.includes('creme') || nom.includes('crema');
+            });
+
+            // Si aún no está en Google Sheets, lo inyectamos al menú desplegable
+            if (!existeCreme) {
+                catalogoProductos.push({
+                    "Nombre": "Croiss a la Creme (+ $50)",
+                    "Precio Venta": 190
+                });
+            }
+
+            renderizarMenuYStock();
         }
-        await cargarStock(true);
     } catch (err) {
-        console.error("Error al cargar congelados:", err);
+        console.error("Error al cargar stock:", err);
+    } finally {
+        isFetchingStock = false;
     }
 }
 
