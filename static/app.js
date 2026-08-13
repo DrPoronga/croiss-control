@@ -2680,6 +2680,106 @@ function renderizarMenuYStock() {
     }
 }
 
+async function renderizarMenuYStock() {
+    const select = document.getElementById('vProductoSelect');
+    const lista = document.getElementById('listaStock');
+    const seleccionPrevia = select ? select.value : '';
+
+    if (select) select.innerHTML = '<option value="" disabled selected>Seleccionar croissant...</option>';
+    if (lista) lista.innerHTML = '';
+
+    // Leemos el estado de visibilidad desde el servidor
+    let estadoMenu = {};
+    try {
+        const res = await fetch('/api/menu_visibilidad');
+        const data = await res.json();
+        estadoMenu = data.estado || {};
+    } catch (e) {
+        console.error("Error leyendo visibilidad del menú:", e);
+    }
+
+    let productosRenderizados = 0;
+    catalogoProductos.forEach(prod => {
+        const nombreProd = obtenerNombreDesdeObjeto(prod);
+        const nameLower = (nombreProd || '').toLowerCase();
+
+        if (!nombreProd || nameLower.includes('congelado') || nameLower.includes('sobrevendido') || nameLower.includes('masa')) return;
+
+        productosRenderizados++;
+
+        // Select para registrar pedido interno
+        if (select) {
+            const opt = document.createElement('option');
+            opt.value = nombreProd;
+            opt.innerText = nombreProd;
+            select.appendChild(opt);
+        }
+
+        // Fila unificada de Stock
+        if (lista) {
+            const precioVenta = obtenerPrecioDesdeObjeto(prod);
+            const nomEscapado = nombreProd.replace(/'/g, "\\'");
+            const estaActivo = estadoMenu[nameLower] !== false; // Activo por defecto salvo que sea false
+            const checkedAttr = estaActivo ? 'checked' : '';
+            const statusBadge = estaActivo 
+                ? '<span style="color:#16A34A; font-weight:800; font-size:0.75rem;">ON</span>' 
+                : '<span style="color:#DC2626; font-weight:800; font-size:0.75rem;">OFF</span>';
+
+            const div = document.createElement('div');
+            div.className = 'stock-item';
+            div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed var(--border-color); gap: 10px;';
+
+            div.innerHTML = `
+                <div style="flex: 1; min-width: 0;">
+                    <strong style="font-size: 0.92rem; color: var(--text-main); display: block; word-break: break-word;">${nombreProd}</strong>
+                    <small style="color: var(--text-muted); font-weight: 600;">$${precioVenta} c/u</small> · ${statusBadge}
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                    <button type="button" class="btn-jalea-chip active" style="font-size:0.75rem; padding: 5px 10px; margin: 0;" onclick="abrirModalRenombrarProducto('${nomEscapado}')">✏️ Nombre</button>
+
+                    <label style="position: relative; display: inline-block; width: 44px; height: 24px; margin: 0; flex-shrink: 0;">
+                        <input type="checkbox" ${checkedAttr} onchange="cambiarVisibilidadMenuTienda('${nomEscapado}', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                        <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: ${estaActivo ? '#16A34A' : '#CBD5E1'}; transition: .3s; border-radius: 24px;">
+                            <span style="position: absolute; content: ''; height: 18px; width: 18px; left: ${estaActivo ? '22px' : '3px'}; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;"></span>
+                        </span>
+                    </label>
+                </div>
+            `;
+            lista.appendChild(div);
+        }
+    });
+
+    if (lista && productosRenderizados === 0) {
+        lista.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay productos cargados en el menú.</p>';
+    }
+
+    if (select && seleccionPrevia) {
+        const existe = Array.from(select.options).some(o => o.value === seleccionPrevia);
+        if (existe) select.value = seleccionPrevia;
+    }
+}
+
+async function cambiarVisibilidadMenuTienda(nombreProducto, disponible) {
+    try {
+        const res = await fetch('/api/menu_visibilidad', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ producto: nombreProducto, disponible: disponible })
+        });
+        const data = await res.json();
+        if (data.status === 'exito') {
+            renderizarMenuYStock(); // Refresca la lista unificada
+            Swal.fire({
+                toast: true, position: 'top-end', icon: disponible ? 'success' : 'info',
+                title: `${nombreProducto}: ${disponible ? 'Activado en Tienda' : 'Oculto de Tienda'}`,
+                showConfirmButton: false, timer: 1800, background: '#FAF0EB', color: '#2D1E18'
+            });
+        }
+    } catch (e) {
+        Swal.fire('Error', 'No se pudo actualizar la visibilidad en tienda', 'error');
+    }
+}
+
 function abrirModalRenombrarProducto(nombreActual) {
     Swal.fire({
         title: `Renombrar producto`,
@@ -3357,23 +3457,3 @@ async function cargarControlVisibilidadMenu() {
     }
 }
 
-async function cambiarVisibilidadMenuTienda(nombreProducto, disponible) {
-    try {
-        const res = await fetch('/api/menu_visibilidad', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ producto: nombreProducto, disponible: disponible })
-        });
-        const data = await res.json();
-        if (data.status === 'exito') {
-            cargarControlVisibilidadMenu();
-            Swal.fire({
-                toast: true, position: 'top-end', icon: disponible ? 'success' : 'info',
-                title: `${nombreProducto}: ${disponible ? 'Activado en Tienda' : 'Oculto de Tienda'}`,
-                showConfirmButton: false, timer: 1800, background: '#FAF0EB', color: '#2D1E18'
-            });
-        }
-    } catch (e) {
-        Swal.fire('Error', 'No se pudo actualizar la visibilidad en tienda', 'error');
-    }
-}
