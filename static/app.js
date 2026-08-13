@@ -97,7 +97,7 @@ function obtenerPrecioDesdeObjeto(prod) {
 function obtenerExtraRelleno(nombreProducto) {
     if (!nombreProducto) return 0;
     const nombre = nombreProducto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (nombre.includes('jamon') || nombre.includes('queso')) return 50;
+    if (nombre.includes('jamon') || nombre.includes('queso') || nombre.includes('creme') || nombre.includes('crema')) return 50;
     if (nombre.includes('dulce de leche') || nombre.includes('ddl') || nombre.includes('dulce')) return 30;
     return 0;
 }
@@ -119,10 +119,17 @@ function agregarAlPedido() {
         return;
     }
 
+    let salsasArray = [];
+    if (prodNombre.toLowerCase().includes('pop')) {
+        let numSalsas = prodNombre.toLowerCase().includes('9') ? 1 : 2;
+        salsasArray = Array(numSalsas).fill("Dulce de Leche");
+    }
+
     carrito.push({
         producto: prodNombre,
         cantidad: cant,
         con_jalea: false,
+        salsas: salsasArray,
         precio_unitario: 0,
         subtotal: 0
     });
@@ -131,14 +138,10 @@ function agregarAlPedido() {
     renderizarCarrito();
 }
 
-function toggleJaleaItem(index) {
-    carrito[index].con_jalea = !carrito[index].con_jalea;
-    renderizarCarrito();
-}
-
-function eliminarDelCarrito(index) {
-    carrito.splice(index, 1);
-    renderizarCarrito();
+function actualizarSalsaItem(itemIndex, salsaIndex, valor) {
+    if (carrito[itemIndex] && carrito[itemIndex].salsas) {
+        carrito[itemIndex].salsas[salsaIndex] = valor;
+    }
 }
 
 function renderizarCarrito() {
@@ -191,15 +194,39 @@ function renderizarCarrito() {
         const claseJalea = item.con_jalea ? 'active' : '';
         const textoJalea = item.con_jalea ? 'Con Jalea' : 'Sin Jalea';
 
+        let selectorSalsasHtml = '';
+        if (esPop) {
+            const OpcionesSalsas = ["Dulce de Leche", "Frutilla", "Jalea"];
+            let selectores = '';
+            for (let i = 0; i < item.salsas.length; i++) {
+                const salsaActual = item.salsas[i] || "Dulce de Leche";
+                let opcionesHtml = OpcionesSalsas.map(s => `<option value="${s}" ${s === salsaActual ? 'selected' : ''}>${s}</option>`).join('');
+                selectores += `
+                    <div style="margin-top:4px;">
+                        <small style="font-size:0.7rem; font-weight:700; color:#7A6B63;">Salsa ${i + 1}:</small>
+                        <select onchange="actualizarSalsaItem(${index}, ${i}, this.value)" style="padding:3px 8px; font-size:0.75rem; border-radius:8px; border:1px solid #D8CFC8; background:#FFFFFF;">
+                            ${opcionesHtml}
+                        </select>
+                    </div>
+                `;
+            }
+            selectorSalsasHtml = `<div style="margin-top:6px; background:#FAF0EB; padding:8px; border-radius:10px; border:1px dashed #C86D28;">${selectores}</div>`;
+        }
+
+        const selectorJaleaHtml = !esPop ? `
+            <button type="button" class="btn-jalea-chip ${claseJalea}" onclick="toggleJaleaItem(${index})">
+                ${textoJalea}
+            </button>
+        ` : '';
+
         const div = document.createElement('div');
         div.className = 'cart-item';
         div.innerHTML = `
             <div>
                 <strong>${item.cantidad}x ${item.producto}</strong><br>
-                <button type="button" class="btn-jalea-chip ${claseJalea}" onclick="toggleJaleaItem(${index})">
-                    ${textoJalea}
-                </button>
-                <small style="color:#64748b; display:block; margin-top:2px;">$${precioUnitario} c/u</small>
+                ${selectorJaleaHtml}
+                ${selectorSalsasHtml}
+                <small style="color:#64748b; display:block; margin-top:4px;">$${precioUnitario} c/u</small>
             </div>
             <div style="text-align: right;">
                 <span style="font-weight: bold; margin-right: 8px;">$${subtotal}</span>
@@ -209,7 +236,6 @@ function renderizarCarrito() {
         listEl.appendChild(div);
     });
 
-    // Cálculo final con Descuento aplicado
     const montoDescuento = Math.round(totalGeneralBruto * (descuentoPorcentaje / 100));
     const totalFinal = Math.max(0, totalGeneralBruto - montoDescuento);
 
@@ -222,6 +248,16 @@ function renderizarCarrito() {
     } else {
         totalEl.innerText = totalFinal;
     }
+}
+
+function toggleJaleaItem(index) {
+    carrito[index].con_jalea = !carrito[index].con_jalea;
+    renderizarCarrito();
+}
+
+function eliminarDelCarrito(index) {
+    carrito.splice(index, 1);
+    renderizarCarrito();
 }
 
 function actualizarMedioPagoSegunEstado() {
@@ -2035,6 +2071,16 @@ function abrirModalSumarCongelados() {
 // ==========================================
 // CLIENTES Y DIRECTORIO CRM
 // ==========================================
+// --- FUNCIONES CRM ---
+
+function guardarPlantillaPromo() {
+    const txt = document.getElementById('txtPlantillaPromo').value;
+    localStorage.setItem('croiss_promo_msg', txt);
+    Swal.fire({
+        title: 'Guardado', text: 'Plantilla de WhatsApp actualizada.', icon: 'success', timer: 1500, showConfirmButton: false
+    });
+}
+
 function cambiarSegmentoCliente(segmento) {
     document.querySelectorAll('#sec-clientes .seg-btn').forEach(b => b.classList.remove('active'));
     document.querySelectorAll('#sec-clientes .sub-seccion').forEach(s => s.classList.remove('active'));
@@ -2043,10 +2089,179 @@ function cambiarSegmentoCliente(segmento) {
         document.getElementById('segBtnLista').classList.add('active');
         document.getElementById('subSecLista').classList.add('active');
         datosClientesGlobal.subOrigen = 'lista';
-    } else {
+    } else if (segmento === 'promo') {
         document.getElementById('segBtnPromo').classList.add('active');
         document.getElementById('subSecPromo').classList.add('active');
         datosClientesGlobal.subOrigen = 'promo';
+    } else {
+        document.getElementById('segBtnMensajes').classList.add('active');
+        document.getElementById('subSecMensajes').classList.add('active');
+        datosClientesGlobal.subOrigen = 'mensajes';
+        const txtArea = document.getElementById('txtPlantillaPromo');
+        if (txtArea) txtArea.value = localStorage.getItem('croiss_promo_msg') || '¡Hola {nombre}! Te escribimos de Croiss para regalarte este cupón...';
+    }
+}
+
+function renderizarListaDirectorio(lista) {
+    const contDirectorio = document.getElementById('listaClientesDirectorio');
+    const labelCant = document.getElementById('cantClientesLabel');
+    
+    if (labelCant) labelCant.innerText = `Directorio General (${lista ? lista.length : 0} clientes)`;
+    if (!contDirectorio) return;
+
+    contDirectorio.innerHTML = '';
+    if (!lista || lista.length === 0) {
+        contDirectorio.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:20px 0;">No se encontraron clientes.</p>';
+        return;
+    }
+
+    lista.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'ios-cliente-row compact';
+        div.style.cursor = 'pointer';
+        div.onclick = (e) => { e.preventDefault(); verDetalleCliente(c); };
+
+        const idTag = c.id_cliente ? `<small style="color:var(--accent); font-weight:700; margin-right:6px;">[${c.id_cliente}]</small>` : '';
+
+        // Días de inactividad
+        let txtUltimaCompra = 'Sin compras';
+        if (c.dias_sin_comprar !== undefined && c.dias_sin_comprar !== 999) {
+            if (c.dias_sin_comprar === 0) txtUltimaCompra = 'Compró Hoy';
+            else if (c.dias_sin_comprar < 0) txtUltimaCompra = 'Pedido Futuro';
+            else txtUltimaCompra = `Hace ${c.dias_sin_comprar} día(s)`;
+        }
+
+        div.innerHTML = `
+            <div>
+                <strong>${idTag}${c.nombre || 'Sin nombre'}</strong><br>
+                <small style="color:var(--text-muted);">${c.total_pedidos || 0} ped. - ${c.total_croissants || 0} cl. | ${c.total_pops || 0} pop</small><br>
+                <small style="color:#C86D28; font-weight:700;">Última vez: ${txtUltimaCompra}</small>
+            </div>
+            <div style="display:flex; align-items:center; gap:6px;">
+                <strong style="color:var(--text-main); font-size:0.9rem;">$${c.total_gastado || 0}</strong>
+                <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
+            </div>
+        `;
+        contDirectorio.appendChild(div);
+    });
+}
+
+function verDetalleCliente(clienteObj) {
+    if (!clienteObj) return;
+    clienteDetalleActual = clienteObj;
+
+    document.querySelectorAll('#sec-clientes .sub-seccion').forEach(s => s.classList.remove('active'));
+    const secDetalle = document.getElementById('subSecDetalle');
+    if (secDetalle) secDetalle.classList.add('active');
+
+    const elNom = document.getElementById('detClienteNombre');
+    if (elNom) {
+        const catBadge = clienteObj.categoria ? `<span style="font-size:0.75rem; background:#FAF0EB; color:var(--accent); border:1px solid #F7DFC8; padding:3px 10px; border-radius:12px; font-weight:800; margin-left:8px; vertical-align:middle;">${clienteObj.categoria}</span>` : '';
+        elNom.innerHTML = `${clienteObj.nombre || 'Cliente'}${catBadge}`;
+    }
+
+    const elStats = document.getElementById('detClienteStats');
+    if (elStats) {
+        let txtUltimaCompra = 'Sin datos';
+        
+        if (clienteObj.dias_sin_comprar !== undefined && clienteObj.dias_sin_comprar !== 999) {
+            if (clienteObj.dias_sin_comprar < 0) {
+                txtUltimaCompra = 'Pedido Agendado';
+            } else if (clienteObj.dias_sin_comprar === 0) {
+                txtUltimaCompra = 'Hoy';
+            } else {
+                txtUltimaCompra = `Hace ${clienteObj.dias_sin_comprar} día${clienteObj.dias_sin_comprar > 1 ? 's' : ''}`;
+            }
+        }
+
+        elStats.innerHTML = `
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; text-align: left;">
+                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
+                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">🥐 Sabor Favorito</small>
+                    <strong style="color: var(--text-main); font-size: 0.88rem;">${clienteObj.sabor_favorito || 'Variado'}</strong>
+                </div>
+                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
+                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">💵 Ticket Promedio</small>
+                    <strong style="color: #16A34A; font-size: 0.88rem;">$${clienteObj.ticket_promedio || 0} / pedido</strong>
+                </div>
+                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
+                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">📊 Cantidades</small>
+                    <strong style="color: var(--accent); font-size: 0.88rem;">${clienteObj.total_croissants || 0} cl. | ${clienteObj.total_pops || 0} pop</strong>
+                </div>
+                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
+                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">🗓️ Última Compra</small>
+                    <strong style="color: var(--text-main); font-size: 0.88rem;">${txtUltimaCompra}</strong>
+                </div>
+            </div>
+        `;
+    }
+
+    const contContacto = document.getElementById('detClienteContacto');
+    if (contContacto) {
+        let datosStr = [];
+        if (clienteObj.telefono) datosStr.push(`Tel: ${clienteObj.telefono}`);
+        if (clienteObj.email) datosStr.push(`Email: ${clienteObj.email}`);
+        
+        let dirTexto = clienteObj.direccion ? `<br><span style="color:var(--text-main); font-weight:600;">Dir: ${clienteObj.direccion}</span>` : '';
+        let mapsBtn = clienteObj.direccion ? ` <button type="button" class="btn-jalea-chip" style="margin-left:6px; font-size:0.7rem; padding: 2px 8px;" onclick="abrirGoogleMaps('${encodeURIComponent(clienteObj.direccion)}')">Abrir Maps</button>` : '';
+
+        let telLimpio = (clienteObj.telefono || '').replace(/\D/g, ''); 
+        if (telLimpio.startsWith('0')) telLimpio = telLimpio.substring(1); 
+        if (telLimpio && !telLimpio.startsWith('598')) telLimpio = '598' + telLimpio; 
+
+        let btnWhatsApp = '';
+        if (telLimpio) {
+            // AQUÍ OCURRE LA MAGIA DEL PUNTO 4 Y PUNTO 5:
+            // Saca solo el primer nombre
+            let primerNombre = (clienteObj.nombre || '').trim().split(' ')[0];
+            // Lee la plantilla guardada o usa una por defecto
+            let msgPlantilla = localStorage.getItem('croiss_promo_msg') || '¡Hola {nombre}! Te escribimos de CROISS 🥐 ¿Cómo estás?';
+            
+            let msgText = encodeURIComponent(msgPlantilla.replace(/\{nombre\}/gi, primerNombre));
+            
+            btnWhatsApp = `<a href="https://wa.me/${telLimpio}?text=${msgText}" target="_blank" class="btn-jalea-chip" style="background:#25D366; color:white; border:none; padding:6px 12px; font-size:0.78rem; text-decoration:none; font-weight:700; margin-right:6px; display:inline-block;">💬 Abrir WhatsApp</a>`;
+        }
+
+        const btnEditar = `<button type="button" class="btn-jalea-chip active" style="font-size:0.78rem; padding:6px 12px;" onclick="abrirModalEditarCliente()">✏️ Editar Datos</button>`;
+        
+        contContacto.innerHTML = `
+            <div>${datosStr.join(' | ') || 'Sin datos de contacto'}${dirTexto}${mapsBtn}</div>
+            <div style="margin-top:10px; display:flex; gap:6px;">${btnWhatsApp}${btnEditar}</div>
+        `;
+    }
+
+    const contHist = document.getElementById('detClienteHistorial');
+    if (contHist) {
+        contHist.innerHTML = '';
+        const historial = Array.isArray(clienteObj.historial) ? clienteObj.historial : [];
+        if (historial.length === 0) {
+            contHist.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin pedidos en el historial.</p>';
+            return;
+        }
+
+        historial.forEach(h => {
+            const estPago = h.estado_pago || h.estado || 'Pendiente';
+            const estEntrega = String(h.estado_entrega || h.entrega || '').trim().toLowerCase();
+            const colorPago = estPago.toLowerCase() === 'pagado' ? '#16a34a' : '#dc2626';
+
+            let estEntregaBadge = estEntrega.includes('entregad') ? '<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">🚚 Entregado</span>' : '<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">⏳ Por Entregar</span>';
+            const nombreEscapado = (clienteObj.nombre || '').replace(/'/g, "\\'");
+
+            const div = document.createElement('div');
+            div.className = 'historial-compra-card';
+            div.innerHTML = `
+                <div>
+                    <strong>Fecha: ${h.fecha || 'Sin fecha'}</strong> <small style="color:${colorPago}; font-weight:700;">[${estPago}]</small> ${estEntregaBadge}<br>
+                    <span style="font-size:0.85rem; color:#334155; margin-top:4px; display:inline-block;">${h.producto || '-'}</span>
+                </div>
+                <div style="text-align:right;">
+                    <strong style="color:var(--text-main); font-size:0.95rem;">$${h.monto || 0}</strong><br>
+                    <small style="color:var(--accent); font-weight:700;">${h.cantidad || 0} un.</small><br>
+                    ${h.fila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarPedido(${h.fila}, '${nombreEscapado}')">Eliminar</button>` : ''}
+                </div>
+            `;
+            contHist.appendChild(div);
+        });
     }
 }
 
@@ -2140,158 +2355,6 @@ function renderizarRankingMes(rankingLista) {
         `;
         contRanking.appendChild(div);
     });
-}
-
-function renderizarListaDirectorio(lista) {
-    const contDirectorio = document.getElementById('listaClientesDirectorio');
-    const labelCant = document.getElementById('cantClientesLabel');
-    
-    if (labelCant) labelCant.innerText = `Directorio General (${lista ? lista.length : 0} clientes)`;
-    if (!contDirectorio) return;
-
-    contDirectorio.innerHTML = '';
-    if (!lista || lista.length === 0) {
-        contDirectorio.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:20px 0;">No se encontraron clientes.</p>';
-        return;
-    }
-
-    lista.forEach(c => {
-        const div = document.createElement('div');
-        div.className = 'ios-cliente-row compact';
-        div.style.cursor = 'pointer';
-        div.onclick = (e) => { e.preventDefault(); verDetalleCliente(c); };
-
-        const idTag = c.id_cliente ? `<small style="color:var(--accent); font-weight:700; margin-right:6px;">[${c.id_cliente}]</small>` : '';
-
-        div.innerHTML = `
-            <div>
-                <strong>${idTag}${c.nombre || 'Sin nombre'}</strong><br>
-                <small style="color:var(--text-muted);">${c.total_pedidos || 0} ped. - ${c.total_croissants || 0} cl. | ${c.total_pops || 0} pop</small>
-            </div>
-            <div style="display:flex; align-items:center; gap:6px;">
-                <strong style="color:var(--text-main); font-size:0.9rem;">$${c.total_gastado || 0}</strong>
-                <span style="color:#CBD5E1; font-weight:bold; font-size:1rem;">></span>
-            </div>
-        `;
-        contDirectorio.appendChild(div);
-    });
-}
-
-function verDetalleCliente(clienteObj) {
-    if (!clienteObj) return;
-    clienteDetalleActual = clienteObj;
-
-    document.querySelectorAll('#sec-clientes .sub-seccion').forEach(s => s.classList.remove('active'));
-    const secDetalle = document.getElementById('subSecDetalle');
-    if (secDetalle) secDetalle.classList.add('active');
-
-    const elNom = document.getElementById('detClienteNombre');
-    if (elNom) {
-        const catBadge = clienteObj.categoria ? `<span style="font-size:0.75rem; background:#FAF0EB; color:var(--accent); border:1px solid #F7DFC8; padding:3px 10px; border-radius:12px; font-weight:800; margin-left:8px; vertical-align:middle;">${clienteObj.categoria}</span>` : '';
-        elNom.innerHTML = `${clienteObj.nombre || 'Cliente'}${catBadge}`;
-    }
-
-    const elStats = document.getElementById('detClienteStats');
-    if (elStats) {
-        let txtUltimaCompra = 'Sin datos';
-        
-        if (clienteObj.dias_sin_comprar !== undefined && clienteObj.dias_sin_comprar !== 999) {
-            if (clienteObj.dias_sin_comprar < 0) {
-                txtUltimaCompra = 'Pedido Agendado';
-            } else if (clienteObj.dias_sin_comprar === 0) {
-                txtUltimaCompra = 'Hoy';
-            } else {
-                txtUltimaCompra = `Hace ${clienteObj.dias_sin_comprar} día${clienteObj.dias_sin_comprar > 1 ? 's' : ''}`;
-            }
-        }
-
-        elStats.innerHTML = `
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; text-align: left;">
-                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
-                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">🥐 Sabor Favorito</small>
-                    <strong style="color: var(--text-main); font-size: 0.88rem;">${clienteObj.sabor_favorito || 'Variado'}</strong>
-                </div>
-                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
-                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">💵 Ticket Promedio</small>
-                    <strong style="color: #16A34A; font-size: 0.88rem;">$${clienteObj.ticket_promedio || 0} / pedido</strong>
-                </div>
-                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
-                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">📊 Cantidades</small>
-                    <strong style="color: var(--accent); font-size: 0.88rem;">${clienteObj.total_croissants || 0} cl. | ${clienteObj.total_pops || 0} pop</strong>
-                </div>
-                <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 12px; padding: 10px;">
-                    <small style="color: var(--text-muted); font-size: 0.68rem; font-weight: 700; text-transform: uppercase; display: block;">🗓️ Última Compra</small>
-                    <strong style="color: var(--text-main); font-size: 0.88rem;">${txtUltimaCompra}</strong>
-                </div>
-            </div>
-        `;
-    }
-
-    const contContacto = document.getElementById('detClienteContacto');
-    if (contContacto) {
-        let datosStr = [];
-        if (clienteObj.telefono) datosStr.push(`Tel: ${clienteObj.telefono}`);
-        if (clienteObj.email) datosStr.push(`Email: ${clienteObj.email}`);
-        
-        let dirTexto = clienteObj.direccion ? `<br><span style="color:var(--text-main); font-weight:600;">Dir: ${clienteObj.direccion}</span>` : '';
-        let mapsBtn = clienteObj.direccion ? ` <button type="button" class="btn-jalea-chip" style="margin-left:6px; font-size:0.7rem; padding: 2px 8px;" onclick="abrirGoogleMaps('${encodeURIComponent(clienteObj.direccion)}')">Abrir Maps</button>` : '';
-
-        // 🟢 NORMALIZACIÓN AUTOMÁTICA DE TELÉFONO (+598 Uruguay)
-        let telLimpio = (clienteObj.telefono || '').replace(/\D/g, ''); // Deja solo números
-        if (telLimpio.startsWith('0')) {
-            telLimpio = telLimpio.substring(1); // Quita el "0" inicial (ej: 099123456 -> 99123456)
-        }
-        if (telLimpio && !telLimpio.startsWith('598')) {
-            telLimpio = '598' + telLimpio; // Le agrega el +598 si no lo tiene (ej: 59899123456)
-        }
-
-        let btnWhatsApp = '';
-        if (telLimpio) {
-            let msgText = encodeURIComponent(`¡Hola ${clienteObj.nombre}! Te escribimos de CROISS 🥐 ¿Cómo estás?`);
-            btnWhatsApp = `<a href="https://wa.me/${telLimpio}?text=${msgText}" target="_blank" class="btn-jalea-chip" style="background:#25D366; color:white; border:none; padding:6px 12px; font-size:0.78rem; text-decoration:none; font-weight:700; margin-right:6px; display:inline-block;">💬 Abrir WhatsApp</a>`;
-        }
-
-        const btnEditar = `<button type="button" class="btn-jalea-chip active" style="font-size:0.78rem; padding:6px 12px;" onclick="abrirModalEditarCliente()">✏️ Editar Datos</button>`;
-        
-        contContacto.innerHTML = `
-            <div>${datosStr.join(' | ') || 'Sin datos de contacto'}${dirTexto}${mapsBtn}</div>
-            <div style="margin-top:10px; display:flex; gap:6px;">${btnWhatsApp}${btnEditar}</div>
-        `;
-    }
-
-    const contHist = document.getElementById('detClienteHistorial');
-    if (contHist) {
-        contHist.innerHTML = '';
-        const historial = Array.isArray(clienteObj.historial) ? clienteObj.historial : [];
-        if (historial.length === 0) {
-            contHist.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">Sin pedidos en el historial.</p>';
-            return;
-        }
-
-        historial.forEach(h => {
-            const estPago = h.estado_pago || h.estado || 'Pendiente';
-            const estEntrega = String(h.estado_entrega || h.entrega || '').trim().toLowerCase();
-            const colorPago = estPago.toLowerCase() === 'pagado' ? '#16a34a' : '#dc2626';
-
-            let estEntregaBadge = estEntrega.includes('entregad') ? '<span style="background:#dcfce7; color:#15803d; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">🚚 Entregado</span>' : '<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">⏳ Por Entregar</span>';
-            const nombreEscapado = (clienteObj.nombre || '').replace(/'/g, "\\'");
-
-            const div = document.createElement('div');
-            div.className = 'historial-compra-card';
-            div.innerHTML = `
-                <div>
-                    <strong>Fecha: ${h.fecha || 'Sin fecha'}</strong> <small style="color:${colorPago}; font-weight:700;">[${estPago}]</small> ${estEntregaBadge}<br>
-                    <span style="font-size:0.85rem; color:#334155; margin-top:4px; display:inline-block;">${h.producto || '-'}</span>
-                </div>
-                <div style="text-align:right;">
-                    <strong style="color:var(--text-main); font-size:0.95rem;">$${h.monto || 0}</strong><br>
-                    <small style="color:var(--accent); font-weight:700;">${h.cantidad || 0} un.</small><br>
-                    ${h.fila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarPedido(${h.fila}, '${nombreEscapado}')">Eliminar</button>` : ''}
-                </div>
-            `;
-            contHist.appendChild(div);
-        });
-    }
 }
 
 function abrirModalEditarCliente() {
@@ -2658,6 +2721,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const tInicio = Date.now();
             mostrarCroissLoader();
 
+            // Mapeamos el carrito para unir las salsas al string de producto
+            const carritoProcesado = carrito.map(item => {
+                let detalleSalsas = (item.salsas && item.salsas.length > 0) ? ` (Salsas: ${item.salsas.join(', ')})` : '';
+                return {
+                    producto: item.producto + detalleSalsas,
+                    cantidad: item.cantidad,
+                    con_jalea: item.con_jalea
+                };
+            });
+
             const payload = {
                 fecha: getInputValueSafe('vFecha', hoy),
                 fecha_entrega: getInputValueSafe('vFechaEntrega', hoy),
@@ -2665,7 +2738,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 telefono: getInputValueSafe('vTelefonoCliente'),
                 email: getInputValueSafe('vEmailCliente'),
                 direccion: getInputValueSafe('vDireccionCliente'),
-                items: carrito,
+                items: carritoProcesado,
                 monto_total: montoFinalNeto,
                 descuento: descuentoPorcentaje,
                 estado: getInputValueSafe('vEstado', 'Pendiente'),
@@ -2673,6 +2746,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 notas: getInputValueSafe('vNotasCliente')
             };
 
+            // Resto de la petición igual...
             try {
                 const res = await fetch('/api/venta', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},

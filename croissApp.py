@@ -766,7 +766,6 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
             "cajas_grande": 0, "cajas_mediana": 0, "cajas_chica": 0, "papel": 0
         }
     
-    # Obtener precios dinámicos de la receta
     costos_dinamicos = obtener_costos_receta_dinamicos()
     c_base = costos_dinamicos["croissant_base"]
     c_pop = costos_dinamicos["pop_base"]
@@ -792,19 +791,17 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
                 c_item = 1
                 sabor_item = sin_jalea_str.lower()
             
-            # Asignación de costo base
             if "pop" in sabor_item:
                 c_unit = c_pop
             else:
                 c_unit = c_base
 
-            # Rellenos
-            if "jamon" in sabor_item or "jamón" in sabor_item or "queso" in sabor_item:
+            # Rellenos (Se agrega Creme/Crema con el mismo costo)
+            if "jamon" in sabor_item or "jamón" in sabor_item or "queso" in sabor_item or "creme" in sabor_item or "crema" in sabor_item:
                 c_unit += costos_dinamicos["extra_salado"]
             elif "dulce" in sabor_item or "ddl" in sabor_item:
                 c_unit += costos_dinamicos["extra_dulce"]
             
-            # Pincelada de Jalea
             if tiene_jalea:
                 c_unit += c_jalea
 
@@ -1523,7 +1520,7 @@ def obtener_clientes():
             try: monto = float(get_field_val(v, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
             except ValueError: monto = 0.0
 
-            # ESTE ES EL EQUIVALENTE (usado para desempatar/ordenar el ranking)
+            # Equivalente (usado para desempatar/ordenar el ranking) - 9 pop = 3 croiss (1 batch)
             cant_horno = int(get_field_val(v, "Cantidad")) if get_field_val(v, "Cantidad").isdigit() else 0
             key_norm = cliente_nombre.lower()
 
@@ -1567,9 +1564,12 @@ def obtener_clientes():
             clientes_historico[key_norm]["total_gastado"] += monto
             clientes_historico[key_norm]["total_croissants"] += cant_clasicos
             clientes_historico[key_norm]["total_pops"] += cant_pops
-            clientes_historico[key_norm]["score_ranking"] += cant_horno
             clientes_historico[key_norm]["total_pedidos"] += 1
             clientes_historico[key_norm]["historial"].append(pedido_item)
+
+            # SOLO SUMAMOS PUNTOS AL RANKING SI EL PEDIDO COSTÓ MÁS DE $0
+            if monto > 0:
+                clientes_historico[key_norm]["score_ranking"] += cant_horno
 
             if desc_prod:
                 for item in desc_prod.split(","):
@@ -1598,9 +1598,12 @@ def obtener_clientes():
                 clientes_mes[key_norm]["total_gastado"] += monto
                 clientes_mes[key_norm]["total_croissants"] += cant_clasicos
                 clientes_mes[key_norm]["total_pops"] += cant_pops
-                clientes_mes[key_norm]["score_ranking"] += cant_horno
                 clientes_mes[key_norm]["total_pedidos"] += 1
                 clientes_mes[key_norm]["historial"].append(pedido_item)
+
+                # SOLO SUMAMOS PUNTOS AL RANKING DEL MES SI EL PEDIDO COSTÓ MÁS DE $0
+                if monto > 0:
+                    clientes_mes[key_norm]["score_ranking"] += cant_horno
 
         for key, c in clientes_historico.items():
             c["total_gastado"] = round(c["total_gastado"], 2)
@@ -1647,7 +1650,7 @@ def obtener_clientes():
         lista_historico.sort(key=lambda x: x["nombre"].lower())
 
         lista_mes = list(clientes_mes.values())
-        # ORDEN DE PRIORIDAD: PRIMERO POR EQUIVALENCIA Y LUEGO POR GASTADO
+        # ORDEN DE PRIORIDAD: 1ro por puntos de Croissants Grandes/Pop(1/3), 2do desempata el que más dinero gastó
         lista_mes.sort(key=lambda x: (x["score_ranking"], x["total_gastado"]), reverse=True)
         for c in lista_mes: c["total_gastado"] = round(c["total_gastado"], 2)
 

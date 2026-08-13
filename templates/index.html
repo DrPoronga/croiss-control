@@ -482,6 +482,7 @@
                         <div class="ios-segmented-control" style="margin-bottom: 20px;">
                             <button id="segBtnLista" class="seg-btn active" onclick="cambiarSegmentoCliente('lista')">Directorio General</button>
                             <button id="segBtnPromo" class="seg-btn" onclick="cambiarSegmentoCliente('promo')">Cliente del Mes</button>
+                            <button id="segBtnMensajes" class="seg-btn" onclick="cambiarSegmentoCliente('mensajes')">Promociones</button>
                         </div>
                         <div id="subSecLista" class="sub-seccion active">
 							<div style="margin-bottom: 12px; width: 100%;">
@@ -510,6 +511,18 @@
 							</div>
 							<div id="listaClientesRanking" class="ios-list-container">Cargando ranking del mes...</div>
 						</div>
+
+                        <!-- NUEVA PESTAÑA: PROMOCIONES -->
+                        <div id="subSecMensajes" class="sub-seccion">
+                            <div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 18px; padding: 16px;">
+                                <h4 style="font-size: 0.95rem; font-weight: 800; color: var(--text-main); margin-bottom: 10px;">Plantilla Promocional (WhatsApp)</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Escribe el mensaje para enviar ofertas. Usa <strong>{nombre}</strong> donde quieras que se pre-pople automáticamente el nombre del cliente.</p>
+                                
+                                <textarea id="txtPlantillaPromo" rows="6" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-color); border-radius: 12px; font-family: inherit; font-size: 0.88rem; outline: none; resize: vertical; box-sizing: border-box;" placeholder="Ejemplo: ¡Hola {nombre}! Te escribimos de Croiss para regalarte este cupón..."></textarea>
+                                
+                                <button type="button" class="btn-submit" style="margin-top: 14px;" onclick="guardarPlantillaPromo()">💾 Guardar Plantilla</button>
+                            </div>
+                        </div>
 						
 						<div id="subSecDetalle" class="sub-seccion">
                             <button type="button" class="btn-jalea-chip active" style="margin-bottom: 14px;" onclick="volverASeccionAnterior()">Volver</button>
@@ -521,9 +534,7 @@
                             <h4 style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px; text-transform: uppercase;">Historial de Compras</h4>
                             <div id="detClienteHistorial" class="ios-list-container">Cargando historial...</div>
                         </div>
-                    </div>
-                </div>
-
+						
             </div>
         </div>
     </div>
