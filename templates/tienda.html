@@ -469,7 +469,10 @@
             const el = document.getElementById(idSeccion);
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
-
+		function verMenuPublico() {
+            scrollToSection('step-card-1');
+        }
+		
         function mostrarCroissLoader() {
             if (!croissImagePreload.src) croissImagePreload.src = '/static/croissant.png';
             Swal.fire({
@@ -533,12 +536,12 @@
             render();
         }
 
-        async function fetchCatalogo() {
+       async function fetchCatalogo() {
 			try {
 				const res = await fetch('/api/public/catalogo');
 				const data = await res.json();
 				if(data.status === 'exito' && Array.isArray(data.productos) && data.productos.length > 0) {
-					menuItems = data.productos.map(p => {
+					let lista = data.productos.map(p => {
 						let nombreLimpio = p.nombre || '';
 						if (nombreLimpio.toLowerCase().includes('sal') && !nombreLimpio.toLowerCase().includes('croisstzel')) {
 							if (nombreLimpio.toLowerCase().includes('jamon') || nombreLimpio.toLowerCase().includes('queso')) {
@@ -546,11 +549,27 @@
 							} else if (nombreLimpio.toLowerCase().includes('dulce') || nombreLimpio.toLowerCase().includes('ddl')) {
 								nombreLimpio = "Croisstzel c/ Dulce de Leche (+ $30)";
 							} else {
-								nombreLimpio = "Croisstzel (Tu Croiss Clásico con sal en escamas)";
+								nombreLimpio = "Croisstzel (Tu Croissant Clásico con sal en escamas)";
 							}
+						} else if (nombreLimpio.toLowerCase().includes('creme') || nombreLimpio.toLowerCase().includes('crema')) {
+							nombreLimpio = "Croiss a la Creme (Relleno de Crema Pastelera)";
 						}
 						return { ...p, nombre: nombreLimpio };
 					});
+
+					// Reordenar dinámicamente para ubicar Croiss a la Creme abajo de Dulce de Leche
+					const idxCreme = lista.findIndex(p => p.nombre.toLowerCase().includes('creme') || p.nombre.toLowerCase().includes('crema'));
+					if (idxCreme !== -1) {
+						const itemCreme = lista.splice(idxCreme, 1)[0];
+						const idxDulce = lista.findIndex(p => p.nombre.toLowerCase().includes('dulce') || p.nombre.toLowerCase().includes('ddl'));
+						if (idxDulce !== -1) {
+							lista.splice(idxDulce + 1, 0, itemCreme);
+						} else {
+							lista.push(itemCreme);
+						}
+					}
+
+					menuItems = lista;
 				}
 			} catch(e) { console.error(e); }
 			renderProducts();
