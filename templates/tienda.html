@@ -470,7 +470,18 @@
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
 		function verMenuPublico() {
-            scrollToSection('step-card-1');
+            Swal.fire({
+                title: 'Menú CROISS 🥐',
+                html: `
+                    <div style="max-height: 70vh; overflow-y: auto; padding-right: 4px; text-align: center;">
+                        <img src="{{ url_for('static', filename='menu.png') }}" style="width: 100%; border-radius: 14px; margin-bottom: 12px; border: 1px solid #EFEAE6;" alt="Menú 1">
+                        <img src="{{ url_for('static', filename='menu2.jpg') }}" style="width: 100%; border-radius: 14px; border: 1px solid #EFEAE6;" alt="Menú 2">
+                    </div>
+                `,
+                showConfirmButton: true,
+                confirmButtonText: 'Cerrar Carta',
+                customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' }
+            });
         }
 		
         function mostrarCroissLoader() {
