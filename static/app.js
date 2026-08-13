@@ -2696,7 +2696,7 @@ async function cargarStock(forzar = false) {
             // Si aún no está en Google Sheets, lo inyectamos al menú desplegable
             if (!existeCreme) {
                 catalogoProductos.push({
-                    "Nombre": "Croiss a la Creme (+ $50)",
+                    "Nombre": "Croiss a la Creme",
                     "Precio Venta": 190
                 });
             }
