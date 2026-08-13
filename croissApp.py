@@ -1031,6 +1031,7 @@ def api_public_catalogo():
     try:
         sheet = conectar_sheet("Productos_Stock")
         productos = get_clean_records(sheet)
+        estado_menu = obtener_estado_menu()
         menu_publico = []
         
         for prod in productos:
@@ -1039,6 +1040,10 @@ def api_public_catalogo():
             if not nombre or any(k in name_lower for k in ["congelado", "sobrevendido", "masa"]):
                 continue
             
+            # Si el administrador lo apagó desde index.html, no lo mostramos en la tienda
+            if estado_menu.get(name_lower) is False:
+                continue
+
             raw_precio = get_field_val(prod, "Precio Venta", "Precio", "precio")
             try:
                 precio = float(str(raw_precio).replace("$", "").replace(",", ".").strip())
@@ -1047,10 +1052,53 @@ def api_public_catalogo():
 
             menu_publico.append({"nombre": nombre, "precio": precio})
 
+        # Si Croiss a la Creme no está aún en Sheets pero está activo en el panel, se incluye
+        existe_creme = any(("creme" in p["nombre"].lower() or "crema" in p["nombre"].lower()) for p in menu_publico)
+        if not existe_creme and estado_menu.get("croiss a la creme (+ $50)") is not False:
+            menu_publico.append({"nombre": "Croiss a la Creme (+ $50)", "precio": 190})
+
         return jsonify({"status": "exito", "productos": menu_publico}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
+MENU_ESTADO_FILE = "menu_estado.json"
 
+def obtener_estado_menu():
+    if os.path.exists(MENU_ESTADO_FILE):
+        try:
+            with open(MENU_ESTADO_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {}
+
+def guardar_estado_menu(estado):
+    try:
+        with open(MENU_ESTADO_FILE, "w", encoding="utf-8") as f:
+            json.dump(estado, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        print(f"Error guardando estado menu: {e}", flush=True)
+
+@app.route('/api/menu_visibilidad', methods=['GET', 'POST'])
+def api_menu_visibilidad():
+    try:
+        if request.method == 'POST':
+            datos = request.json or {}
+            nombre_prod = str(datos.get("producto", "")).strip().lower()
+            disponible = bool(datos.get("disponible", True))
+            
+            if not nombre_prod:
+                return jsonify({"status": "error", "mensaje": "Producto no especificado"}), 400
+                
+            estado = obtener_estado_menu()
+            estado[nombre_prod] = disponible
+            guardar_estado_menu(estado)
+            return jsonify({"status": "exito", "mensaje": "Estado de menú actualizado"}), 200
+
+        return jsonify({"status": "exito", "estado": obtener_estado_menu()}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 @app.route('/api/public/fechas', methods=['GET'])
 @limiter.limit("30 per minute")
 def api_public_fechas():

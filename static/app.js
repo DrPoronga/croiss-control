@@ -445,18 +445,53 @@ function autocompletarDatosCliente() {
 
 ///
 
-async function cargarStockPop() {
+async function cargarStock(forzar = false) {
+    if (isFetchingStock) return;
+    cargarSugerenciasClientes();
+
+    if (catalogoProductos.length > 0 && !forzar) {
+        renderizarMenuYStock();
+        return;
+    }
+
+    isFetchingStock = true;
     try {
-        const res = await fetch('/api/stock/pop');
+        const res = await fetch('/api/stock');
         const data = await res.json();
-        if (data.status === 'exito') {
-            const elPop = document.getElementById('cantPopCongelados');
-            const elMasasPop = document.getElementById('cantMasasPop');
-            if (elPop) elPop.innerText = `${data.pop_congelados} un.`;
-            if (elMasasPop) elMasasPop.innerText = `${data.pop_masas} masas`;
+        if (data.status === 'exito' && Array.isArray(data.productos)) {
+            catalogoProductos = data.productos;
+
+            // Verificamos si "Croiss a la Creme" ya existe en la lista de la planilla
+            const existeCreme = catalogoProductos.some(p => {
+                const nom = obtenerNombreDesdeObjeto(p).toLowerCase();
+                return nom.includes('creme') || nom.includes('crema');
+            });
+
+            // Si aún no está en Google Sheets, lo inyectamos justo debajo de Dulce de Leche
+            if (!existeCreme) {
+                const itemCreme = {
+                    "Nombre": "Croiss a la Creme (+ $50)",
+                    "Precio Venta": 190
+                };
+
+                const idxDulce = catalogoProductos.findIndex(p => {
+                    const nom = obtenerNombreDesdeObjeto(p).toLowerCase();
+                    return nom.includes('dulce') || nom.includes('ddl');
+                });
+
+                if (idxDulce !== -1) {
+                    catalogoProductos.splice(idxDulce + 1, 0, itemCreme);
+                } else {
+                    catalogoProductos.push(itemCreme);
+                }
+            }
+
+            renderizarMenuYStock();
         }
-    } catch (e) {
-        console.error("Error cargando stock pop:", e);
+    } catch (err) {
+        console.error("Error al cargar stock:", err);
+    } finally {
+        isFetchingStock = false;
     }
 }
 
@@ -2589,6 +2624,7 @@ async function cargarStock(forzar = false) {
 }
 
 function renderizarMenuYStock() {
+	cargarControlVisibilidadMenu();
     const select = document.getElementById('vProductoSelect');
     const lista = document.getElementById('listaStock');
     const seleccionPrevia = select ? select.value : '';
@@ -3210,5 +3246,73 @@ async function guardarPreciosInsumos(e) {
         cerrarCroissLoaderSeguro();
         console.error("Error guardando precios:", err);
         Swal.fire('Error', 'No se pudo guardar la información', 'error');
+    }
+}
+
+async function cargarControlVisibilidadMenu() {
+    const cont = document.getElementById('listaControlVisibilidadMenu');
+    if (!cont) return;
+
+    try {
+        const res = await fetch('/api/menu_visibilidad');
+        const data = await res.json();
+        const estadoMenu = data.estado || {};
+
+        cont.innerHTML = '';
+
+        if (!catalogoProductos || catalogoProductos.length === 0) {
+            cont.innerHTML = '<p style="font-size:0.8rem; color:#94a3b8; text-align:center;">Cargando menú...</p>';
+            return;
+        }
+
+        catalogoProductos.forEach(prod => {
+            const nombre = obtenerNombreDesdeObjeto(prod);
+            const nameLower = (nombre || '').toLowerCase();
+
+            if (!nombre || nameLower.includes('congelado') || nameLower.includes('sobrevendido') || nameLower.includes('masa')) return;
+
+            const estaActivo = estadoMenu[nameLower] !== false; // Activo por defecto a menos que sea explicitamente false
+            const checkedAttr = estaActivo ? 'checked' : '';
+            const statusText = estaActivo ? '<span style="color:#16A34A; font-weight:800;">ON (Visible)</span>' : '<span style="color:#DC2626; font-weight:800;">OFF (Oculto)</span>';
+
+            const div = document.createElement('div');
+            div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed var(--border-color); font-size: 0.88rem;';
+            div.innerHTML = `
+                <div>
+                    <strong>${nombre}</strong><br>
+                    <small id="txtStatus-${nameLower.replace(/[^a-z0-0]/gi, '')}">${statusText}</small>
+                </div>
+                <label style="position: relative; display: inline-block; width: 44px; height: 24px; margin: 0;">
+                    <input type="checkbox" ${checkedAttr} onchange="cambiarVisibilidadMenuTienda('${nombre.replace(/'/g, "\\'")}', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                    <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: ${estaActivo ? '#16A34A' : '#CBD5E1'}; transition: .3s; border-radius: 24px;">
+                        <span style="position: absolute; content: ''; height: 18px; width: 18px; left: ${estaActivo ? '22px' : '3px'}; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;"></span>
+                    </span>
+                </label>
+            `;
+            cont.appendChild(div);
+        });
+    } catch (e) {
+        console.error("Error cargando interruptores de menú:", e);
+    }
+}
+
+async function cambiarVisibilidadMenuTienda(nombreProducto, disponible) {
+    try {
+        const res = await fetch('/api/menu_visibilidad', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ producto: nombreProducto, disponible: disponible })
+        });
+        const data = await res.json();
+        if (data.status === 'exito') {
+            cargarControlVisibilidadMenu();
+            Swal.fire({
+                toast: true, position: 'top-end', icon: disponible ? 'success' : 'info',
+                title: `${nombreProducto}: ${disponible ? 'Activado en Tienda' : 'Oculto de Tienda'}`,
+                showConfirmButton: false, timer: 1800, background: '#FAF0EB', color: '#2D1E18'
+            });
+        }
+    } catch (e) {
+        Swal.fire('Error', 'No se pudo actualizar la visibilidad en tienda', 'error');
     }
 }
