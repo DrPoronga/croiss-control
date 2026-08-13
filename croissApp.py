@@ -1054,8 +1054,8 @@ def api_public_catalogo():
 
         # Si Croiss a la Creme no está aún en Sheets pero está activo en el panel, se incluye
         existe_creme = any(("creme" in p["nombre"].lower() or "crema" in p["nombre"].lower()) for p in menu_publico)
-        if not existe_creme and estado_menu.get("croiss a la creme (+ $50)") is not False:
-            menu_publico.append({"nombre": "Croiss a la Creme (+ $50)", "precio": 190})
+        if not existe_creme and estado_menu.get("croiss a la creme") is not False:
+            menu_publico.append({"nombre": "Croiss a la Creme", "precio": 190})
 
         return jsonify({"status": "exito", "productos": menu_publico}), 200
     except Exception as error:
