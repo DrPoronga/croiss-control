@@ -2414,6 +2414,25 @@ def marcar_en_camino():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
+@app.route('/api/stock/renombrar_producto', methods=['POST'])
+def renombrar_producto():
+    try:
+        datos = request.json or {}
+        nombre_actual = str(datos.get("nombre_actual", "")).strip()
+        nombre_nuevo = str(datos.get("nombre_nuevo", "")).strip()
+
+        if not nombre_actual or not nombre_nuevo:
+            return jsonify({"status": "error", "mensaje": "Ingresa un nombre válido"}), 400
+
+        sheet_stock = conectar_sheet("Productos_Stock")
+        celda = sheet_stock.find(re.compile(rf"^{re.escape(nombre_actual)}$", re.IGNORECASE))
+        if not celda:
+            return jsonify({"status": "error", "mensaje": f"No se encontró el producto {nombre_actual}"}), 404
+
+        ejecutar_con_reintento(sheet_stock.update_cell, celda.row, celda.col, nombre_nuevo)
+        return jsonify({"status": "exito", "mensaje": f"Producto renombrado a '{nombre_nuevo}'"}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
        
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
