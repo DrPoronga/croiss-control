@@ -2658,14 +2658,80 @@ function renderizarMenuYStock() {
         }
     });
 
-    if (lista && productosRenderizados === 0) {
-        lista.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay productos cargados en el menú.</p>';
-    }
+    if (lista) {
+            const precioVenta = obtenerPrecioDesdeObjeto(prod);
+            const nomEscapado = nombreProd.replace(/'/g, "\\'");
+            const div = document.createElement('div');
+            div.className = 'stock-item';
+            div.style.padding = '12px';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
 
+            div.innerHTML = `
+                <div>
+                    <strong>${nombreProd}</strong><br>
+                    <small style="color:var(--text-muted); font-weight:600;">$${precioVenta} c/u</small>
+                </div>
+                <div>
+                    <button type="button" class="btn-jalea-chip active" style="font-size:0.75rem; padding: 4px 10px; margin:0;" onclick="abrirModalRenombrarProducto('${nomEscapado}')">✏️ Nombre</button>
+                </div>
+            `;
+            lista.appendChild(div);
+        }
     if (select && seleccionPrevia) {
         const existe = Array.from(select.options).some(o => o.value === seleccionPrevia);
         if (existe) select.value = seleccionPrevia;
     }
+}
+
+function abrirModalRenombrarProducto(nombreActual) {
+    Swal.fire({
+        title: `Renombrar producto`,
+        html: `
+            <div style="text-align:left; margin-top:10px;">
+                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NOMBRE ACTUAL:</label>
+                <div style="font-weight:800; font-size:0.95rem; color:var(--text-main); margin-bottom:12px;">${nombreActual}</div>
+                <label style="font-size:0.75rem; font-weight:700; color:var(--text-muted); display:block; margin-bottom:4px;">NUEVO NOMBRE EN MENÚ:</label>
+                <input type="text" id="swalNuevoNombreInput" class="croiss-swal-input" value="${nombreActual}" placeholder="Ej: Croissant Especial">
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Guardar Nombre',
+        cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
+        preConfirm: () => {
+            const inputVal = document.getElementById('swalNuevoNombreInput').value.trim();
+            if (!inputVal) {
+                Swal.showValidationMessage('Debes ingresar un nombre válido.');
+                return false;
+            }
+            return inputVal;
+        }
+    }).then(async (result) => {
+        if (result.isConfirmed && result.value) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const res = await fetch('/api/stock/renombrar_producto', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ nombre_actual: nombreActual, nombre_nuevo: result.value })
+                });
+                const data = await res.json();
+                await esperarAnimacionMinima(tInicio, 2200);
+
+                if (data.status === 'exito') {
+                    mostrarCroissExito('Nombre Actualizado', data.mensaje);
+                    cargarTodoElStock();
+                } else {
+                    Swal.fire('Error', data.mensaje, 'error');
+                }
+            } catch (e) {
+                Swal.fire('Error', 'No se pudo cambiar el nombre del producto', 'error');
+            }
+        }
+    });
 }
 
 function actualizarUIStockCongelados(data) {
