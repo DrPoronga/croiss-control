@@ -2566,6 +2566,21 @@ async function cargarStock(forzar = false) {
         const data = await res.json();
         if (data.status === 'exito' && Array.isArray(data.productos)) {
             catalogoProductos = data.productos;
+
+            // Verificamos si "Croiss a la Creme" ya existe en la lista de la planilla
+            const existeCreme = catalogoProductos.some(p => {
+                const nom = obtenerNombreDesdeObjeto(p).toLowerCase();
+                return nom.includes('creme') || nom.includes('crema');
+            });
+
+            // Si aún no se ha agregado manualmente a Google Sheets, lo inyecta automáticamente al menú
+            if (!existeCreme) {
+                catalogoProductos.push({
+                    "Nombre": "Croiss a la Creme (+ $50)",
+                    "Precio Venta": 190
+                });
+            }
+
             renderizarMenuYStock();
         }
     } catch (err) {
