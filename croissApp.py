@@ -2433,6 +2433,6 @@ def renombrar_producto():
         return jsonify({"status": "exito", "mensaje": f"Producto renombrado a '{nombre_nuevo}'"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-       
+        
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
