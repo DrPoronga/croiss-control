@@ -2567,16 +2567,14 @@ async function cargarStock(forzar = false) {
         if (data.status === 'exito' && Array.isArray(data.productos)) {
             catalogoProductos = data.productos;
 
-            // Verificamos si "Croiss a la Creme" ya existe en la lista de la planilla
             const existeCreme = catalogoProductos.some(p => {
                 const nom = obtenerNombreDesdeObjeto(p).toLowerCase();
                 return nom.includes('creme') || nom.includes('crema');
             });
 
-            // Si aún no se ha agregado manualmente a Google Sheets, lo inyecta automáticamente al menú
             if (!existeCreme) {
                 catalogoProductos.push({
-                    "Nombre": "Croiss a la Creme",
+                    "Nombre": "Croiss a la Creme (+ $50)",
                     "Precio Venta": 190
                 });
             }
@@ -2669,44 +2667,6 @@ function actualizarUIStockCongelados(data) {
             if (elSobrevendidos) elSobrevendidos.style.color = '#15803D';
             if (elMasas) elMasas.style.color = '#16A34A';
         }
-    }
-}
-async function cargarStock(forzar = false) {
-    if (isFetchingStock) return;
-    cargarSugerenciasClientes();
-
-    if (catalogoProductos.length > 0 && !forzar) {
-        renderizarMenuYStock();
-        return;
-    }
-
-    isFetchingStock = true;
-    try {
-        const res = await fetch('/api/stock');
-        const data = await res.json();
-        if (data.status === 'exito' && Array.isArray(data.productos)) {
-            catalogoProductos = data.productos;
-
-            // Verificamos si "Croiss a la Creme" ya existe en la lista de la planilla
-            const existeCreme = catalogoProductos.some(p => {
-                const nom = obtenerNombreDesdeObjeto(p).toLowerCase();
-                return nom.includes('creme') || nom.includes('crema');
-            });
-
-            // Si aún no está en Google Sheets, lo inyectamos al menú desplegable
-            if (!existeCreme) {
-                catalogoProductos.push({
-                    "Nombre": "Croiss a la Creme",
-                    "Precio Venta": 190
-                });
-            }
-
-            renderizarMenuYStock();
-        }
-    } catch (err) {
-        console.error("Error al cargar stock:", err);
-    } finally {
-        isFetchingStock = false;
     }
 }
 
