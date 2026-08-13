@@ -2624,7 +2624,7 @@ async function cargarStock(forzar = false) {
 }
 
 function renderizarMenuYStock() {
-	cargarControlVisibilidadMenu();
+    cargarControlVisibilidadMenu();
     const select = document.getElementById('vProductoSelect');
     const lista = document.getElementById('listaStock');
     const seleccionPrevia = select ? select.value : '';
@@ -2637,7 +2637,6 @@ function renderizarMenuYStock() {
         const nombreProd = obtenerNombreDesdeObjeto(prod);
         const nameLower = (nombreProd || '').toLowerCase();
 
-        // FILTRO CORREGIDO: Ignorar congelados, sobrevendidos y masas internas
         if (!nombreProd || nameLower.includes('congelado') || nameLower.includes('sobrevendido') || nameLower.includes('masa')) return;
 
         productosRenderizados++;
@@ -2649,16 +2648,6 @@ function renderizarMenuYStock() {
         }
 
         if (lista) {
-            const precioVenta = obtenerPrecioDesdeObjeto(prod);
-            const div = document.createElement('div');
-            div.className = 'stock-item';
-            div.style.padding = '12px';
-            div.innerHTML = `<div><strong>${nombreProd}</strong><br><small style="color:var(--text-muted); font-weight:600;">$${precioVenta} c/u</small></div>`;
-            lista.appendChild(div);
-        }
-    });
-
-    if (lista) {
             const precioVenta = obtenerPrecioDesdeObjeto(prod);
             const nomEscapado = nombreProd.replace(/'/g, "\\'");
             const div = document.createElement('div');
@@ -2679,6 +2668,12 @@ function renderizarMenuYStock() {
             `;
             lista.appendChild(div);
         }
+    });
+
+    if (lista && productosRenderizados === 0) {
+        lista.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay productos cargados en el menú.</p>';
+    }
+
     if (select && seleccionPrevia) {
         const existe = Array.from(select.options).some(o => o.value === seleccionPrevia);
         if (existe) select.value = seleccionPrevia;
