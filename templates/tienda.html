@@ -688,7 +688,8 @@
                     totalMoney += precioFijo * cart[k].cantidad;
                 } else {
                     let extra = 0;
-                    if(kLower.includes('jamon') || kLower.includes('jamón') || kLower.includes('queso') || kLower.includes('salado')) extra = 50;
+                    // Detecta Jamón, Queso, Salado y también Creme / Crema (+ $50 extra)
+                    if(kLower.includes('jamon') || kLower.includes('jamón') || kLower.includes('queso') || kLower.includes('salado') || kLower.includes('creme') || kLower.includes('crema')) extra = 50;
                     else if(kLower.includes('dulce') || kLower.includes('ddl')) extra = 30;
 
                     totalMoney += (basePrice + extra) * cart[k].cantidad;
@@ -696,7 +697,7 @@
             }
             return { totalCroissants, totalMoney, basePrice };
         }
-
+		
         function updateSubtotal() {
 			const calc = calculatePrices();
 			const subtotalEl = document.getElementById('shopSubtotalText');
