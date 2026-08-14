@@ -535,47 +535,6 @@ def calcular_unidades_normales(items):
             total_normales += cant
     return total_normales
 
-# ==========================================
-# LECTURA ROBUSTA DE FILAS DE STOCK (Sugerencia de fix)
-# ==========================================
-def obtener_niveles_stock(sheet_stock):
-    all_values = sheet_stock.get_all_values()
-    col_stock = 4
-    if all_values:
-        headers = [str(h).strip().lower() for h in all_values[0]]
-        for idx, h in enumerate(headers, start=1):
-            if "stock" in h:
-                col_stock = idx
-                break
-
-    row_cong, st_cong = None, 0
-    row_masas, st_masas = None, 0
-
-    if all_values and len(all_values) > 1:
-        for r_idx, row in enumerate(all_values[1:], start=2):
-            nom = str(row[1] if len(row) > 1 else "").lower().strip()
-            val_st = str(row[col_stock - 1] if col_stock - 1 < len(row) else "0").replace(",", ".").strip()
-            try: st_num = max(0, int(float(val_st)))
-            except ValueError: st_num = 0
-
-            if "congelado" in nom and "pop" not in nom and row_cong is None:
-                row_cong, st_cong = r_idx, st_num
-            elif "masa" in nom and "pop" not in nom and row_masas is None:
-                row_masas, st_masas = r_idx, st_num
-
-    # Crear la fila solo si de verdad no existe
-    if row_cong is None:
-        ejecutar_con_reintento(sheet_stock.append_row, ["CONG-001", "Croissants Congelados", 0, 0])
-        row_cong = len(all_values) + 1 if all_values else 2
-        st_cong = 0
-        all_values.append(["CONG-001", "Croissants Congelados", "0", "0"])
-
-    if row_masas is None:
-        ejecutar_con_reintento(sheet_stock.append_row, ["MASA-001", "Masas Heladera", 0, 0])
-        row_masas = len(all_values) + 1 if all_values else 3
-        st_masas = 0
-
-    return row_cong, row_masas, col_stock, st_cong, st_masas
 
 # ==========================================
 # CACHÉ EN MEMORIA PARA PRECIOS DE INSUMOS
@@ -699,48 +658,75 @@ def api_precios_insumos():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
-def obtener_niveles_stock_pop(sheet_stock):
+def obtener_niveles_stock(sheet_stock):
     all_values = sheet_stock.get_all_values()
     col_stock = 4
-    if all_values:
+    if all_values and len(all_values) > 0:
         headers = [str(h).strip().lower() for h in all_values[0]]
         for idx, h in enumerate(headers, start=1):
             if "stock" in h:
                 col_stock = idx
                 break
 
+    col_letter = chr(64 + col_stock) if 1 <= col_stock <= 26 else "D"
+
+    row_cong, st_cong = None, 0
+    row_masas, st_masas = None, 0
+
+    if all_values and len(all_values) > 1:
+        for r_idx, row in enumerate(all_values[1:], start=2):
+            row_text = " ".join([str(c).lower().strip() for idx, c in enumerate(row) if idx != col_stock - 1])
+            val_st = str(row[col_stock - 1] if col_stock - 1 < len(row) else "0").replace(",", ".").strip()
+            try: st_num = max(0, int(float(val_st)))
+            except ValueError: st_num = 0
+
+            if ("congelado" in row_text or "freezer" in row_text) and "pop" not in row_text and row_cong is None:
+                row_cong, st_cong = r_idx, st_num
+            elif ("masa" in row_text or "heladera" in row_text) and "pop" not in row_text and row_masas is None:
+                row_masas, st_masas = r_idx, st_num
+
+    if row_cong is None:
+        ejecutar_con_reintento(sheet_stock.append_row, ["CONG-001", "Croissants Congelados", 0, 0])
+        all_values = sheet_stock.get_all_values()
+        row_cong = len(all_values)
+        st_cong = 0
+
+    if row_masas is None:
+        ejecutar_con_reintento(sheet_stock.append_row, ["MASA-001", "Masas Heladera", 0, 0])
+        all_values = sheet_stock.get_all_values()
+        row_masas = len(all_values)
+        st_masas = 0
+
+    return row_cong, row_masas, col_stock, col_letter, st_cong, st_masas
+
+
+def obtener_niveles_stock_pop(sheet_stock):
+    all_values = sheet_stock.get_all_values()
+    col_stock = 4
+    if all_values and len(all_values) > 0:
+        headers = [str(h).strip().lower() for h in all_values[0]]
+        for idx, h in enumerate(headers, start=1):
+            if "stock" in h:
+                col_stock = idx
+                break
+
+    col_letter = chr(64 + col_stock) if 1 <= col_stock <= 26 else "D"
+
     row_pop_cong, st_pop_cong = None, 0
     row_pop_masas, st_pop_masas = None, 0
 
     if all_values and len(all_values) > 1:
         for r_idx, row in enumerate(all_values[1:], start=2):
-            nom = str(row[1] if len(row) > 1 else "").lower().strip()
+            row_text = " ".join([str(c).lower().strip() for idx, c in enumerate(row) if idx != col_stock - 1])
             val_st = str(row[col_stock - 1] if col_stock - 1 < len(row) else "0").replace(",", ".").strip()
             try: st_num = max(0, int(float(val_st)))
             except ValueError: st_num = 0
 
-            # 1. Búsqueda flexible de Pop en Freezer / Congelados
-            if "pop" in nom and ("congelado" in nom or "freezer" in nom or "suelta" in nom) and row_pop_cong is None:
+            if "pop" in row_text and ("congelado" in row_text or "freezer" in row_text or "suelta" in row_text) and row_pop_cong is None:
                 row_pop_cong, st_pop_cong = r_idx, st_num
-            # 2. Búsqueda flexible de Masas Pop
-            elif "pop" in nom and ("masa" in nom or "heladera" in nom) and row_pop_masas is None:
+            elif "pop" in row_text and ("masa" in row_text or "heladera" in row_text) and row_pop_masas is None:
                 row_pop_masas, st_pop_masas = r_idx, st_num
 
-    # Respaldos de búsqueda si no matcheó con las palabras compuestas
-    if row_pop_cong is None or row_pop_masas is None:
-        if all_values and len(all_values) > 1:
-            for r_idx, row in enumerate(all_values[1:], start=2):
-                nom = str(row[1] if len(row) > 1 else "").lower().strip()
-                val_st = str(row[col_stock - 1] if col_stock - 1 < len(row) else "0").replace(",", ".").strip()
-                try: st_num = max(0, int(float(val_st)))
-                except ValueError: st_num = 0
-
-                if "pop" in nom and "masa" not in nom and row_pop_cong is None:
-                    row_pop_cong, st_pop_cong = r_idx, st_num
-                elif "pop" in nom and "masa" in nom and row_pop_masas is None:
-                    row_pop_masas, st_pop_masas = r_idx, st_num
-
-    # Si realmente no existe en la planilla, la crea una sola vez
     if row_pop_cong is None:
         ejecutar_con_reintento(sheet_stock.append_row, ["POP-001", "Pop Croiss Congelados", 0, 0])
         all_values = sheet_stock.get_all_values()
@@ -753,7 +739,7 @@ def obtener_niveles_stock_pop(sheet_stock):
         row_pop_masas = len(all_values)
         st_pop_masas = 0
 
-    return row_pop_cong, row_pop_masas, col_stock, st_pop_cong, st_pop_masas
+    return row_pop_cong, row_pop_masas, col_stock, col_letter, st_pop_cong, st_pop_masas
     
 def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
     """
@@ -1370,16 +1356,16 @@ def obtener_agenda():
 def stock_congelados():
     try:
         sheet_stock = conectar_sheet("Productos_Stock")
-        row_cong, row_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
+        row_cong, row_masas, col_stock, col_letter, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
 
         if request.method == 'POST':
             datos = request.json or {}
             st_cong += int(datos.get("congelados", 0))
             st_masas += int(datos.get("masas", 0))
             if row_cong:
-                ejecutar_con_reintento(sheet_stock.update, f"D{row_cong}", [[st_cong]])
+                ejecutar_con_reintento(sheet_stock.update, range_name=f"{col_letter}{row_cong}", values=[[st_cong]])
             if row_masas:
-                ejecutar_con_reintento(sheet_stock.update, f"D{row_masas}", [[st_masas]])
+                ejecutar_con_reintento(sheet_stock.update, range_name=f"{col_letter}{row_masas}", values=[[st_masas]])
 
         return jsonify({
             "status": "exito",
@@ -1400,12 +1386,12 @@ def fijar_stock_congelados():
         st_masas = max(0, int(datos.get("masas", 0)))
 
         sheet_stock = conectar_sheet("Productos_Stock")
-        row_cong, row_masas, col_stock, _, _ = obtener_niveles_stock(sheet_stock)
+        row_cong, row_masas, col_stock, col_letter, _, _ = obtener_niveles_stock(sheet_stock)
 
         if row_cong:
-            ejecutar_con_reintento(sheet_stock.update, f"D{row_cong}", [[st_cong]])
+            ejecutar_con_reintento(sheet_stock.update, range_name=f"{col_letter}{row_cong}", values=[[st_cong]])
         if row_masas:
-            ejecutar_con_reintento(sheet_stock.update, f"D{row_masas}", [[st_masas]])
+            ejecutar_con_reintento(sheet_stock.update, range_name=f"{col_letter}{row_masas}", values=[[st_masas]])
 
         return jsonify({
             "status": "exito", 
@@ -1422,16 +1408,16 @@ def fijar_stock_congelados():
 def stock_pop():
     try:
         sheet_stock = conectar_sheet("Productos_Stock")
-        row_pop_cong, row_pop_masas, col_stock, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
+        row_pop_cong, row_pop_masas, col_stock, col_letter, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
 
         if request.method == 'POST':
             datos = request.json or {}
             st_pop_cong += int(datos.get("congelados", 0))
             st_pop_masas += int(datos.get("masas", 0))
             if row_pop_cong:
-                ejecutar_con_reintento(sheet_stock.update, f"D{row_pop_cong}", [[st_pop_cong]])
+                ejecutar_con_reintento(sheet_stock.update, range_name=f"{col_letter}{row_pop_cong}", values=[[st_pop_cong]])
             if row_pop_masas:
-                ejecutar_con_reintento(sheet_stock.update, f"D{row_pop_masas}", [[st_pop_masas]])
+                ejecutar_con_reintento(sheet_stock.update, range_name=f"{col_letter}{row_pop_masas}", values=[[st_pop_masas]])
 
         return jsonify({
             "status": "exito",
@@ -1452,12 +1438,12 @@ def fijar_stock_pop():
         st_pop_masas = max(0, int(datos.get("masas", 0)))
 
         sheet_stock = conectar_sheet("Productos_Stock")
-        row_pop_cong, row_pop_masas, col_stock, _, _ = obtener_niveles_stock_pop(sheet_stock)
+        row_pop_cong, row_pop_masas, col_stock, col_letter, _, _ = obtener_niveles_stock_pop(sheet_stock)
 
         if row_pop_cong:
-            ejecutar_con_reintento(sheet_stock.update, f"D{row_pop_cong}", [[st_pop_cong]])
+            ejecutar_con_reintento(sheet_stock.update, range_name=f"{col_letter}{row_pop_cong}", values=[[st_pop_cong]])
         if row_pop_masas:
-            ejecutar_con_reintento(sheet_stock.update, f"D{row_pop_masas}", [[st_pop_masas]])
+            ejecutar_con_reintento(sheet_stock.update, range_name=f"{col_letter}{row_pop_masas}", values=[[st_pop_masas]])
 
         return jsonify({
             "status": "exito", 
@@ -1469,7 +1455,7 @@ def fijar_stock_pop():
     except Exception as error:
         print(f"❌ Error en fijar_stock_pop: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+    
 @app.route('/api/eliminar_venta', methods=['POST'])
 def eliminar_venta():
     try:

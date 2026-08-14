@@ -300,8 +300,6 @@ function cerrarCroissLoaderSeguro() {
     const popup = Swal.getPopup();
     if (popup && popup.getAttribute('data-is-loader') === 'true') {
         Swal.close();
-    } else if (Swal.isVisible()) {
-        Swal.close();
     }
 }
 
@@ -534,14 +532,17 @@ function abrirModalEditarCongeladosDirecto() {
                 const data = await r.json();
                 await esperarAnimacionMinima(tInicio, 1800);
 
+                cerrarCroissLoaderSeguro();
+
                 if (data.status === 'exito') {
                     actualizarUIStockCongelados(data);
                     mostrarCroissExito('Stock Actualizado', `Fijados: ${data.congelados} croiss + ${data.masas} masa(s).`);
-                } else { Swal.fire('Error', data.mensaje || 'Error actualizando stock', 'error'); }
+                } else { 
+                    Swal.fire('Error', data.mensaje || 'Error actualizando stock', 'error'); 
+                }
             } catch (err) { 
-                Swal.fire('Error', 'No se pudo actualizar el stock en la planilla', 'error'); 
-            } finally {
                 cerrarCroissLoaderSeguro();
+                Swal.fire('Error', 'No se pudo actualizar el stock en la planilla', 'error'); 
             }
         }
     });
@@ -2021,19 +2022,29 @@ function abrirModalSumarCongelados() {
             const tInicio = Date.now();
             mostrarCroissLoader();
             try {
-                const res = await fetch('/api/stock/congelados', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masas: result.value }) });
+                const res = await fetch('/api/stock/congelados', { 
+                    method: 'POST', 
+                    headers: {'Content-Type': 'application/json'}, 
+                    body: JSON.stringify({ masas: result.value }) 
+                });
                 const data = await res.json();
                 await esperarAnimacionMinima(tInicio, 1800);
+
+                cerrarCroissLoaderSeguro();
 
                 if (data.status === 'exito') {
                     actualizarUIStockCongelados(data);
                     mostrarCroissExito('Masas Agregadas!', `Se sumaron +${result.value} masa(s) (+${result.value * 10} croissants habilitados).`);
-                } else { Swal.fire('Error', data.mensaje, 'error'); }
-            } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
+                } else { 
+                    Swal.fire('Error', data.mensaje || 'No se pudo sumar la masa', 'error'); 
+                }
+            } catch (err) { 
+                cerrarCroissLoaderSeguro();
+                Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); 
+            }
         }
     });
 }
-
 // ==========================================
 // CLIENTES Y DIRECTORIO CRM
 // ==========================================
