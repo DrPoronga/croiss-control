@@ -492,6 +492,61 @@ async function cargarStock(forzar = false) {
     }
 }
 
+function abrirModalEditarCongeladosDirecto() {
+    const croissTxt = document.getElementById('cantCroissCongelados') ? document.getElementById('cantCroissCongelados').innerText.replace(' un.', '').trim() : '0';
+    const masasTxt = document.getElementById('cantSobrevendidos') ? document.getElementById('cantSobrevendidos').innerText.replace(' masas', '').trim() : '0';
+
+    Swal.fire({
+        title: 'Fijar Stock de Producción',
+        html: `
+            <div style="text-align: left; margin-top: 10px; font-size: 0.88rem;">
+                <div style="margin-bottom: 12px;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 4px; color: var(--text-main);">🧊 Croissants Congelados (listos/sueltos):</label>
+                    <input type="number" id="inputFijarCongelados" class="croiss-swal-input" value="${parseInt(croissTxt) || 0}" min="0" placeholder="Ej: 5">
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label style="font-weight: 700; display: block; margin-bottom: 4px; color: var(--accent);">🥣 Masas en Heladera (1 masa = 10 croiss):</label>
+                    <input type="number" id="inputFijarMasas" class="croiss-swal-input" value="${parseInt(masasTxt) || 0}" min="0" placeholder="Ej: 2">
+                </div>
+            </div>
+        `,
+        showCancelButton: true, confirmButtonText: 'Guardar Stock', cancelButtonText: 'Cancelar',
+        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
+        preConfirm: () => {
+            const c = parseInt(document.getElementById('inputFijarCongelados').value);
+            const m = parseInt(document.getElementById('inputFijarMasas').value);
+            if (isNaN(c) || c < 0 || isNaN(m) || m < 0) {
+                Swal.showValidationMessage('Ingresa valores válidos mayores o iguales a 0.');
+                return false;
+            }
+            return { congelados: c, masas: m };
+        }
+    }).then(async (res) => {
+        if (res.isConfirmed) {
+            const tInicio = Date.now();
+            mostrarCroissLoader();
+            try {
+                const r = await fetch('/api/stock/congelados/fijar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(res.value)
+                });
+                const data = await r.json();
+                await esperarAnimacionMinima(tInicio, 1800);
+
+                if (data.status === 'exito') {
+                    actualizarUIStockCongelados(data);
+                    mostrarCroissExito('Stock Actualizado', `Fijados: ${data.congelados} croiss + ${data.masas} masa(s).`);
+                } else { Swal.fire('Error', data.mensaje || 'Error actualizando stock', 'error'); }
+            } catch (err) { 
+                Swal.fire('Error', 'No se pudo actualizar el stock en la planilla', 'error'); 
+            } finally {
+                cerrarCroissLoaderSeguro();
+            }
+        }
+    });
+}
+
 function abrirModalEditarPopDirecto() {
     const popTxt = document.getElementById('cantPopCongelados') ? document.getElementById('cantPopCongelados').innerText.replace(' un.', '').trim() : '0';
     const masasTxt = document.getElementById('cantMasasPop') ? document.getElementById('cantMasasPop').innerText.replace(' masas', '').trim() : '0';
@@ -537,8 +592,12 @@ function abrirModalEditarPopDirecto() {
                 if (data.status === 'exito') {
                     cargarStockPop();
                     mostrarCroissExito('Stock Pop Fijado', `Fijados: ${data.pop_congelados} Pop Croiss.`);
-                } else { Swal.fire('Error', data.mensaje, 'error'); }
-            } catch (err) { Swal.fire('Error', 'No se pudo actualizar el stock Pop', 'error'); }
+                } else { Swal.fire('Error', data.mensaje || 'Error actualizando stock pop', 'error'); }
+            } catch (err) { 
+                Swal.fire('Error', 'No se pudo actualizar el stock Pop', 'error'); 
+            } finally {
+                cerrarCroissLoaderSeguro();
+            }
         }
     });
 }
@@ -1815,56 +1874,6 @@ async function cargarStockCongelados() {
     }
 }
 
-function abrirModalEditarCongeladosDirecto() {
-    const croissTxt = document.getElementById('cantCroissCongelados') ? document.getElementById('cantCroissCongelados').innerText.replace(' un.', '').trim() : '0';
-    const masasTxt = document.getElementById('cantSobrevendidos') ? document.getElementById('cantSobrevendidos').innerText.replace(' masas', '').trim() : '0';
-
-    Swal.fire({
-        title: 'Fijar Stock de Producción',
-        html: `
-            <div style="text-align: left; margin-top: 10px; font-size: 0.88rem;">
-                <div style="margin-bottom: 12px;">
-                    <label style="font-weight: 700; display: block; margin-bottom: 4px; color: var(--text-main);">🧊 Croissants Congelados (listos/sueltos):</label>
-                    <input type="number" id="inputFijarCongelados" class="croiss-swal-input" value="${parseInt(croissTxt) || 0}" min="0" placeholder="Ej: 5">
-                </div>
-                <div style="margin-bottom: 10px;">
-                    <label style="font-weight: 700; display: block; margin-bottom: 4px; color: var(--accent);">🥣 Masas en Heladera (1 masa = 10 croiss):</label>
-                    <input type="number" id="inputFijarMasas" class="croiss-swal-input" value="${parseInt(masasTxt) || 0}" min="0" placeholder="Ej: 2">
-                </div>
-            </div>
-        `,
-        showCancelButton: true, confirmButtonText: 'Guardar Stock', cancelButtonText: 'Cancelar',
-        customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' },
-        preConfirm: () => {
-            const c = parseInt(document.getElementById('inputFijarCongelados').value);
-            const m = parseInt(document.getElementById('inputFijarMasas').value);
-            if (isNaN(c) || c < 0 || isNaN(m) || m < 0) {
-                Swal.showValidationMessage('Ingresa valores válidos mayores o iguales a 0.');
-                return false;
-            }
-            return { congelados: c, masas: m };
-        }
-    }).then(async (res) => {
-        if (res.isConfirmed) {
-            const tInicio = Date.now();
-            mostrarCroissLoader();
-            try {
-                const r = await fetch('/api/stock/congelados/fijar', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(res.value)
-                });
-                const data = await r.json();
-                await esperarAnimacionMinima(tInicio, 1800);
-
-                if (data.status === 'exito') {
-                    actualizarUIStockCongelados(data);
-                    mostrarCroissExito('Stock Actualizado', `Fijados: ${data.congelados} croiss + ${data.masas} masa(s) (Capacidad Total: ${data.capacidad_total} croiss).`);
-                } else { Swal.fire('Error', data.mensaje, 'error'); }
-            } catch (err) { Swal.fire('Error', 'No se pudo actualizar el stock', 'error'); }
-        }
-    });
-}
 
 function abrirModalEditarInsumo(nombreInsumo, stockActual, unidadActual, vencActual) {
     Swal.fire({
