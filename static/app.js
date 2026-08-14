@@ -932,8 +932,6 @@ function cambiarSegmentoBalance(segmento) {
     if (subBal) subBal.classList.toggle('active', segmento === 'balance');
     if (subSab) subSab.classList.toggle('active', segmento === 'sabores');
     if (subEvo) subEvo.classList.toggle('active', segmento === 'evolucion');
-
-    cargarBalance();
 }
 
 function cambiarModoFlujoPrincipal(modo) {
@@ -1799,12 +1797,6 @@ function cambiarSegmentoStock(segmento) {
     if (subCong) subCong.classList.toggle('active', segmento === 'congelados');
     if (subMat) subMat.classList.toggle('active', segmento === 'materiaprima');
     if (subEmp) subEmp.classList.toggle('active', segmento === 'empaque');
-
-    if (segmento === 'congelados') {
-        cargarStockCongelados();
-    } else if (segmento === 'materiaprima' || segmento === 'empaque') {
-        cargarInsumosYGastos();
-    }
 }
 
 async function cargarStockCongelados() {
@@ -1818,98 +1810,6 @@ async function cargarStockCongelados() {
         await cargarStock(true);
     } catch (err) {
         console.error("Error al cargar congelados:", err);
-    }
-}
-
-async function cargarInsumosYGastos() {
-    const tInicio = Date.now();
-    mostrarCroissLoader();
-
-    try {
-        const res = await fetch('/api/gastos_e_insumos');
-        const data = await res.json();
-
-        await esperarAnimacionMinima(tInicio, 1800);
-
-        if (data.status === 'exito') {
-            const contMateriaPrima = document.getElementById('listaMateriaPrimaStock');
-            const contEmpaque = document.getElementById('listaEmpaqueStock');
-            const PalabrasEmpaque = ["caja", "papel", "film", "bolsa", "embalaje", "etiqueta", "cinta", "cajas"];
-
-            let htmlMateriaPrima = '', htmlEmpaque = '';
-
-            if (data.insumos && data.insumos.length > 0) {
-                data.insumos.forEach(ins => {
-                    const nombreInsumo = ins.Insumo || 'Insumo';
-                    const stockVal = ins['Stock Actual'] !== undefined ? ins['Stock Actual'] : 0;
-                    const unidadVal = ins.Unidad || '';
-                    const vencFecha = ins['Vencimiento Proximo'] || ins['Vencimiento Próximo'] || 'Sin fecha';
-                    const esEmpaque = PalabrasEmpaque.some(p => nombreInsumo.toLowerCase().includes(p));
-
-                    const nomEscapado = nombreInsumo.replace(/'/g, "\\'");
-                    const vencEscapado = vencFecha.replace(/'/g, "\\'");
-
-                    const itemHtml = `
-                        <div class="ios-cliente-row compact" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <strong>${nombreInsumo}</strong><br>
-                                <small style="color:var(--text-muted);">${vencFecha !== 'Sin fecha' ? 'Vence: ' + vencFecha : 'Control de Stock'}</small>
-                            </div>
-                            <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
-                                <strong style="color:var(--accent); font-size:1.05rem;">${stockVal} ${unidadVal}</strong>
-                                <div style="display: flex; gap: 4px;">
-                                    <button type="button" class="btn-jalea-chip active" style="font-size:0.7rem; padding: 2px 8px; margin:0;" onclick="abrirModalEditarInsumo('${nomEscapado}', ${stockVal}, '${unidadVal}', '${vencEscapado}')">Editar</button>
-                                    <button type="button" class="btn-remove" style="font-size:0.68rem; padding: 2px 6px;" onclick="eliminarInsumoDirecto('${nomEscapado}')">X</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-
-                    if (esEmpaque) htmlEmpaque += itemHtml;
-                    else htmlMateriaPrima += itemHtml;
-                });
-            }
-
-            if (contMateriaPrima) contMateriaPrima.innerHTML = htmlMateriaPrima || '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay materias primas registradas.</p>';
-            if (contEmpaque) contEmpaque.innerHTML = htmlEmpaque || '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay cajas/empaques registrados.</p>';
-
-            const contGastos = document.getElementById('listaGastosHistorico');
-            if (contGastos) {
-                contGastos.innerHTML = '';
-                if (!data.gastos || data.gastos.length === 0) {
-                    contGastos.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay gastos cargados.</p>';
-                } else {
-                    data.gastos.forEach(g => {
-                        const desc = g.Descripcion || g.descripcion || 'Gasto';
-                        const cat = g.Categoria || g.categoria || 'Otros';
-                        const fecha = g.Fecha || g.fecha || '';
-                        const monto = g.Monto || g.monto || 0;
-                        const cant = g.Cantidad || g.cantidad || 1;
-                        const unidad = g.Unidad || g.unidad || '';
-                        const numFila = g.fila;
-                        const descEscapada = desc.replace(/'/g, "\\'");
-
-                        const div = document.createElement('div');
-                        div.className = 'cuenta-item';
-                        div.innerHTML = `
-                            <div>
-                                <strong>Fecha: ${fecha} - ${desc}</strong> <small style="color:#64748b;">(${cat})</small><br>
-                                <span style="font-size:0.85rem; color:#475569;">Cant: ${cant} ${unidad}</span>
-                            </div>
-                            <div style="text-align:right;">
-                                <strong style="color:#dc2626; font-size:0.95rem;">-$${monto}</strong><br>
-                                ${numFila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarGasto(${numFila}, '${descEscapada}')">Eliminar</button>` : ''}
-                            </div>
-                        `;
-                        contGastos.appendChild(div);
-                    });
-                }
-            }
-        }
-    } catch (err) {
-        console.error("Error cargando inventario:", err);
-    } finally {
-        cerrarCroissLoaderSeguro();
     }
 }
 
@@ -2573,12 +2473,34 @@ function cambiarTab(e, tab) {
         const targetSec = document.getElementById('sec-' + tab);
         if (targetSec) targetSec.classList.add('active');
 
+        // Precarga unificada al entrar a cada sección principal
         if(tab === 'ventas') cargarStock();
         if(tab === 'entregas') cargarTodaLaSeccionAgenda(true);
-        if(tab === 'stock') cargarTodoElStock();
-        if(tab === 'gastos') toggleCamposMateriaPrima();
+        if(tab === 'stock') cargarTodaLaSeccionStock(true);
+        if(tab === 'gastos') cargarTodaLaSeccionGastos(true);
         if(tab === 'balance') cargarBalance();
         if(tab === 'clientes') cargarClientes();
+    }
+}
+
+async function cargarTodaLaSeccionStock(mostrarLoader = true) {
+    const tInicio = Date.now();
+    if (mostrarLoader) mostrarCroissLoader();
+
+    try {
+        await Promise.all([
+            fetch('/api/stock/congelados').then(r => r.json()).then(d => {
+                if (d.status === 'exito') actualizarUIStockCongelados(d);
+            }),
+            cargarStockPop(),
+            cargarStock(true),
+            cargarInsumosYGastos(false)
+        ]);
+        if (mostrarLoader) await esperarAnimacionMinima(tInicio, 1800);
+    } catch (err) {
+        console.error("Error al cargar la sección Stock:", err);
+    } finally {
+        if (mostrarLoader) cerrarCroissLoaderSeguro();
     }
 }
 
@@ -2612,9 +2534,6 @@ function cambiarSegmentoGasto(segmento) {
     if (subNue) subNue.classList.toggle('active', segmento === 'nuevo');
     if (subHis) subHis.classList.toggle('active', segmento === 'historial');
     if (subPre) subPre.classList.toggle('active', segmento === 'precios');
-
-    if (segmento === 'historial') cargarInsumosYGastos();
-    if (segmento === 'precios') cargarPreciosInsumos();
 }
 
 // ==========================================
@@ -3029,15 +2948,125 @@ function abrirPlacaGanador() {
     win.document.close();
 }
 
-async function cargarPreciosInsumos() {
+async function cargarTodaLaSeccionGastos(mostrarLoader = true) {
     const tInicio = Date.now();
-    mostrarCroissLoader();
+    if (mostrarLoader) mostrarCroissLoader();
+
+    try {
+        await Promise.all([
+            cargarInsumosYGastos(false),
+            cargarPreciosInsumos(false)
+        ]);
+        toggleCamposMateriaPrima();
+        if (mostrarLoader) await esperarAnimacionMinima(tInicio, 1800);
+    } catch (err) {
+        console.error("Error cargando sección Gastos:", err);
+    } finally {
+        if (mostrarLoader) cerrarCroissLoaderSeguro();
+    }
+}
+
+async function cargarInsumosYGastos(conLoader = true) {
+    const tInicio = Date.now();
+    if (conLoader) mostrarCroissLoader();
+
+    try {
+        const res = await fetch('/api/gastos_e_insumos');
+        const data = await res.json();
+
+        if (conLoader) await esperarAnimacionMinima(tInicio, 1800);
+
+        if (data.status === 'exito') {
+            const contMateriaPrima = document.getElementById('listaMateriaPrimaStock');
+            const contEmpaque = document.getElementById('listaEmpaqueStock');
+            const PalabrasEmpaque = ["caja", "papel", "film", "bolsa", "embalaje", "etiqueta", "cinta", "cajas"];
+
+            let htmlMateriaPrima = '', htmlEmpaque = '';
+
+            if (data.insumos && data.insumos.length > 0) {
+                data.insumos.forEach(ins => {
+                    const nombreInsumo = ins.Insumo || 'Insumo';
+                    const stockVal = ins['Stock Actual'] !== undefined ? ins['Stock Actual'] : 0;
+                    const unidadVal = ins.Unidad || '';
+                    const vencFecha = ins['Vencimiento Proximo'] || ins['Vencimiento Próximo'] || 'Sin fecha';
+                    const esEmpaque = PalabrasEmpaque.some(p => nombreInsumo.toLowerCase().includes(p));
+
+                    const nomEscapado = nombreInsumo.replace(/'/g, "\\'");
+                    const vencEscapado = vencFecha.replace(/'/g, "\\'");
+
+                    const itemHtml = `
+                        <div class="ios-cliente-row compact" style="margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong>${nombreInsumo}</strong><br>
+                                <small style="color:var(--text-muted);">${vencFecha !== 'Sin fecha' ? 'Vence: ' + vencFecha : 'Control de Stock'}</small>
+                            </div>
+                            <div style="text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px;">
+                                <strong style="color:var(--accent); font-size:1.05rem;">${stockVal} ${unidadVal}</strong>
+                                <div style="display: flex; gap: 4px;">
+                                    <button type="button" class="btn-jalea-chip active" style="font-size:0.7rem; padding: 2px 8px; margin:0;" onclick="abrirModalEditarInsumo('${nomEscapado}', ${stockVal}, '${unidadVal}', '${vencEscapado}')">Editar</button>
+                                    <button type="button" class="btn-remove" style="font-size:0.68rem; padding: 2px 6px;" onclick="eliminarInsumoDirecto('${nomEscapado}')">X</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+
+                    if (esEmpaque) htmlEmpaque += itemHtml;
+                    else htmlMateriaPrima += itemHtml;
+                });
+            }
+
+            if (contMateriaPrima) contMateriaPrima.innerHTML = htmlMateriaPrima || '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay materias primas registradas.</p>';
+            if (contEmpaque) contEmpaque.innerHTML = htmlEmpaque || '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay cajas/empaques registrados.</p>';
+
+            const contGastos = document.getElementById('listaGastosHistorico');
+            if (contGastos) {
+                contGastos.innerHTML = '';
+                if (!data.gastos || data.gastos.length === 0) {
+                    contGastos.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center;">No hay gastos cargados.</p>';
+                } else {
+                    data.gastos.forEach(g => {
+                        const desc = g.Descripcion || g.descripcion || 'Gasto';
+                        const cat = g.Categoria || g.categoria || 'Otros';
+                        const fecha = g.Fecha || g.fecha || '';
+                        const monto = g.Monto || g.monto || 0;
+                        const cant = g.Cantidad || g.cantidad || 1;
+                        const unidad = g.Unidad || g.unidad || '';
+                        const numFila = g.fila;
+                        const descEscapada = desc.replace(/'/g, "\\'");
+
+                        const div = document.createElement('div');
+                        div.className = 'cuenta-item';
+                        div.innerHTML = `
+                            <div>
+                                <strong>Fecha: ${fecha} - ${desc}</strong> <small style="color:#64748b;">(${cat})</small><br>
+                                <span style="font-size:0.85rem; color:#475569;">Cant: ${cant} ${unidad}</span>
+                            </div>
+                            <div style="text-align:right;">
+                                <strong style="color:#dc2626; font-size:0.95rem;">-$${monto}</strong><br>
+                                ${numFila ? `<button type="button" class="btn-remove" style="font-size:0.68rem; padding:2px 6px; margin-top:4px;" onclick="eliminarGasto(${numFila}, '${descEscapada}')">Eliminar</button>` : ''}
+                            </div>
+                        `;
+                        contGastos.appendChild(div);
+                    });
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Error cargando inventario:", err);
+    } finally {
+        if (conLoader) cerrarCroissLoaderSeguro();
+    }
+}
+
+async function cargarPreciosInsumos(conLoader = true) {
+    const tInicio = Date.now();
+    if (conLoader) mostrarCroissLoader();
 
     try {
         const res = await fetch('/api/precios_insumos');
         const responseData = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 1800);
+        if (conLoader) await esperarAnimacionMinima(tInicio, 1800);
 
         if (responseData.status === 'exito') {
             const data = responseData.datos;
@@ -3085,7 +3114,7 @@ async function cargarPreciosInsumos() {
     } catch (err) {
         console.error("Error al cargar precios de insumos:", err);
     } finally {
-        cerrarCroissLoaderSeguro();
+        if (conLoader) cerrarCroissLoaderSeguro();
     }
 }
 
