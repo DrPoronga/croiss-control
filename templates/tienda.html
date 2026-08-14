@@ -931,24 +931,36 @@
 				});
 				const data = await res.json();
 
-				if(data.status === 'exito') {
-					const msgWp = encodeURIComponent(`Hola CROISS! Registré el pedido ${data.id} a nombre de ${payload.cliente} para el día ${selectedDate} en ${zonaNombre}. ¿Cómo coordinamos el pago y horario?`);
-					const wpUrl = `https://wa.me/59899526301?text=${msgWp}`;
+				if (data.status === 'exito') {
+					// Se arma el mensaje pre-poblado con los datos del pedido
+					let resumenProductos = [];
+					for (let k in cart) {
+						if (cart[k] && cart[k].cantidad > 0) {
+							resumenProductos.push(`${cart[k].cantidad}x ${k}`);
+						}
+					}
+
+					let msgWa = `¡Hola! Acabo de registrar mi pedido *#${data.id}* en la web:%0A%0A` +
+								`👤 *Nombre:* ${nombreCliente}%0A` +
+								`📅 *Fecha Entrega:* ${fechaEntrega}%0A` +
+								`🥐 *Pedido:* ${resumenProductos.join(', ')}%0A` +
+								`💵 *Total:* $${montoTotal}%0A` +
+								`📍 *Dirección:* ${direccionCliente}%0A%0A` +
+								`Quedo a la espera para coordinar el pago. ¡Muchas gracias!`;
+
+					let linkWhatsApp = `https://wa.me/59899526301?text=${msgWa}`;
 
 					Swal.fire({
-						title: '¡Pedido Recibido!',
-						html: `
-							<p style="font-size:0.88rem; color:#7A6B63;">Guardamos tu orden <strong>#${data.id}</strong> y te enviamos una copia a tu correo.</p>
-							<p style="font-size:0.85rem; font-weight:700; color:#2D1E18; margin-top:10px;">¿Querés coordinar los detalles por WhatsApp ahora?</p>
-						`,
+						title: '¡Pedido Creado! 🥐',
+						text: 'Haz clic abajo para enviarnos tu pedido por WhatsApp y confirmar la fecha.',
 						icon: 'success',
-						showConfirmButton: true, confirmButtonText: 'Sí',
-						showCancelButton: true, cancelButtonText: 'No',
-						customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm', cancelButton: 'croiss-swal-cancel' }
-					}).then((result) => {
-						if (result.isConfirmed) window.open(wpUrl, '_blank');
-						window.location.reload();
+						confirmButtonText: '💬 Enviar por WhatsApp',
+						customClass: { popup: 'croiss-swal-popup', confirmButton: 'croiss-swal-confirm' },
+						allowOutsideClick: false
+					}).then(() => {
+						window.location.href = linkWhatsApp;
 					});
+				}
 				} else {
 					mostrarAlertaCliente('Atención', data.mensaje, 'error');
 				}
