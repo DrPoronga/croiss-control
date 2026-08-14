@@ -548,6 +548,44 @@ function abrirModalEditarCongeladosDirecto() {
     });
 }
 
+function actualizarUIStockCongelados(data) {
+    const elCong = document.getElementById('cantCroissCongelados');
+    const elSobrevendidos = document.getElementById('cantSobrevendidos');
+    const elMasas = document.getElementById('cantMasasPendientes');
+    const boxContainer = document.getElementById('boxSobrevendidosContainer');
+    const lblTitulo = document.getElementById('lblSobrevendidosTitulo');
+
+    const croiss = data.congelados !== undefined ? data.congelados : 0;
+    const masas = data.masas !== undefined ? data.masas : 0;
+    const capTotal = data.capacidad_total !== undefined ? data.capacidad_total : (croiss + (masas * 10));
+
+    if (elCong) elCong.innerText = `${croiss} un.`;
+    if (elSobrevendidos) elSobrevendidos.innerText = `${masas} masas`;
+    if (elMasas) elMasas.innerText = `(Cap. Total: ${capTotal} croiss)`;
+
+    if (boxContainer) {
+        if (capTotal <= 0) {
+            boxContainer.style.background = '#FEF2F2';
+            boxContainer.style.borderColor = '#FCA5A5';
+            if (lblTitulo) {
+                lblTitulo.style.color = '#991B1B';
+                lblTitulo.innerText = 'Sin Capacidad 🚫';
+            }
+            if (elSobrevendidos) elSobrevendidos.style.color = '#DC2626';
+            if (elMasas) elMasas.style.color = '#B91C1C';
+        } else {
+            boxContainer.style.background = '#F0FDF4';
+            boxContainer.style.borderColor = '#DCFCE7';
+            if (lblTitulo) {
+                lblTitulo.style.color = '#166534';
+                lblTitulo.innerText = 'Masas en Heladera 🥣';
+            }
+            if (elSobrevendidos) elSobrevendidos.style.color = '#15803D';
+            if (elMasas) elMasas.style.color = '#16A34A';
+        }
+    }
+}
+
 function abrirModalEditarPopDirecto() {
     const popTxt = document.getElementById('cantPopCongelados') ? document.getElementById('cantPopCongelados').innerText.replace(' un.', '').trim() : '0';
     const masasTxt = document.getElementById('cantMasasPop') ? document.getElementById('cantMasasPop').innerText.replace(' masas', '').trim() : '0';
