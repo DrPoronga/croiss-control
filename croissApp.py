@@ -1270,8 +1270,9 @@ def obtener_agenda():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
+
 # ==========================================
-# LECTURA Y ACTUALIZACIÓN ROBUSTA DE STOCK
+# LECTURA Y ACTUALIZACIÓN UNIFICADA DE STOCK
 # ==========================================
 def obtener_niveles_stock(sheet_stock):
     all_values = sheet_stock.get_all_values()
@@ -1310,13 +1311,7 @@ def obtener_niveles_stock(sheet_stock):
         row_masas = len(all_values)
         st_masas = 0
 
-    return {
-        "row_cong": row_cong,
-        "row_masas": row_masas,
-        "col_stock": col_stock,
-        "st_cong": st_cong,
-        "st_masas": st_masas
-    }
+    return row_cong, row_masas, col_stock, st_cong, st_masas
 
 
 def obtener_niveles_stock_pop(sheet_stock):
@@ -1356,23 +1351,14 @@ def obtener_niveles_stock_pop(sheet_stock):
         row_pop_masas = len(all_values)
         st_pop_masas = 0
 
-    return {
-        "row_cong": row_pop_cong,
-        "row_masas": row_pop_masas,
-        "col_stock": col_stock,
-        "st_cong": st_pop_cong,
-        "st_masas": st_pop_masas
-    }
+    return row_pop_cong, row_pop_masas, col_stock, st_pop_cong, st_pop_masas
 
 
 @app.route('/api/stock/congelados', methods=['GET', 'POST'])
 def stock_congelados():
     try:
         sheet_stock = conectar_sheet("Productos_Stock")
-        info = obtener_niveles_stock(sheet_stock)
-        row_cong, row_masas = info["row_cong"], info["row_masas"]
-        col_stock = info["col_stock"]
-        st_cong, st_masas = info["st_cong"], info["st_masas"]
+        row_cong, row_masas, col_stock, st_cong, st_masas = obtener_niveles_stock(sheet_stock)
 
         if request.method == 'POST':
             datos = request.json or {}
@@ -1403,9 +1389,7 @@ def fijar_stock_congelados():
         st_masas = max(0, int(datos.get("masas", 0)))
 
         sheet_stock = conectar_sheet("Productos_Stock")
-        info = obtener_niveles_stock(sheet_stock)
-        row_cong, row_masas = info["row_cong"], info["row_masas"]
-        col_stock = info["col_stock"]
+        row_cong, row_masas, col_stock, _, _ = obtener_niveles_stock(sheet_stock)
 
         if row_cong:
             ejecutar_con_reintento(sheet_stock.update_cell, row_cong, col_stock, st_cong)
@@ -1428,10 +1412,7 @@ def fijar_stock_congelados():
 def stock_pop():
     try:
         sheet_stock = conectar_sheet("Productos_Stock")
-        info = obtener_niveles_stock_pop(sheet_stock)
-        row_pop_cong, row_pop_masas = info["row_cong"], info["row_masas"]
-        col_stock = info["col_stock"]
-        st_pop_cong, st_pop_masas = info["st_cong"], info["st_masas"]
+        row_pop_cong, row_pop_masas, col_stock, st_pop_cong, st_pop_masas = obtener_niveles_stock_pop(sheet_stock)
 
         if request.method == 'POST':
             datos = request.json or {}
@@ -1462,9 +1443,7 @@ def fijar_stock_pop():
         st_pop_masas = max(0, int(datos.get("masas", 0)))
 
         sheet_stock = conectar_sheet("Productos_Stock")
-        info = obtener_niveles_stock_pop(sheet_stock)
-        row_pop_cong, row_pop_masas = info["row_cong"], info["row_masas"]
-        col_stock = info["col_stock"]
+        row_pop_cong, row_pop_masas, col_stock, _, _ = obtener_niveles_stock_pop(sheet_stock)
 
         if row_pop_cong:
             ejecutar_con_reintento(sheet_stock.update_cell, row_pop_cong, col_stock, st_pop_cong)
@@ -1481,8 +1460,7 @@ def fijar_stock_pop():
     except Exception as error:
         print(f"❌ Error en fijar_stock_pop: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
-  
+        
 @app.route('/api/eliminar_venta', methods=['POST'])
 def eliminar_venta():
     try:
