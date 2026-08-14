@@ -300,6 +300,8 @@ function cerrarCroissLoaderSeguro() {
     const popup = Swal.getPopup();
     if (popup && popup.getAttribute('data-is-loader') === 'true') {
         Swal.close();
+    } else if (Swal.isVisible()) {
+        Swal.close();
     }
 }
 
@@ -2483,6 +2485,21 @@ function cambiarTab(e, tab) {
     }
 }
 
+async function cargarStockPop() {
+    try {
+        const res = await fetch('/api/stock/pop');
+        const data = await res.json();
+        if (data.status === 'exito') {
+            const elPopCong = document.getElementById('cantPopCongelados');
+            const elMasasPop = document.getElementById('cantMasasPop');
+            if (elPopCong) elPopCong.innerText = `${data.pop_congelados !== undefined ? data.pop_congelados : 0} un.`;
+            if (elMasasPop) elMasasPop.innerText = `${data.pop_masas !== undefined ? data.pop_masas : 0} masas`;
+        }
+    } catch (err) {
+        console.error("Error al cargar stock Pop:", err);
+    }
+}
+
 async function cargarTodaLaSeccionStock(mostrarLoader = true) {
     const tInicio = Date.now();
     if (mostrarLoader) mostrarCroissLoader();
@@ -2491,7 +2508,7 @@ async function cargarTodaLaSeccionStock(mostrarLoader = true) {
         await Promise.all([
             fetch('/api/stock/congelados').then(r => r.json()).then(d => {
                 if (d.status === 'exito') actualizarUIStockCongelados(d);
-            }),
+            }).catch(e => console.error(e)),
             cargarStockPop(),
             cargarStock(true),
             cargarInsumosYGastos(false)
@@ -2503,7 +2520,6 @@ async function cargarTodaLaSeccionStock(mostrarLoader = true) {
         if (mostrarLoader) cerrarCroissLoaderSeguro();
     }
 }
-
 function cambiarSegmentoEntrega(segmento) {
     const btnCue = document.getElementById('segBtnCuentas');
     const btnEnt = document.getElementById('segBtnEntregas');
