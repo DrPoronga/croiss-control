@@ -34,7 +34,7 @@ let ganadoresHistoricosGlobal = [];
 // ==========================================
 // HELPER DE ANIMACIÓN Y TIEMPOS
 // ==========================================
-async function esperarAnimacionMinima(tiempoInicio, minMs = 2200) {
+async function esperarAnimacionMinima(tiempoInicio, minMs = 1800) {
     const transcurrido = Date.now() - tiempoInicio;
     if (transcurrido < minMs) {
         await new Promise(resolve => setTimeout(resolve, minMs - transcurrido));
@@ -530,7 +530,7 @@ function abrirModalEditarPopDirecto() {
                     body: JSON.stringify(res.value)
                 });
                 const data = await r.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     cargarStockPop();
@@ -560,7 +560,7 @@ function abrirModalSumarPop() {
             try {
                 const res = await fetch('/api/stock/pop', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ congelados: result.value }) });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     cargarStockPop();
@@ -586,7 +586,7 @@ async function cargarBalance() {
         const res = await fetch(url);
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 2200);
+        await esperarAnimacionMinima(tInicio, 1800);
 
         if(data.status === 'exito') {
             rankingMesActualGlobal = data.ranking_mes_actual || [];
@@ -1053,18 +1053,35 @@ function renderizarGraficoFlujoPrincipal() {
 // ==========================================
 // AGENDA Y MODAL EDICIÓN DE PEDIDOS
 // ==========================================
-async function cargarAgenda() {
+async function cargarTodaLaSeccionAgenda(mostrarLoader = true) {
+    const tInicio = Date.now();
+    if (mostrarLoader) mostrarCroissLoader();
+
+    try {
+        await Promise.all([
+            cargarCuentas(false),
+            cargarAgenda(false)
+        ]);
+        if (mostrarLoader) await esperarAnimacionMinima(tInicio, 1800);
+    } catch (err) {
+        console.error("Error cargando sección Agenda:", err);
+    } finally {
+        if (mostrarLoader) cerrarCroissLoaderSeguro();
+    }
+}
+
+async function cargarAgenda(conLoader = true) {
     const contenedor = document.getElementById('listaAgenda');
     if(!contenedor) return;
 
     const tInicio = Date.now();
-    mostrarCroissLoader();
+    if (conLoader) mostrarCroissLoader();
 
     try {
         const res = await fetch('/api/agenda');
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 2200);
+        if (conLoader) await esperarAnimacionMinima(tInicio, 1800);
 
         if(data.status === 'exito') {
             contenedor.innerHTML = '';
@@ -1162,7 +1179,7 @@ async function cargarAgenda() {
         console.error("Error al cargar la agenda:", err);
         contenedor.innerHTML = '<p style="color:red; text-align:center;">Error al cargar la agenda.</p>';
     } finally {
-        cerrarCroissLoaderSeguro();
+        if (conLoader) cerrarCroissLoaderSeguro();
     }
 }
 
@@ -1434,12 +1451,11 @@ function abrirEdicionPedido(numFila) {
                     body: JSON.stringify(result.value)
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if(data.status === 'exito') {
                     mostrarCroissExito('Pedido Actualizado', 'Se guardaron los cambios.');
-                    cargarAgenda();
-                    if (typeof cargarCuentas === 'function') cargarCuentas();
+                    cargarTodaLaSeccionAgenda(false);
                 } else { Swal.fire('Error', data.mensaje, 'error'); }
             } catch(e) { Swal.fire('Error', 'No se pudo conectar con el servidor.', 'error'); }
         }
@@ -1523,18 +1539,18 @@ function generarPDFDia(fecha) {
 // ==========================================
 // CUENTAS Y ESTADOS DE ENTREGA
 // ==========================================
-async function cargarCuentas() {
+async function cargarCuentas(conLoader = true) {
     const contPago = document.getElementById('listaPendientesPago');
     const contEntrega = document.getElementById('listaPendientesEntrega');
     const bannerTotal = document.getElementById('cMontoPendienteTotal');
 
     const tInicio = Date.now();
-    mostrarCroissLoader();
+    if (conLoader) mostrarCroissLoader();
 
     try {
         const res = await fetch('/api/cuentas');
         const data = await res.json();
-        await esperarAnimacionMinima(tInicio, 2200);
+        if (conLoader) await esperarAnimacionMinima(tInicio, 1800);
 
         if (data.status === 'exito') {
             if(bannerTotal) bannerTotal.innerText = `$${data.total_por_cobrar}`;
@@ -1642,7 +1658,7 @@ async function cargarCuentas() {
     } catch (err) {
         console.error("Error al cargar entregas:", err);
     } finally {
-        cerrarCroissLoaderSeguro();
+        if (conLoader) cerrarCroissLoaderSeguro();
     }
 }
 
@@ -1662,11 +1678,11 @@ async function marcarComoPagado(numFila, nombreCliente) {
                     body: JSON.stringify({ fila: numFila, estado: 'Pagado' })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Cobro Registrado!', `El pedido de ${nombreCliente} ya figura al día.`);
-                    cargarCuentas();
+                    cargarTodaLaSeccionAgenda(false);
                 } else { Swal.fire('Error', data.mensaje, 'error'); }
             } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
         }
@@ -1689,12 +1705,11 @@ async function notificarEntrega(numFila, nombreCliente) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Pedido Entregado!', `Notificación enviada a ${nombreCliente}.`);
-                    if (typeof cargarCuentas === 'function') cargarCuentas();
-                    if (typeof cargarAgenda === 'function') cargarAgenda();
+                    cargarTodaLaSeccionAgenda(false);
                     if (typeof cargarClientes === 'function') cargarClientes();
                 } else { Swal.fire('Atención', data.mensaje, 'warning'); }
             } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
@@ -1718,12 +1733,11 @@ async function marcarEnCamino(numFila, clienteNombre) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('¡Pedido en camino!', `Aviso enviado por e-mail a ${clienteNombre}.`);
-                    if (typeof cargarCuentas === 'function') cargarCuentas();
-                    if (typeof cargarAgenda === 'function') cargarAgenda();
+                    cargarTodaLaSeccionAgenda(false);
                 } else { Swal.fire('Error', data.mensaje, 'error'); }
             } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
         }
@@ -1754,15 +1768,14 @@ async function eliminarPedido(numFila, clienteNombre) {
                 body: JSON.stringify({ fila: numFila, notificar: enviarMail })
             });
             const data = await res.json();
-            await esperarAnimacionMinima(tInicio, 2200);
+            await esperarAnimacionMinima(tInicio, 1800);
 
             if (data.status === 'exito') {
                 mostrarCroissExito(
                     enviarMail ? 'Pedido Cancelado' : 'Orden Eliminada',
                     enviarMail ? `Se envió el correo de notificación a ${clienteNombre}.` : 'Se removió la orden y devolvió el stock sin enviar mail.'
                 );
-                if (typeof cargarCuentas === 'function') cargarCuentas();
-                if (typeof cargarAgenda === 'function') cargarAgenda();
+                cargarTodaLaSeccionAgenda(false);
                 if (typeof cargarClientes === 'function') cargarClientes();
             } else { Swal.fire('Error', data.mensaje, 'error'); }
         } catch (err) { Swal.fire('Error', 'No se pudo conectar con el servidor', 'error'); }
@@ -1816,7 +1829,7 @@ async function cargarInsumosYGastos() {
         const res = await fetch('/api/gastos_e_insumos');
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 2200);
+        await esperarAnimacionMinima(tInicio, 1800);
 
         if (data.status === 'exito') {
             const contMateriaPrima = document.getElementById('listaMateriaPrimaStock');
@@ -1940,7 +1953,7 @@ function abrirModalEditarCongeladosDirecto() {
                     body: JSON.stringify(res.value)
                 });
                 const data = await r.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     actualizarUIStockCongelados(data);
@@ -1987,7 +2000,7 @@ function abrirModalEditarInsumo(nombreInsumo, stockActual, unidadActual, vencAct
             try {
                 const r = await fetch('/api/stock/editar_insumo', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(res.value) });
                 const data = await r.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Insumo Actualizado', data.mensaje);
@@ -2010,8 +2023,8 @@ function eliminarInsumoDirecto(nombreInsumo) {
             mostrarCroissLoader();
             try {
                 const r = await fetch('/api/stock/eliminar_insumo', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ insumo: nombreInsumo }) });
-                const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                const data = await r.json();
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Insumo Eliminado', `${nombreInsumo} fue removido.`);
@@ -2066,7 +2079,7 @@ function abrirModalSumarStock(tipoCategoria) {
             try {
                 const res = await fetch('/api/stock/sumar_insumo', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(result.value) });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Stock Actualizado', data.mensaje);
@@ -2099,7 +2112,7 @@ function abrirModalSumarCongelados() {
             try {
                 const res = await fetch('/api/stock/congelados', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ masas: result.value }) });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     actualizarUIStockCongelados(data);
@@ -2335,7 +2348,7 @@ async function cargarClientes() {
         const res = await fetch(`/api/clientes?mes=${mesVal}`);
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 2200);
+        await esperarAnimacionMinima(tInicio, 1800);
 
         if (data.status === 'exito') {
             datosClientesGlobal.todos = data.clientes_todos || [];
@@ -2443,7 +2456,7 @@ function abrirModalEditarCliente() {
             try {
                 const res = await fetch('/api/cliente/editar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(result.value) });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Cliente Actualizado', 'Todos los datos se guardaron correctamente.');
@@ -2471,7 +2484,7 @@ function confirmarEliminarCliente(nombreCliente) {
             try {
                 const res = await fetch('/api/cliente/eliminar', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ nombre: nombreCliente }) });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Cliente Eliminado', `${nombreCliente} fue removido.`);
@@ -2527,7 +2540,7 @@ async function eliminarGasto(numFila, descGasto) {
             try {
                 const res = await fetch('/api/eliminar_gasto', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ fila: numFila }) });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Registro Eliminado', 'Se removió la transacción.');
@@ -2561,10 +2574,10 @@ function cambiarTab(e, tab) {
         if (targetSec) targetSec.classList.add('active');
 
         if(tab === 'ventas') cargarStock();
-        if(tab === 'entregas') cambiarSegmentoEntrega('entregas');
+        if(tab === 'entregas') cargarTodaLaSeccionAgenda(true);
         if(tab === 'stock') cargarTodoElStock();
         if(tab === 'gastos') toggleCamposMateriaPrima();
-        if(tab === 'balance') { cargarBalance(); }
+        if(tab === 'balance') cargarBalance();
         if(tab === 'clientes') cargarClientes();
     }
 }
@@ -2583,9 +2596,6 @@ function cambiarSegmentoEntrega(segmento) {
     if (subCue) subCue.classList.toggle('active', segmento === 'cuentas');
     if (subEnt) subEnt.classList.toggle('active', segmento === 'entregas');
     if (subAge) subAge.classList.toggle('active', segmento === 'agenda');
-
-    if (segmento === 'cuentas' || segmento === 'entregas') cargarCuentas(); 
-    if (segmento === 'agenda') cargarAgenda();
 }
 
 function cambiarSegmentoGasto(segmento) {
@@ -2661,7 +2671,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     carrito = [];
@@ -2690,7 +2700,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         mostrarCroissExito('Pedido Registrado!', msjExito);
                     }
 
-                    if (typeof cargarAgenda === 'function') cargarAgenda();
+                    if (typeof cargarTodaLaSeccionAgenda === 'function') cargarTodaLaSeccionAgenda(false);
                     if (typeof cargarStock === 'function') cargarStock();
                 } else {
                     Swal.fire('Error', data.mensaje || 'Error al guardar pedido', 'error');
@@ -2728,7 +2738,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Compra / Gasto Registrado!', 'Se actualizó el historial y el stock de insumos.');
@@ -2762,7 +2772,7 @@ async function enviarRecordatorioPago(numFila, clienteNombre) {
                     body: JSON.stringify({ fila: numFila })
                 });
                 const data = await res.json();
-                await esperarAnimacionMinima(tInicio, 2200);
+                await esperarAnimacionMinima(tInicio, 1800);
 
                 if (data.status === 'exito') {
                     mostrarCroissExito('Recordatorio Enviado', data.mensaje);
@@ -3027,7 +3037,7 @@ async function cargarPreciosInsumos() {
         const res = await fetch('/api/precios_insumos');
         const responseData = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 2200);
+        await esperarAnimacionMinima(tInicio, 1800);
 
         if (responseData.status === 'exito') {
             const data = responseData.datos;
@@ -3102,7 +3112,7 @@ async function guardarPreciosInsumos(e) {
         });
         const data = await res.json();
 
-        await esperarAnimacionMinima(tInicio, 2200);
+        await esperarAnimacionMinima(tInicio, 1800);
 
         if (data.status === 'exito') {
             mostrarCroissExito('Precios Actualizados', 'Los costos de producción se recalcularon correctamente.');
@@ -3163,5 +3173,93 @@ async function cargarControlVisibilidadMenu() {
         });
     } catch (e) {
         console.error("Error cargando interruptores de menú:", e);
+    }
+}
+
+function renderizarMenuYStock() {
+    const select = document.getElementById('vProductoSelect');
+    const lista = document.getElementById('listaStock');
+    const seleccionPrevia = select ? select.value : '';
+
+    if (select) select.innerHTML = '<option value="" disabled selected>Seleccionar croissant...</option>';
+
+    if (!catalogoProductos || catalogoProductos.length === 0) return;
+
+    let productosRenderizados = 0;
+    catalogoProductos.forEach(prod => {
+        const nombreProd = obtenerNombreDesdeObjeto(prod);
+        const nameLower = (nombreProd || '').toLowerCase();
+
+        if (!nombreProd || nameLower.includes('congelado') || nameLower.includes('sobrevendido') || nameLower.includes('masa')) return;
+
+        productosRenderizados++;
+
+        if (select) {
+            const opt = document.createElement('option');
+            opt.value = nombreProd;
+            opt.innerText = nombreProd;
+            select.appendChild(opt);
+        }
+    });
+
+    if (select && seleccionPrevia) {
+        const existe = Array.from(select.options).some(o => o.value === seleccionPrevia);
+        if (existe) select.value = seleccionPrevia;
+    }
+
+    if (lista) {
+        (async () => {
+            let estadoMenu = {};
+            try {
+                const res = await fetch('/api/menu_visibilidad');
+                const data = await res.json();
+                estadoMenu = data.estado || {};
+            } catch (e) {
+                console.error("Error leyendo visibilidad del menú:", e);
+            }
+
+            lista.innerHTML = '';
+            let contStock = 0;
+            catalogoProductos.forEach(prod => {
+                const nombreProd = obtenerNombreDesdeObjeto(prod);
+                const nameLower = (nombreProd || '').toLowerCase();
+
+                if (!nombreProd || nameLower.includes('congelado') || nameLower.includes('sobrevendido') || nameLower.includes('masa')) return;
+
+                contStock++;
+                const precioVenta = obtenerPrecioDesdeObjeto(prod);
+                const nomEscapado = nombreProd.replace(/'/g, "\\'");
+                const estaActivo = estadoMenu[nameLower] !== false;
+                const statusBadge = estaActivo 
+                    ? '<span style="color:#16A34A; font-weight:800; font-size:0.75rem;">ON</span>' 
+                    : '<span style="color:#DC2626; font-weight:800; font-size:0.75rem;">OFF</span>';
+
+                const div = document.createElement('div');
+                div.className = 'stock-item';
+                div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px dashed var(--border-color); gap: 10px;';
+
+                div.innerHTML = `
+                    <div style="flex: 1; min-width: 0;">
+                        <strong style="font-size: 0.92rem; color: var(--text-main); display: block; word-break: break-word;">${nombreProd}</strong>
+                        <small style="color: var(--text-muted); font-weight: 600;">$${precioVenta} c/u</small> · ${statusBadge}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+                        <button type="button" class="btn-jalea-chip active" style="font-size:0.75rem; padding: 5px 10px; margin: 0;" onclick="abrirModalRenombrarProducto('${nomEscapado}')">✏️ Nombre</button>
+
+                        <label style="position: relative; display: inline-block; width: 44px; height: 24px; margin: 0; flex-shrink: 0;">
+                            <input type="checkbox" ${estaActivo ? 'checked' : ''} onchange="cambiarVisibilidadMenuTienda('${nomEscapado}', this.checked)" style="opacity: 0; width: 0; height: 0;">
+                            <span style="position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: ${estaActivo ? '#16A34A' : '#CBD5E1'}; transition: .3s; border-radius: 24px;">
+                                <span style="position: absolute; content: ''; height: 18px; width: 18px; left: ${estaActivo ? '22px' : '3px'}; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%;"></span>
+                            </span>
+                        </label>
+                    </div>
+                `;
+                lista.appendChild(div);
+            });
+
+            if (contStock === 0) {
+                lista.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay productos cargados en el menú.</p>';
+            }
+        })();
     }
 }
