@@ -1376,8 +1376,10 @@ def stock_congelados():
             datos = request.json or {}
             st_cong += int(datos.get("congelados", 0))
             st_masas += int(datos.get("masas", 0))
-            if row_cong: ejecutar_con_reintento(sheet_stock.update_cell, row_cong, col_stock, st_cong)
-            if row_masas: ejecutar_con_reintento(sheet_stock.update_cell, row_masas, col_stock, st_masas)
+            if row_cong:
+                ejecutar_con_reintento(sheet_stock.update, f"D{row_cong}", [[st_cong]])
+            if row_masas:
+                ejecutar_con_reintento(sheet_stock.update, f"D{row_masas}", [[st_masas]])
 
         return jsonify({
             "status": "exito",
@@ -1387,6 +1389,7 @@ def stock_congelados():
             "mensaje": "Stock actualizado"
         }), 200
     except Exception as error:
+        print(f"❌ Error en stock_congelados: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/stock/congelados/fijar', methods=['POST'])
@@ -1399,8 +1402,10 @@ def fijar_stock_congelados():
         sheet_stock = conectar_sheet("Productos_Stock")
         row_cong, row_masas, col_stock, _, _ = obtener_niveles_stock(sheet_stock)
 
-        if row_cong: ejecutar_con_reintento(sheet_stock.update_cell, row_cong, col_stock, st_cong)
-        if row_masas: ejecutar_con_reintento(sheet_stock.update_cell, row_masas, col_stock, st_masas)
+        if row_cong:
+            ejecutar_con_reintento(sheet_stock.update, f"D{row_cong}", [[st_cong]])
+        if row_masas:
+            ejecutar_con_reintento(sheet_stock.update, f"D{row_masas}", [[st_masas]])
 
         return jsonify({
             "status": "exito", 
@@ -1410,6 +1415,7 @@ def fijar_stock_congelados():
             "mensaje": "Valores fijados correctamente"
         }), 200
     except Exception as error:
+        print(f"❌ Error en fijar_stock_congelados: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/stock/pop', methods=['GET', 'POST'])
@@ -1422,8 +1428,10 @@ def stock_pop():
             datos = request.json or {}
             st_pop_cong += int(datos.get("congelados", 0))
             st_pop_masas += int(datos.get("masas", 0))
-            if row_pop_cong: ejecutar_con_reintento(sheet_stock.update_cell, row_pop_cong, col_stock, st_pop_cong)
-            if row_pop_masas: ejecutar_con_reintento(sheet_stock.update_cell, row_pop_masas, col_stock, st_pop_masas)
+            if row_pop_cong:
+                ejecutar_con_reintento(sheet_stock.update, f"D{row_pop_cong}", [[st_pop_cong]])
+            if row_pop_masas:
+                ejecutar_con_reintento(sheet_stock.update, f"D{row_pop_masas}", [[st_pop_masas]])
 
         return jsonify({
             "status": "exito",
@@ -1433,6 +1441,7 @@ def stock_pop():
             "mensaje": "Stock Pop actualizado"
         }), 200
     except Exception as error:
+        print(f"❌ Error en stock_pop: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
 
 @app.route('/api/stock/pop/fijar', methods=['POST'])
@@ -1445,8 +1454,10 @@ def fijar_stock_pop():
         sheet_stock = conectar_sheet("Productos_Stock")
         row_pop_cong, row_pop_masas, col_stock, _, _ = obtener_niveles_stock_pop(sheet_stock)
 
-        if row_pop_cong: ejecutar_con_reintento(sheet_stock.update_cell, row_pop_cong, col_stock, st_pop_cong)
-        if row_pop_masas: ejecutar_con_reintento(sheet_stock.update_cell, row_pop_masas, col_stock, st_pop_masas)
+        if row_pop_cong:
+            ejecutar_con_reintento(sheet_stock.update, f"D{row_pop_cong}", [[st_pop_cong]])
+        if row_pop_masas:
+            ejecutar_con_reintento(sheet_stock.update, f"D{row_pop_masas}", [[st_pop_masas]])
 
         return jsonify({
             "status": "exito", 
@@ -1456,8 +1467,9 @@ def fijar_stock_pop():
             "mensaje": "Valores Pop fijados correctamente"
         }), 200
     except Exception as error:
+        print(f"❌ Error en fijar_stock_pop: {error}", flush=True)
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/eliminar_venta', methods=['POST'])
 def eliminar_venta():
     try:
