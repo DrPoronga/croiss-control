@@ -190,6 +190,7 @@
                             <button id="segBtnStockMateriaPrima" class="seg-btn" onclick="cambiarSegmentoStock('materiaprima')">Materia Prima</button>
                             <button id="segBtnStockEmpaque" class="seg-btn" onclick="cambiarSegmentoStock('empaque')">Empaques</button>
                         </div>
+
                         <div id="subSecStockCongelados" class="sub-seccion active">
                             <!-- STOCK CROISSANTS TRADICIONALES -->
                             <div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 14px;">
@@ -237,6 +238,17 @@
                                 </div>
                                 <div id="listaStock">Cargando productos del menú...</div>
                             </div>
+                        </div>
+
+                        <div id="subSecStockMateriaPrima" class="sub-seccion">
+                            <button type="button" class="btn-add-item" style="margin-bottom: 14px;" onclick="abrirModalSumarStock('Materia Prima')">+ Cargar Materia Prima</button>
+                            <div id="listaMateriaPrimaStock">Cargando materia prima...</div>
+                        </div>
+
+                        <div id="subSecStockEmpaque" class="sub-seccion">
+                            <button type="button" class="btn-add-item" style="margin-bottom: 14px;" onclick="abrirModalSumarStock('Empaque')">+ Cargar Empaque / Cajas</button>
+                            <div id="listaEmpaqueStock">Cargando cajas y empaques...</div>
+                        </div>
                     </div>
                 </div>
 
