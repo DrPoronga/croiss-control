@@ -2153,6 +2153,7 @@ def obtener_cuentas():
             
             direccion_item = get_field_val(reg, "Dirección", "Direccion")
             notas_item = get_field_val(reg, "Notas", "Nota", "Comentario", "Observaciones")
+            telefono_item = get_field_val(reg, "Teléfono", "Telefono", "Tel")
             
             try: 
                 monto = float(get_field_val(reg, "Monto Total", "Monto").replace("$", "").replace(",", ".").strip())
@@ -2173,15 +2174,14 @@ def obtener_cuentas():
                 "fecha_entrega": f_entrega, 
                 "entrega": estado_entrega, 
                 "direccion": direccion_item, 
-                "notas": notas_item
+                "notas": notas_item,
+                "telefono": telefono_item
             }
 
-            # 🟢 FILTRO CORREGIDO: Solo ingresa a Deudores si debe dinero (Monto mayor a 0)
             if estado_pago.lower() == "pendiente" and monto > 0:
                 pendientes_pago.append(item)
                 total_por_cobrar += monto
 
-            # Próximas entregas (sigue mostrando los pedidos pendientes de entregar, tengan costo o $0)
             if f_entrega and f_entrega >= hoy_str and estado_entrega.lower() != "entregado":
                 pendientes_entrega.append(item)
 
