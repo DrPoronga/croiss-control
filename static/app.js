@@ -1736,8 +1736,9 @@ async function cargarCuentas(conLoader = true) {
                             </div>
                             <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
                                 <button class="btn-pagar-ahora" onclick="marcarComoPagado(${p.fila}, '${clienteClean}')">Marcar Pagado</button>
+                                <button type="button" class="btn-jalea-chip" style="background:#009EE3; color:#FFFFFF; border-color:#009EE3; font-size:0.72rem; padding: 5px 10px; margin: 0; font-weight: bold; width: 100%; text-align: center;" onclick="enviarLinkPagoWhatsApp(${p.fila}, '${p.telefono || ''}')">🔗 Link Mercado Pago</button>
                                 <div style="display:flex; gap:6px;">
-                                    <button type="button" class="btn-jalea-chip" style="background:#FEF3C7; color:#B45309; border-color:#FDE68A; font-size:0.72rem; padding: 4px 8px; margin: 0;" onclick="enviarRecordatorioPago(${p.fila}, '${clienteClean}')">📩 Recordar</button>
+                                    <button type="button" class="btn-jalea-chip" style="background:#FEF3C7; color:#B45309; border-color:#FDE68A; font-size:0.72rem; padding: 4px 8px; margin: 0;" onclick="enviarRecordatorioPago(${p.fila}, '${clienteClean}')">📩 Mail</button>
                                     <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${p.fila}, '${clienteClean}')">Cancelar</button>
                                 </div>
                             </div>
@@ -1782,9 +1783,9 @@ async function cargarCuentas(conLoader = true) {
                         }
 
                         const esGratis = e.monto <= 0;
-						const botonCobroOPago = (esPagado || esGratis)
-							? `<div class="agenda-badge badge-ok" style="display:flex; align-items:center; justify-content:center; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; text-align:center; height:100%; box-sizing:border-box;">${esGratis ? 'Cortesía $0' : 'Pagado'}</div>`
-							: `<button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${e.fila}, '${clienteClean}')">💸 Pago</button>`;
+                        const botonCobroOPago = (esPagado || esGratis)
+                            ? `<div class="agenda-badge badge-ok" style="display:flex; align-items:center; justify-content:center; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; text-align:center; height:100%; box-sizing:border-box;">${esGratis ? 'Cortesía $0' : 'Pagado'}</div>`
+                            : `<button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${e.fila}, '${clienteClean}')">💸 Pago</button>`;
 
                         div.innerHTML = `
                             <div style="flex: 1; padding-right: 12px;">
