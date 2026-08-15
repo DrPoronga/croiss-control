@@ -2520,22 +2520,25 @@ def generar_link_pago():
         prod_desc = row_data[col_prod - 1] if col_prod - 1 < len(row_data) else "Pedido CROISS"
         
         try:
-            monto = float(str(row_data[col_monto - 1]).replace("$", "").replace(",", ".").strip())
+            monto_original = float(str(row_data[col_monto - 1]).replace("$", "").replace(",", ".").strip())
         except ValueError:
-            monto = 0.0
+            monto_original = 0.0
 
-        if monto <= 0:
+        if monto_original <= 0:
             return jsonify({"status": "error", "mensaje": "El monto del pedido debe ser mayor a $0."}), 400
+
+        # Se le suma el 8.5% de comisión bancaria/plataforma al total cargado en el link
+        monto_tarjeta = round(monto_original * 1.085, 2)
 
         sdk = mercadopago.SDK(MP_ACCESS_TOKEN)
 
         preference_data = {
             "items": [
                 {
-                    "title": f"CROISS - {prod_desc[:30]}",
+                    "title": f"CROISS - {prod_desc[:25]} (inc. 8.5% recargo)",
                     "quantity": 1,
                     "currency_id": "UYU",
-                    "unit_price": monto
+                    "unit_price": monto_tarjeta
                 }
             ],
             "payer": {
@@ -2551,12 +2554,13 @@ def generar_link_pago():
         return jsonify({
             "status": "exito",
             "link": link_mp,
-            "monto": monto,
+            "monto_original": monto_original,
+            "monto_tarjeta": monto_tarjeta,
             "cliente": cliente_nom
         }), 200
 
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-          
+        
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
