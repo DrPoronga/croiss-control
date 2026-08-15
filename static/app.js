@@ -375,7 +375,7 @@ function abrirGoogleMaps(direccion) {
         Swal.fire('Sin Dirección', 'No hay una dirección registrada para este cliente/pedido.', 'info');
         return;
     }
-    window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(decodeURIComponent(direccion))}`, '_blank');
+    window.open(`https://www.waze.com/ul?q=${encodeURIComponent(decodeURIComponent(direccion))}&navigate=yes`, '_blank');
 }
 
 function abrirGoogleMapsIngresado() {
