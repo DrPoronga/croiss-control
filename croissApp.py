@@ -417,7 +417,63 @@ def obtener_o_crear_sheet_precios_insumos():
         for item in precios_defecto:
             ws.append_row(item)
         return ws
+
+def obtener_o_crear_sheet_cupones():
+    """Obtiene o crea la pestaña 'Cupones' para validar descuentos."""
+    ruta_credenciales = "credentials.json"
+    creds = Credentials.from_service_account_file(ruta_credenciales, scopes=SCOPES)
+    cliente = gspread.authorize(creds)
+    doc = cliente.open_by_key(SPREADSHEET_ID)
+    try:
+        return doc.worksheet("Cupones")
+    except Exception:
+        ws = doc.add_worksheet(title="Cupones", rows="50", cols="5")
+        ws.append_row(["Codigo", "Tipo", "Valor", "Limite_Usos", "Activo"])
+        return ws
+
+@app.route('/api/public/validar_cupon', methods=['POST'])
+def validar_cupon():
+    try:
+        datos = request.json or {}
+        codigo = str(datos.get("codigo", "")).strip().upper()
         
+        if not codigo:
+            return jsonify({"status": "error", "mensaje": "Por favor ingresa un código."}), 400
+            
+        sheet_cupones = obtener_o_crear_sheet_cupones()
+        registros = get_clean_records(sheet_cupones)
+        
+        for idx, reg in enumerate(registros, start=2):
+            cod_sheet = get_field_val(reg, "Codigo", "Código").strip().upper()
+            if cod_sheet == codigo:
+                activo = get_field_val(reg, "Activo").strip().upper()
+                if activo != "SI":
+                    return jsonify({"status": "error", "mensaje": "Este cupón ya no se encuentra activo."}), 400
+                    
+                limite_str = get_field_val(reg, "Limite_Usos", "Limite", "Usos")
+                if limite_str and limite_str.isdigit():
+                    if int(limite_str) <= 0:
+                        return jsonify({"status": "error", "mensaje": "Este cupón ha agotado su límite de usos."}), 400
+                        
+                tipo = get_field_val(reg, "Tipo")
+                try:
+                    valor = float(get_field_val(reg, "Valor").replace(",", "."))
+                except ValueError:
+                    valor = 0.0
+                    
+                return jsonify({
+                    "status": "exito",
+                    "cupon": {
+                        "codigo": codigo,
+                        "tipo": tipo,
+                        "valor": valor,
+                        "fila": idx
+                    }
+                }), 200
+                
+        return jsonify({"status": "error", "mensaje": "El cupón no existe o es inválido."}), 404
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500        
 
 def sincronizar_cliente(nombre, email, telefono, direccion):
     if not nombre or nombre.lower() == "consumidor final": return
@@ -2436,6 +2492,71 @@ def renombrar_producto():
         return jsonify({"status": "exito", "mensaje": f"Producto renombrado a '{nombre_nuevo}'"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
+  
+import mercadopago
+
+MP_ACCESS_TOKEN = os.environ.get("MP_ACCESS_TOKEN", "APP_USR-7749651536754458-081516-32f403ea2a50e7156418e0037380b60c-1414899287")
+
+@app.route('/api/generar_link_pago', methods=['POST'])
+def generar_link_pago():
+    try:
+        datos = request.json or {}
+        num_fila = datos.get("fila")
         
+        if not num_fila:
+            return jsonify({"status": "error", "mensaje": "Fila no especificada"}), 400
+
+        sheet_ventas = conectar_sheet("Ventas")
+        row_data = sheet_ventas.row_values(int(num_fila))
+        headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
+
+        col_cli, col_monto, col_prod = 4, 7, 5
+        for i, h in enumerate(headers, start=1):
+            if "cliente" in h: col_cli = i
+            elif "monto" in h: col_monto = i
+            elif "producto" in h: col_prod = i
+
+        cliente_nom = row_data[col_cli - 1] if col_cli - 1 < len(row_data) else "Cliente"
+        prod_desc = row_data[col_prod - 1] if col_prod - 1 < len(row_data) else "Pedido CROISS"
+        
+        try:
+            monto = float(str(row_data[col_monto - 1]).replace("$", "").replace(",", ".").strip())
+        except ValueError:
+            monto = 0.0
+
+        if monto <= 0:
+            return jsonify({"status": "error", "mensaje": "El monto del pedido debe ser mayor a $0."}), 400
+
+        sdk = mercadopago.SDK(MP_ACCESS_TOKEN)
+
+        preference_data = {
+            "items": [
+                {
+                    "title": f"CROISS - {prod_desc[:30]}",
+                    "quantity": 1,
+                    "currency_id": "UYU",
+                    "unit_price": monto
+                }
+            ],
+            "payer": {
+                "name": cliente_nom
+            }
+        }
+
+        preference_response = sdk.preference().create(preference_data)
+        preference = preference_response["response"]
+        
+        link_mp = preference.get("init_point") or preference.get("sandbox_init_point")
+
+        return jsonify({
+            "status": "exito",
+            "link": link_mp,
+            "monto": monto,
+            "cliente": cliente_nom
+        }), 200
+
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+          
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
