@@ -3489,13 +3489,20 @@ async function enviarLinkPagoWhatsApp(numFila, clienteTelefono) {
             if (telLimpio.startsWith('0')) telLimpio = telLimpio.substring(1);
             if (telLimpio && !telLimpio.startsWith('598')) telLimpio = '598' + telLimpio;
 
-            let mensaje = `¡Hola ${primerNombre}! Te dejo el link directo de Mercado Pago ($${data.monto}) para abonar tu pedido de CROISS: ${data.link}\n\nTambién, si deseas pagar por transferencia Itaú, el número de cuenta es 5584633. ¡Muchas gracias! 🥐`;
+            let mensaje = `¡Hola ${primerNombre}! Te escribimos de CROISS 🥐\n\n` +
+                `Tu pedido es por un total de *$${data.monto_original}*.\n\n` +
+                `📌 *Opciones de Pago:*\n\n` +
+                `1️⃣ *Transferencia directa (Sin recargo - $${data.monto_original}):*\n` +
+                `• Itaú: 5584633\n` +
+                `• Mercado Pago (Cuenta/CVU): 1003657866242\n\n` +
+                `2️⃣ *Tarjeta / Link Mercado Pago (+$${(data.monto_tarjeta - data.monto_original).toFixed(2)} por 8.5% comisión = $${data.monto_tarjeta}):*\n` +
+                `• Link de pago: ${data.link}\n\n` +
+                `¡Muchas gracias!`;
 
             let urlWa = telLimpio 
                 ? `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
                 : `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
 
-            // Abre WhatsApp sin crear pestañas secundarias en el navegador
             window.location.href = urlWa;
         } else {
             Swal.fire('Error', data.mensaje || 'No se pudo generar el link de pago.', 'error');
