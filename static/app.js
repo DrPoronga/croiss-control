@@ -430,7 +430,9 @@ function abrirGoogleMaps(direccion) {
         Swal.fire('Sin Dirección', 'No hay una dirección registrada para este cliente/pedido.', 'info');
         return;
     }
-    window.open(`https://www.waze.com/ul?q=${encodeURIComponent(decodeURIComponent(direccion))}&navigate=yes`, '_blank');
+    
+    // Abre Waze directamente en la app del sistema sin crear pestañas secundarias
+    window.location.href = `https://www.waze.com/ul?q=${encodeURIComponent(decodeURIComponent(direccion))}&navigate=yes`;
 }
 
 function abrirGoogleMapsIngresado() {
