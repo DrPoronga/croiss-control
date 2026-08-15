@@ -3491,11 +3491,11 @@ async function enviarLinkPagoWhatsApp(numFila, clienteTelefono) {
 
             let mensaje = `Hola ${primerNombre}, Te escribimos de CROISS 🥐\n\n` +
                 `Tu pedido es de un total de *$${data.monto_original}*.\n\n` +
-                `*Opciones de Pago:*\n\n` +
-                `-*Transferencia directa (Sin recargo - $${data.monto_original}):*\n` +
+                `Opciones de Pago:\n\n` +
+                `-Transferencia directa (Sin recargo):\n` +
                 `• Itaú: 5584633\n` +
                 `• Mercado Pago (Cuenta/CVU): 1003657866242\n\n` +
-                `-*Tarjeta / Link Mercado Pago (+ 8.5% comisión = $${data.monto_tarjeta}):*\n` +
+                `-Tarjeta / Link Mercado Pago (+ 8.5% comisión = $${data.monto_tarjeta}):\n` +
                 `• Link de pago: ${data.link}\n\n` +
                 `¡Muchas gracias!`;
 
