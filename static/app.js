@@ -143,15 +143,49 @@ function actualizarSalsaItem(itemIndex, salsaIndex, valor) {
     }
 }
 
+let cuponAplicado = null; // Guarda el cupón activo en el carrito
+
+async function aplicarCuponTienda() {
+    const inputCupon = document.getElementById('vInputCupon');
+    const codigo = inputCupon ? inputCupon.value.trim().toUpperCase() : '';
+    
+    if (!codigo) {
+        Swal.fire('Atención', 'Ingresá un código de cupón.', 'warning');
+        return;
+    }
+
+    try {
+        const res = await fetch('/api/public/validar_cupon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo })
+        });
+        const data = await res.json();
+
+        if (data.status === 'exito') {
+            cuponAplicado = data.cupon;
+            mostrarCroissExito('¡Cupón Aplicado!', `Descuento del ${data.cupon.tipo === '%' ? data.cupon.valor + '%' : '$' + data.cupon.valor} activado.`);
+            renderizarCarrito();
+        } else {
+            cuponAplicado = null;
+            Swal.fire('Error', data.mensaje || 'Cupón inválido', 'error');
+            renderizarCarrito();
+        }
+    } catch (err) {
+        Swal.fire('Error', 'No se pudo conectar para validar el cupón.', 'error');
+    }
+}
+
 function renderizarCarrito() {
     const listEl = document.getElementById('cartList');
     const totalEl = document.getElementById('cartTotal');
     const descuentoSelect = document.getElementById('vDescuento');
-    const descuentoPorcentaje = descuentoSelect ? (parseFloat(descuentoSelect.value) || 0) : 0;
+    let descuentoPorcentaje = descuentoSelect ? (parseFloat(descuentoSelect.value) || 0) : 0;
 
     if (carrito.length === 0) {
         listEl.innerHTML = '<p style="color: #94a3b8; text-align: center;">El ticket está vacío</p>';
         totalEl.innerText = '0';
+        cuponAplicado = null;
         return;
     }
 
@@ -235,20 +269,41 @@ function renderizarCarrito() {
         listEl.appendChild(div);
     });
 
-    const montoDescuento = Math.round(totalGeneralBruto * (descuentoPorcentaje / 100));
+    // Cálculo de descuento por cupón o manual
+    let montoDescuento = Math.round(totalGeneralBruto * (descuentoPorcentaje / 100));
+    let etiquetaDescuento = `-${descuentoPorcentaje}% aplicado`;
+
+    if (cuponAplicado) {
+        if (cuponAplicado.tipo === '%') {
+            montoDescuento = Math.round(totalGeneralBruto * (cuponAplicado.valor / 100));
+            etiquetaDescuento = `Cupón ${cuponAplicado.codigo} (-${cuponAplicado.valor}%)`;
+        } else {
+            montoDescuento = cuponAplicado.valor;
+            etiquetaDescuento = `Cupón ${cuponAplicado.codigo} (-$${cuponAplicado.valor})`;
+        }
+    }
+
     const totalFinal = Math.max(0, totalGeneralBruto - montoDescuento);
 
-    if (descuentoPorcentaje > 0) {
+    // Formulario de ingreso de cupón dentro del carrito
+    const divCupon = document.createElement('div');
+    divCupon.style.cssText = 'margin-top: 12px; padding-top: 10px; border-top: 1px dashed #E2D9D3; display: flex; gap: 6px;';
+    divCupon.innerHTML = `
+        <input type="text" id="vInputCupon" placeholder="Código de cupón..." value="${cuponAplicado ? cuponAplicado.codigo : ''}" class="croiss-swal-input" style="margin:0 !important; font-size:0.8rem !important; padding:6px 10px !important; text-transform:uppercase;">
+        <button type="button" class="btn-jalea-chip active" style="margin:0; padding:6px 12px; font-size:0.75rem;" onclick="aplicarCuponTienda()">Aplicar</button>
+    `;
+    listEl.appendChild(divCupon);
+
+    if (montoDescuento > 0) {
         totalEl.innerHTML = `
             <span style="text-decoration: line-through; color: #94a3b8; font-size: 0.9rem; margin-right: 6px;">$${totalGeneralBruto}</span>
             <span style="color: #16a34a; font-size: 1.3rem; font-weight: 800;">$${totalFinal}</span>
-            <small style="font-size: 0.75rem; color: #16a34a; font-weight: 700; display: block;">(-${descuentoPorcentaje}% aplicado)</small>
+            <small style="font-size: 0.75rem; color: #16a34a; font-weight: 700; display: block;">(${etiquetaDescuento})</small>
         `;
     } else {
         totalEl.innerText = totalFinal;
     }
 }
-
 function toggleJaleaItem(index) {
     carrito[index].con_jalea = !carrito[index].con_jalea;
     renderizarCarrito();
@@ -2131,6 +2186,25 @@ function renderizarListaDirectorio(lista) {
     if (labelCant) labelCant.innerText = `Directorio General (${lista ? lista.length : 0} clientes)`;
     if (!contDirectorio) return;
 
+    // Inyectar dinámicamente el selector de orden sin romper tu HTML original
+    if (!document.getElementById('selectOrdenCliente')) {
+        const elBuscador = document.getElementById('inputBuscarCliente');
+        if (elBuscador && elBuscador.parentNode) {
+            const selectDiv = document.createElement('div');
+            selectDiv.style.marginTop = '8px';
+            selectDiv.style.marginBottom = '12px';
+            selectDiv.innerHTML = `
+                <select id="selectOrdenCliente" onchange="filtrarDirectorioClientes()" class="croiss-swal-input" style="padding: 6px; font-size: 0.8rem; margin: 0; width: 100%; border-radius: 8px;">
+                    <option value="nombre_asc">Ordenar por: Nombre (A-Z)</option>
+                    <option value="recientes">Ordenar por: Compra más reciente (Hoy)</option>
+                    <option value="antiguos">Ordenar por: Compra más antigua (Para promos)</option>
+                    <option value="riesgo">Ordenar por: ⚠️ En Riesgo primero</option>
+                </select>
+            `;
+            elBuscador.parentNode.insertBefore(selectDiv, elBuscador.nextSibling);
+        }
+    }
+
     contDirectorio.innerHTML = '';
     if (!lista || lista.length === 0) {
         contDirectorio.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:20px 0;">No se encontraron clientes.</p>';
@@ -2152,9 +2226,12 @@ function renderizarListaDirectorio(lista) {
             else txtUltimaCompra = `Hace ${c.dias_sin_comprar} día(s)`;
         }
 
+        // Nuevo tag visual para clientes en riesgo
+        const catBadge = c.categoria === '⚠️ En Riesgo' ? `<span style="background:#FEF2F2; color:#DC2626; padding:2px 6px; border-radius:6px; font-size:0.65rem; font-weight:800; margin-left:6px; vertical-align:middle;">⚠️ En Riesgo</span>` : '';
+
         div.innerHTML = `
             <div>
-                <strong>${idTag}${c.nombre || 'Sin nombre'}</strong><br>
+                <strong>${idTag}${c.nombre || 'Sin nombre'}</strong>${catBadge}<br>
                 <small style="color:var(--text-muted);">${c.total_pedidos || 0} ped. - ${c.total_croissants || 0} cl. | ${c.total_pops || 0} pop</small><br>
                 <small style="color:#C86D28; font-weight:700;">Última vez: ${txtUltimaCompra}</small>
             </div>
@@ -2284,10 +2361,35 @@ function verDetalleCliente(clienteObj) {
 }
 
 function filtrarDirectorioClientes() {
-    const el = document.getElementById('inputBuscarCliente');
-    if (!el) return;
-    const textoBuscado = el.value.toLowerCase().trim();
-    const listaFiltrada = datosClientesGlobal.todos.filter(c => c.nombre && c.nombre.toLowerCase().includes(textoBuscado));
+    const elBusqueda = document.getElementById('inputBuscarCliente');
+    const elOrden = document.getElementById('selectOrdenCliente'); 
+    
+    let textoBuscado = elBusqueda ? elBusqueda.value.toLowerCase().trim() : '';
+    let criterioOrden = elOrden ? elOrden.value : 'nombre_asc';
+    
+    let listaFiltrada = datosClientesGlobal.todos.filter(c => c.nombre && c.nombre.toLowerCase().includes(textoBuscado));
+    
+    // Nueva lógica de ordenamiento
+    listaFiltrada.sort((a, b) => {
+        if (criterioOrden === 'nombre_asc') {
+            return (a.nombre || '').localeCompare(b.nombre || '');
+        } else if (criterioOrden === 'recientes') {
+            let diasA = (a.dias_sin_comprar !== undefined && a.dias_sin_comprar !== 999) ? a.dias_sin_comprar : 9999;
+            let diasB = (b.dias_sin_comprar !== undefined && b.dias_sin_comprar !== 999) ? b.dias_sin_comprar : 9999;
+            return diasA - diasB;
+        } else if (criterioOrden === 'antiguos') {
+            let diasA = (a.dias_sin_comprar !== undefined && a.dias_sin_comprar !== 999) ? a.dias_sin_comprar : -1;
+            let diasB = (b.dias_sin_comprar !== undefined && b.dias_sin_comprar !== 999) ? b.dias_sin_comprar : -1;
+            return diasB - diasA; // Invertido para los más viejos primero
+        } else if (criterioOrden === 'riesgo') {
+            let catA = (a.categoria === '⚠️ En Riesgo') ? 0 : 1;
+            let catB = (b.categoria === '⚠️ En Riesgo') ? 0 : 1;
+            if (catA !== catB) return catA - catB;
+            return (a.nombre || '').localeCompare(b.nombre || '');
+        }
+        return 0;
+    });
+
     renderizarListaDirectorio(listaFiltrada);
 }
 
@@ -3364,5 +3466,41 @@ function renderizarMenuYStock() {
                 lista.innerHTML = '<p style="font-size:0.85rem; color:#94a3b8; text-align:center; padding:15px 0;">No hay productos cargados en el menú.</p>';
             }
         })();
+    }
+}
+
+async function enviarLinkPagoWhatsApp(numFila, clienteTelefono) {
+    const tInicio = Date.now();
+    mostrarCroissLoader();
+
+    try {
+        const res = await fetch('/api/generar_link_pago', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fila: numFila })
+        });
+        const data = await res.json();
+        await esperarAnimacionMinima(tInicio, 1800);
+
+        if (data.status === 'exito') {
+            let primerNombre = (data.cliente || '').trim().split(' ')[0];
+            let telLimpio = (clienteTelefono || '').replace(/\D/g, '');
+            if (telLimpio.startsWith('0')) telLimpio = telLimpio.substring(1);
+            if (telLimpio && !telLimpio.startsWith('598')) telLimpio = '598' + telLimpio;
+
+            let mensaje = `¡Hola ${primerNombre}! Te dejo el link directo de Mercado Pago ($${data.monto}) para abonar tu pedido de CROISS: ${data.link}\n\nTambién, si deseas pagar por transferencia Itaú, el número de cuenta es 5584633. ¡Muchas gracias! 🥐`;
+
+            let urlWa = telLimpio 
+                ? `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
+                : `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
+
+            window.open(urlWa, '_blank');
+        } else {
+            Swal.fire('Error', data.mensaje || 'No se pudo generar el link de pago.', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Error', 'No se pudo conectar con el servidor para generar Mercado Pago.', 'error');
+    } finally {
+        cerrarCroissLoaderSeguro();
     }
 }
