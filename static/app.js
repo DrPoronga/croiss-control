@@ -3495,7 +3495,8 @@ async function enviarLinkPagoWhatsApp(numFila, clienteTelefono) {
                 ? `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
                 : `https://wa.me/?text=${encodeURIComponent(mensaje)}`;
 
-            window.open(urlWa, '_blank');
+            // Abre WhatsApp sin crear pestañas secundarias en el navegador
+            window.location.href = urlWa;
         } else {
             Swal.fire('Error', data.mensaje || 'No se pudo generar el link de pago.', 'error');
         }
