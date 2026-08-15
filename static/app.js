@@ -1728,19 +1728,18 @@ async function cargarCuentas(conLoader = true) {
                         
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
+                        div.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 12px;';
                         div.innerHTML = `
-                            <div>
-                                <strong>${p.cliente}</strong> <small style="color:#64748b;">(Entrega: ${p.fecha_entrega})</small><br>
-                                <span style="font-size:0.85rem; color:#475569;">${p.producto} (${p.cantidad} un.)</span><br>
-                                <span style="font-size:0.9rem; font-weight:800; color:#dc2626;">Monto: $${p.monto}</span>
+                            <div style="flex: 1; min-width: 0;">
+                                <strong style="color: var(--text-main); font-size: 0.95rem;">${p.cliente}</strong> <small style="color:#64748b;">(${p.fecha_entrega})</small><br>
+                                <span style="font-size:0.82rem; color:#475569; margin-top:2px; display:inline-block;">${p.producto} (${p.cantidad} un.)</span><br>
+                                <span style="font-size:0.9rem; font-weight:800; color:#dc2626; margin-top:2px; display:inline-block;">Monto: $${p.monto}</span>
                             </div>
-                            <div style="display:flex; flex-direction:column; gap:6px; align-items:flex-end;">
-                                <button class="btn-pagar-ahora" onclick="marcarComoPagado(${p.fila}, '${clienteClean}')">Marcar Pagado</button>
-                                <button type="button" class="btn-jalea-chip" style="background:#009EE3; color:#FFFFFF; border-color:#009EE3; font-size:0.72rem; padding: 5px 10px; margin: 0; font-weight: bold; width: 100%; text-align: center;" onclick="enviarLinkPagoWhatsApp(${p.fila}, '${p.telefono || ''}')">🔗 Link Mercado Pago</button>
-                                <div style="display:flex; gap:6px;">
-                                    <button type="button" class="btn-jalea-chip" style="background:#FEF3C7; color:#B45309; border-color:#FDE68A; font-size:0.72rem; padding: 4px 8px; margin: 0;" onclick="enviarRecordatorioPago(${p.fila}, '${clienteClean}')">📩 Mail</button>
-                                    <button type="button" class="btn-remove" style="font-size:0.72rem; padding:4px 8px;" onclick="eliminarPedido(${p.fila}, '${clienteClean}')">Cancelar</button>
-                                </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 190px; flex-shrink: 0;">
+                                <button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${p.fila}, '${clienteClean}')">💸 Pagado</button>
+                                <button type="button" class="btn-jalea-chip" style="margin:0; padding:6px 4px; font-size:0.75rem; background:#009EE3; color:#FFFFFF; border-color:#009EE3; border-radius:10px; width:100%; box-sizing:border-box; font-weight:bold; display:flex; align-items:center; justify-content:center;" onclick="enviarLinkPagoWhatsApp(${p.fila}, '${p.telefono || ''}')">📲 Link MP</button>
+                                <button type="button" class="btn-jalea-chip" style="margin:0; padding:6px 4px; font-size:0.75rem; background:#FEF3C7; color:#B45309; border-color:#FDE68A; border-radius:10px; width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center;" onclick="enviarRecordatorioPago(${p.fila}, '${clienteClean}')">📩 Mail</button>
+                                <button type="button" class="btn-remove" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center;" onclick="eliminarPedido(${p.fila}, '${clienteClean}')">Cancelar</button>
                             </div>
                         `;
                         contPago.appendChild(div);
