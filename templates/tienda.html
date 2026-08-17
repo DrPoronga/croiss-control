@@ -290,9 +290,22 @@
 				<p style="color: #94a3b8; text-align: center; margin: 0;">Agregá croissants arriba para ver el resumen</p>
 			</div>
 
-			<button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
-				Confirmar Pedido
-			</button>
+			<div style="display: flex; flex-direction: column; gap: 10px; margin-top: 16px;">
+				<!-- Botón Principal -->
+				<button type="button" class="btn-submit-order-final" onclick="confirmarPedidoTienda()">
+					Confirmar Pedido
+				</button>
+				
+				<!-- Botones Secundarios -->
+				<div style="display: flex; gap: 10px;">
+					<button type="button" onclick="irAlPaso(1)" style="flex: 1; background: #EFEAE6; color: #2D1E18; border: 1px solid #D8CFC8; padding: 12px; font-size: 0.88rem; font-weight: 700; border-radius: 20px; cursor: pointer;">
+						✏️ Modificar Pedido
+					</button>
+					<button type="button" onclick="reiniciarPedido()" style="flex: 1; background: #FEF2F2; color: #DC2626; border: 1px solid #FCA5A5; padding: 12px; font-size: 0.88rem; font-weight: 700; border-radius: 20px; cursor: pointer;">
+						Cancelar
+					</button>
+				</div>
+			</div>
 		</div>
 	</section>
 
