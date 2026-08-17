@@ -879,14 +879,14 @@
 			const nom = (document.getElementById('custNombre')?.value || '').trim();
 			const tel = (document.getElementById('custTel')?.value || '').trim();
 			const email = (document.getElementById('custEmail')?.value || '').trim();
-            const zonaKey = (document.getElementById('custZonaSelect')?.value || '').trim();
-            const dir = (document.getElementById('custDir')?.value || '').trim();
+			const zonaKey = (document.getElementById('custZonaSelect')?.value || '').trim();
+			const dir = (document.getElementById('custDir')?.value || '').trim();
 
 			let notasCliente = (document.getElementById('custNotas')?.value || '').trim();
 			const esRegalo = document.getElementById('chkEsRegalo')?.checked;
 
-            const zonaNombre = REGLAS_ZONAS[zonaKey] ? REGLAS_ZONAS[zonaKey].nombre : 'Zona';
-            const direccionCompleta = `[${zonaNombre}] ${dir}`;
+			const zonaNombre = REGLAS_ZONAS[zonaKey] ? REGLAS_ZONAS[zonaKey].nombre : 'Zona';
+			const direccionCompleta = `[${zonaNombre}] ${dir}`;
 
 			if (esRegalo) {
 				const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
@@ -932,7 +932,6 @@
 				const data = await res.json();
 
 				if (data.status === 'exito') {
-					// Se arma el mensaje pre-poblado con los datos del pedido
 					let resumenProductos = [];
 					for (let k in cart) {
 						if (cart[k] && cart[k].cantidad > 0) {
@@ -941,11 +940,11 @@
 					}
 
 					let msgWa = `¡Hola! Acabo de registrar mi pedido *#${data.id}* en la web:%0A%0A` +
-								`👤 *Nombre:* ${nombreCliente}%0A` +
-								`📅 *Fecha Entrega:* ${fechaEntrega}%0A` +
+								`👤 *Nombre:* ${nom}%0A` +
+								`📅 *Fecha Entrega:* ${selectedDate}%0A` +
 								`🥐 *Pedido:* ${resumenProductos.join(', ')}%0A` +
-								`💵 *Total:* $${montoTotal}%0A` +
-								`📍 *Dirección:* ${direccionCliente}%0A%0A` +
+								`💵 *Total:* $${calc.totalMoney}%0A` +
+								`📍 *Dirección:* ${direccionCompleta}%0A%0A` +
 								`Quedo a la espera para coordinar el pago. ¡Muchas gracias!`;
 
 					let linkWhatsApp = `https://wa.me/59899526301?text=${msgWa}`;
@@ -960,7 +959,6 @@
 					}).then(() => {
 						window.location.href = linkWhatsApp;
 					});
-				}
 				} else {
 					mostrarAlertaCliente('Atención', data.mensaje, 'error');
 				}
