@@ -664,3 +664,62 @@ async function confirmarPedidoTienda() {
         mostrarAlertaCliente('Error', 'No se pudo conectar con el servidor', 'error');
     }
 }
+
+function reiniciarPedido(confirmar = true) {
+    const realizarReinicio = () => {
+        cart = {};
+        selectedDate = "";
+        
+        // Limpiar inputs del formulario
+        const ids = ['custNombre', 'custTel', 'custEmail', 'custDir', 'custNotas', 'custRegaloDestinatario', 'custRegaloMensaje'];
+        ids.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.value = '';
+        });
+
+        const zonaSel = document.getElementById('custZonaSelect');
+        if (zonaSel) zonaSel.selectedIndex = 0;
+
+        const chkRegalo = document.getElementById('chkEsRegalo');
+        if (chkRegalo) {
+            chkRegalo.checked = false;
+            toggleOpcionRegalo();
+        }
+
+        // Actualizar vistas y volver al Paso 1
+        renderProducts();
+        renderDates();
+        buildSummary();
+
+        for (let i = 1; i <= 4; i++) {
+            const body = document.getElementById(`step-body-${i}`);
+            const badge = document.getElementById(`step-badge-${i}`);
+            if (body) body.style.display = (i === 1) ? 'block' : 'none';
+            if (badge) {
+                if (i === 1) badge.classList.add('step-active');
+                else badge.classList.remove('step-active');
+            }
+        }
+        scrollToSection('step-card-1');
+    };
+
+    if (confirmar && Object.keys(cart).length > 0) {
+        Swal.fire({
+            title: '¿Reiniciar pedido?',
+            text: 'Se vaciará el carrito y se borrarán los datos ingresados.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Sí, reiniciar',
+            cancelButtonText: 'Cancelar',
+            customClass: {
+                popup: 'croiss-swal-popup',
+                confirmButton: 'croiss-swal-confirm',
+                cancelButton: 'croiss-swal-cancel'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) realizarReinicio();
+        });
+    } else {
+        realizarReinicio();
+    }
+}
