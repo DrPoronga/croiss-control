@@ -2734,10 +2734,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const descuentoSelect = document.getElementById('vDescuento');
-            const descuentoPorcentaje = descuentoSelect ? (parseFloat(descuentoSelect.value) || 0) : 0;
+            let descuentoPorcentaje = descuentoSelect ? (parseFloat(descuentoSelect.value) || 0) : 0;
 
             const totalBruto = carrito.reduce((acc, i) => acc + (i.precio_unitario * i.cantidad), 0);
-            const montoFinalNeto = Math.max(0, Math.round(totalBruto * (1 - (descuentoPorcentaje / 100))));
+            let montoDescuento = Math.round(totalBruto * (descuentoPorcentaje / 100));
+            let tagCupon = '';
+
+            // Si hay un cupón de descuento activo en el ticket, prioriza el cupón
+            if (typeof cuponAplicado !== 'undefined' && cuponAplicado) {
+                if (cuponAplicado.tipo === '%') {
+                    montoDescuento = Math.round(totalBruto * (cuponAplicado.valor / 100));
+                    descuentoPorcentaje = cuponAplicado.valor;
+                    tagCupon = `[Cupón: ${cuponAplicado.codigo}]`;
+                } else {
+                    montoDescuento = cuponAplicado.valor;
+                    tagCupon = `[Cupón: ${cuponAplicado.codigo} -$${cuponAplicado.valor}]`;
+                }
+            }
+
+            const montoFinalNeto = Math.max(0, totalBruto - montoDescuento);
+
+            let notasCliente = getInputValueSafe('vNotasCliente');
+            if (tagCupon) {
+                notasCliente = `${tagCupon} ${notasCliente}`.trim();
+            }
 
             const tInicio = Date.now();
             mostrarCroissLoader();
@@ -2763,7 +2783,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 descuento: descuentoPorcentaje,
                 estado: getInputValueSafe('vEstado', 'Pendiente'),
                 medio_pago: getInputValueSafe('vMedio', 'Efectivo'),
-                notas: getInputValueSafe('vNotasCliente')
+                notas: notasCliente
             };
 
             try {
@@ -2776,6 +2796,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.status === 'exito') {
                     carrito = [];
+                    cuponAplicado = null; // Reinicia el cupón al guardar
                     renderizarCarrito();
                     formFinalizarPedido.reset();
                     if(document.getElementById('vFecha')) document.getElementById('vFecha').value = hoy;
