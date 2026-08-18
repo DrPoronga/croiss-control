@@ -427,8 +427,8 @@ def obtener_o_crear_sheet_cupones():
     try:
         return doc.worksheet("Cupones")
     except Exception:
-        ws = doc.add_worksheet(title="Cupones", rows="50", cols="5")
-        ws.append_row(["Codigo", "Tipo", "Valor", "Limite_Usos", "Activo"])
+        ws = doc.add_worksheet(title="Cupones", rows="50", cols="6")
+        ws.append_row(["Codigo", "Tipo", "Valor", "Limite_Usos", "Vencimiento", "Activo"])
         return ws
 
 @app.route('/api/public/validar_cupon', methods=['POST'])
@@ -442,6 +442,7 @@ def validar_cupon():
             
         sheet_cupones = obtener_o_crear_sheet_cupones()
         registros = get_clean_records(sheet_cupones)
+        hoy_str = datetime.now().strftime("%Y-%m-%d")
         
         for idx, reg in enumerate(registros, start=2):
             cod_sheet = get_field_val(reg, "Codigo", "Código").strip().upper()
@@ -449,6 +450,14 @@ def validar_cupon():
                 activo = get_field_val(reg, "Activo").strip().upper()
                 if activo != "SI":
                     return jsonify({"status": "error", "mensaje": "Este cupón ya no se encuentra activo."}), 400
+                
+                # --- NUEVA LÓGICA DE VENCIMIENTO ---
+                vencimiento_str = get_field_val(reg, "Vencimiento", "Expiracion", "Fecha Vencimiento")
+                if vencimiento_str:
+                    venc_norm = normalizar_fecha(vencimiento_str)
+                    # Si hay fecha y ya pasó el día de hoy, rechazar el cupón
+                    if venc_norm and venc_norm < hoy_str:
+                        return jsonify({"status": "error", "mensaje": "El cupón ha expirado."}), 400
                     
                 limite_str = get_field_val(reg, "Limite_Usos", "Limite", "Usos")
                 if limite_str and limite_str.isdigit():
@@ -473,8 +482,8 @@ def validar_cupon():
                 
         return jsonify({"status": "error", "mensaje": "El cupón no existe o es inválido."}), 404
     except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500        
-
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+        
 def sincronizar_cliente(nombre, email, telefono, direccion):
     if not nombre or nombre.lower() == "consumidor final": return
     if "@" in str(nombre) and "@" not in str(email): nombre, email = email, nombre

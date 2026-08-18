@@ -2,6 +2,7 @@ const croissImagePreload = new Image();
 croissImagePreload.src = '/static/croissant.png';
 let croissAnimFrameId = null;
 
+
 const defaultMenu = [
     { nombre: "Croissant Clásico", relleno: "ninguno" },
     { nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
@@ -16,6 +17,7 @@ let menuItems = defaultMenu;
 let cart = {}; 
 let selectedDate = "";
 let datesCapacity = [];
+let cuponAplicadoTienda = null;
 
 // REGLAS DE DÍAS POR ZONA (0 = Domingo, 1 = Lunes, 2 = Martes, 3 = Miércoles, 4 = Jueves, 5 = Viernes, 6 = Sábado)
 const REGLAS_ZONAS = {
@@ -454,6 +456,44 @@ function toggleOpcionRegalo() {
     if (box) box.style.display = (chk && chk.checked) ? 'block' : 'none';
 }
 
+// --- NUEVA FUNCIÓN PARA VALIDAR EL CUPÓN EN LA TIENDA ---
+async function aplicarCuponPublico() {
+    const input = document.getElementById('inputCuponTienda');
+    const codigo = input ? input.value.trim().toUpperCase() : '';
+    if (!codigo) {
+        Swal.fire('Atención', 'Ingresa un código promocional.', 'warning');
+        return;
+    }
+
+    mostrarCroissLoader();
+    try {
+        const res = await fetch('/api/public/validar_cupon', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ codigo })
+        });
+        const data = await res.json();
+        cerrarCroissLoaderSeguro();
+
+        if (data.status === 'exito') {
+            cuponAplicadoTienda = data.cupon;
+            Swal.fire({
+                toast: true, position: 'top-end', icon: 'success',
+                title: `¡Cupón aplicado!`,
+                showConfirmButton: false, timer: 2000, background: '#F0FDF4', color: '#166534'
+            });
+            buildSummary();
+        } else {
+            cuponAplicadoTienda = null;
+            Swal.fire('Error', data.mensaje || 'Cupón inválido o expirado.', 'error');
+            buildSummary();
+        }
+    } catch (e) {
+        cerrarCroissLoaderSeguro();
+        Swal.fire('Error', 'No se pudo validar el cupón.', 'error');
+    }
+}
+
 function buildSummary() {
     const calc = calculatePrices();
     const box = document.getElementById('orderSummaryBox');
@@ -463,7 +503,6 @@ function buildSummary() {
     const tel = (document.getElementById('custTel')?.value || '').trim();
     const zonaVal = document.getElementById('custZonaSelect')?.value;
     const zonaNombre = REGLAS_ZONAS[zonaVal] ? REGLAS_ZONAS[zonaVal].nombre : '';
-    const dir = (document.getElementById('custDir')?.value || '').trim();
     const esRegalo = document.getElementById('chkEsRegalo')?.checked;
     const destinatario = (document.getElementById('custRegaloDestinatario')?.value || '').trim();
     const mensajeRegalo = (document.getElementById('custRegaloMensaje')?.value || '').trim();
@@ -497,6 +536,23 @@ function buildSummary() {
     let zonaHtml = zonaNombre ? '<strong>Zona:</strong> ' + zonaNombre + '<br>' : '';
     let fechaHtml = selectedDate ? selectedDate : '<span style="color:#DC2626;">(Seleccionar arriba)</span>';
 
+    // Cálculo de cupones
+    let totalGeneral = calc.totalMoney;
+    let montoDescuento = 0;
+    let textoDescuentoHtml = '';
+
+    if (cuponAplicadoTienda) {
+        if (cuponAplicadoTienda.tipo === '%') {
+            montoDescuento = Math.round(totalGeneral * (cuponAplicadoTienda.valor / 100));
+            textoDescuentoHtml = `<div style="color:#16A34A; font-weight:700; font-size:0.9rem; text-align:right;">Cupón ${cuponAplicadoTienda.codigo} (-${cuponAplicadoTienda.valor}%): -$${montoDescuento}</div>`;
+        } else {
+            montoDescuento = cuponAplicadoTienda.valor;
+            textoDescuentoHtml = `<div style="color:#16A34A; font-weight:700; font-size:0.9rem; text-align:right;">Cupón ${cuponAplicadoTienda.codigo}: -$${montoDescuento}</div>`;
+        }
+    }
+
+    const totalFinal = Math.max(0, totalGeneral - montoDescuento);
+
     box.innerHTML = `
         <div style="margin-bottom: 8px;">
             ${clienteHtml}
@@ -509,8 +565,12 @@ function buildSummary() {
             <strong style="color:#C86D28;">Items:</strong>
             ${itemsHtml}
         </div>
-        <div style="margin-top:12px; font-size:1.2rem; font-weight:800; text-align:right; color:#2D1E18;">
-            Total A Pagar: $${calc.totalMoney}
+        <div style="margin-top:12px; font-size:1.05rem; font-weight:800; text-align:right; color:#7A6B63;">
+            Subtotal: $${totalGeneral}
+        </div>
+        ${textoDescuentoHtml}
+        <div style="margin-top:4px; font-size:1.35rem; font-weight:800; text-align:right; color:#2D1E18;">
+            Total A Pagar: $${totalFinal}
         </div>
     `;
 }
@@ -525,13 +585,11 @@ function mostrarAlertaCliente(titulo, texto, icono = 'warning') {
 function irAlPaso(paso) {
     const calc = calculatePrices();
 
-    // Validar Paso 1 (Menú)
     if (paso > 1 && calc.totalCroissants === 0) {
         mostrarAlertaCliente('Elegí tus croissants', 'Agregá al menos 1 croissant a tu pedido antes de continuar.');
         return;
     }
 
-    // Validar Paso 2 (Datos del cliente y Zona)
     if (paso > 2) {
         const nom = (document.getElementById('custNombre')?.value || '').trim();
         const tel = (document.getElementById('custTel')?.value || '').trim();
@@ -545,7 +603,6 @@ function irAlPaso(paso) {
         }
     }
 
-    // Validar Paso 3 (Fecha)
     if (paso > 3 && !selectedDate) {
         mostrarAlertaCliente('Selecciona la fecha', 'Por favor marca el día de entrega disponible para tu zona.');
         return;
@@ -596,6 +653,26 @@ async function confirmarPedidoTienda() {
         notasCliente = `${tagRegalo} ${notasCliente}`.trim();
     }
 
+    // Cálculo final aplicando el cupón a la orden guardada
+    let totalGeneral = calc.totalMoney;
+    let montoDescuento = 0;
+    let stringCupon = '';
+
+    if (cuponAplicadoTienda) {
+        if (cuponAplicadoTienda.tipo === '%') {
+            montoDescuento = Math.round(totalGeneral * (cuponAplicadoTienda.valor / 100));
+            stringCupon = `[Dto ${cuponAplicadoTienda.valor}% - Cupón: ${cuponAplicadoTienda.codigo}]`;
+        } else {
+            montoDescuento = cuponAplicadoTienda.valor;
+            stringCupon = `[Dto $${cuponAplicadoTienda.valor} - Cupón: ${cuponAplicadoTienda.codigo}]`;
+        }
+    }
+    const totalFinal = Math.max(0, totalGeneral - montoDescuento);
+
+    if (stringCupon) {
+        notasCliente = `${stringCupon} ${notasCliente}`.trim();
+    }
+
     let itemsArr = [];
     for(let k in cart) {
         if(cart[k] && cart[k].cantidad > 0) {
@@ -616,7 +693,7 @@ async function confirmarPedidoTienda() {
         fecha_entrega: selectedDate,
         notas: notasCliente,
         items: itemsArr,
-        monto_total: calc.totalMoney
+        monto_total: totalFinal // Manda el precio ya descontado a la base de datos
     };
 
     mostrarCroissLoader();
@@ -641,7 +718,7 @@ async function confirmarPedidoTienda() {
                         `👤 *Nombre:* ${nom}%0A` +
                         `📅 *Fecha Entrega:* ${selectedDate}%0A` +
                         `🥐 *Pedido:* ${resumenProductos.join(', ')}%0A` +
-                        `💵 *Total:* $${calc.totalMoney}%0A` +
+                        `💵 *Total:* $${totalFinal}${montoDescuento > 0 ? ' (Descuento aplicado)' : ''}%0A` +
                         `📍 *Dirección:* ${direccionCompleta}%0A%0A` +
                         `Quedo a la espera para coordinar el pago. ¡Muchas gracias!`;
 
@@ -669,8 +746,11 @@ function reiniciarPedido(confirmar = true) {
     const realizarReinicio = () => {
         cart = {};
         selectedDate = "";
+        cuponAplicadoTienda = null; // Reinicia el cupón
         
-        // Limpiar inputs del formulario
+        const inputCupon = document.getElementById('inputCuponTienda');
+        if (inputCupon) inputCupon.value = '';
+
         const ids = ['custNombre', 'custTel', 'custEmail', 'custDir', 'custNotas', 'custRegaloDestinatario', 'custRegaloMensaje'];
         ids.forEach(id => {
             const el = document.getElementById(id);
@@ -686,7 +766,6 @@ function reiniciarPedido(confirmar = true) {
             toggleOpcionRegalo();
         }
 
-        // Actualizar vistas y volver al Paso 1
         renderProducts();
         renderDates();
         buildSummary();
