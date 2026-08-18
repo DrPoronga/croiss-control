@@ -2740,7 +2740,6 @@ document.addEventListener('DOMContentLoaded', () => {
             let montoDescuento = Math.round(totalBruto * (descuentoPorcentaje / 100));
             let tagCupon = '';
 
-            // Si hay un cupón de descuento activo en el ticket, prioriza el cupón
             if (typeof cuponAplicado !== 'undefined' && cuponAplicado) {
                 if (cuponAplicado.tipo === '%') {
                     montoDescuento = Math.round(totalBruto * (cuponAplicado.valor / 100));
@@ -2781,6 +2780,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 items: carritoProcesado,
                 monto_total: montoFinalNeto,
                 descuento: descuentoPorcentaje,
+                cupon: (typeof cuponAplicado !== 'undefined' && cuponAplicado) ? cuponAplicado.codigo : '',
                 estado: getInputValueSafe('vEstado', 'Pendiente'),
                 medio_pago: getInputValueSafe('vMedio', 'Efectivo'),
                 notas: notasCliente
@@ -2796,7 +2796,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (data.status === 'exito') {
                     carrito = [];
-                    cuponAplicado = null; // Reinicia el cupón al guardar
+                    cuponAplicado = null;
                     renderizarCarrito();
                     formFinalizarPedido.reset();
                     if(document.getElementById('vFecha')) document.getElementById('vFecha').value = hoy;
@@ -2835,7 +2835,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-
     const formGasto = document.getElementById('formGasto');
     if (formGasto) {
         formGasto.addEventListener('submit', async (e) => {

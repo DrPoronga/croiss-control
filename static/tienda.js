@@ -660,12 +660,11 @@ async function confirmarPedidoTienda() {
         notasCliente = `${tagRegalo} ${notasCliente}`.trim();
     }
 
-    // Cálculo final aplicando el cupón a la orden guardada
     let totalGeneral = calc.totalMoney;
     let montoDescuento = 0;
     let stringCupon = '';
 
-    if (cuponAplicadoTienda) {
+    if (typeof cuponAplicadoTienda !== 'undefined' && cuponAplicadoTienda) {
         if (cuponAplicadoTienda.tipo === '%') {
             montoDescuento = Math.round(totalGeneral * (cuponAplicadoTienda.valor / 100));
             stringCupon = `[Dto ${cuponAplicadoTienda.valor}% - Cupón: ${cuponAplicadoTienda.codigo}]`;
@@ -700,7 +699,8 @@ async function confirmarPedidoTienda() {
         fecha_entrega: selectedDate,
         notas: notasCliente,
         items: itemsArr,
-        monto_total: totalFinal // Manda el precio ya descontado a la base de datos
+        cupon: (typeof cuponAplicadoTienda !== 'undefined' && cuponAplicadoTienda) ? cuponAplicadoTienda.codigo : '',
+        monto_total: totalFinal
     };
 
     mostrarCroissLoader();
