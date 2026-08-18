@@ -418,18 +418,6 @@ def obtener_o_crear_sheet_precios_insumos():
             ws.append_row(item)
         return ws
 
-def obtener_o_crear_sheet_cupones():
-    """Obtiene o crea la pestaña 'Cupones' para validar descuentos."""
-    ruta_credenciales = "credentials.json"
-    creds = Credentials.from_service_account_file(ruta_credenciales, scopes=SCOPES)
-    cliente = gspread.authorize(creds)
-    doc = cliente.open_by_key(SPREADSHEET_ID)
-    try:
-        return doc.worksheet("Cupones")
-    except Exception:
-        ws = doc.add_worksheet(title="Cupones", rows="50", cols="6")
-        ws.append_row(["Codigo", "Tipo", "Valor", "Limite_Usos", "Vencimiento", "Activo"])
-        return ws
 
 @app.route('/api/public/validar_cupon', methods=['POST'])
 def validar_cupon():
@@ -484,6 +472,19 @@ def validar_cupon():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
  
+def obtener_o_crear_sheet_cupones():
+    """Obtiene o crea la pestaña 'Cupones' ajustada al orden real de columnas."""
+    ruta_credenciales = "credentials.json"
+    creds = Credentials.from_service_account_file(ruta_credenciales, scopes=SCOPES)
+    cliente = gspread.authorize(creds)
+    doc = cliente.open_by_key(SPREADSHEET_ID)
+    try:
+        return doc.worksheet("Cupones")
+    except Exception:
+        ws = doc.add_worksheet(title="Cupones", rows="50", cols="6")
+        ws.append_row(["Codigo", "Tipo", "Valor", "Fecha Vencimiento", "Limite_Usos", "Activo"])
+        return ws
+
 def descontar_uso_cupon(codigo_cupon):
     if not codigo_cupon:
         return
@@ -497,9 +498,11 @@ def descontar_uso_cupon(codigo_cupon):
                 if limite_str and limite_str.isdigit():
                     limite_actual = int(limite_str)
                     nuevo_limite = max(0, limite_actual - 1)
-                    # Descuenta 1 uso en la Columna D (Limite_Usos)
-                    ejecutar_con_reintento(sheet_cupones.update_cell, idx, 4, nuevo_limite)
-                    # Si no quedan usos, lo pasa a "NO" en la Columna F (Activo)
+                    
+                    # Columna 5 (E) -> Limite_Usos
+                    ejecutar_con_reintento(sheet_cupones.update_cell, idx, 5, nuevo_limite)
+                    
+                    # Columna 6 (F) -> Activo
                     if nuevo_limite == 0:
                         ejecutar_con_reintento(sheet_cupones.update_cell, idx, 6, "NO")
                 break
