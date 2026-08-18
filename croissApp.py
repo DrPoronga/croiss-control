@@ -483,6 +483,28 @@ def validar_cupon():
         return jsonify({"status": "error", "mensaje": "El cupón no existe o es inválido."}), 404
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
+ 
+def descontar_uso_cupon(codigo_cupon):
+    if not codigo_cupon:
+        return
+    try:
+        sheet_cupones = obtener_o_crear_sheet_cupones()
+        registros = get_clean_records(sheet_cupones)
+        for idx, reg in enumerate(registros, start=2):
+            cod_sheet = get_field_val(reg, "Codigo", "Código").strip().upper()
+            if cod_sheet == str(codigo_cupon).strip().upper():
+                limite_str = get_field_val(reg, "Limite_Usos", "Limite", "Usos")
+                if limite_str and limite_str.isdigit():
+                    limite_actual = int(limite_str)
+                    nuevo_limite = max(0, limite_actual - 1)
+                    # Descuenta 1 uso en la Columna D (Limite_Usos)
+                    ejecutar_con_reintento(sheet_cupones.update_cell, idx, 4, nuevo_limite)
+                    # Si no quedan usos, lo pasa a "NO" en la Columna F (Activo)
+                    if nuevo_limite == 0:
+                        ejecutar_con_reintento(sheet_cupones.update_cell, idx, 6, "NO")
+                break
+    except Exception as e:
+        print(f"⚠️ Error descontando uso de cupón {codigo_cupon}: {e}", flush=True)
         
 def sincronizar_cliente(nombre, email, telefono, direccion):
     if not nombre or nombre.lower() == "consumidor final": return
@@ -983,10 +1005,12 @@ def registrar_venta():
         try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)
         except Exception: pass
 
+        if datos.get("cupon"):
+            descontar_uso_cupon(datos.get("cupon"))
+
         return jsonify({"status": "exito", "mensaje": "Pedido registrado correctamente", "id": nuevo_id, "alertas": alertas_empaque}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
 # ==========================================
 # RUTAS PÚBLICAS DE E-COMMERCE / TIENDA
 # ==========================================
@@ -1263,6 +1287,9 @@ def api_public_crear_pedido():
 
         try: sincronizar_cliente(cliente_nombre, email_cliente, telefono_cliente, direccion_cliente)
         except Exception: pass
+
+        if datos.get("cupon"):
+            descontar_uso_cupon(datos.get("cupon"))
 
         return jsonify({"status": "exito", "mensaje": "Pedido registrado", "id": nuevo_id}), 200
     except Exception as error:
