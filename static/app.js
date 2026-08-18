@@ -891,6 +891,35 @@ async function cargarBalance() {
     } finally {
         cerrarCroissLoaderSeguro();
     }
+	// Render de Métricas de Cupones
+	const contCupones = document.getElementById('boxCuponesBalance');
+	if (contCupones) {
+		if (data.cupones_stats && data.cupones_stats.length > 0) {
+			let htmlCupones = '';
+			data.cupones_stats.forEach(c => {
+				htmlCupones += `
+					<div style="display:flex; justify-content:space-between; align-items:center; padding:10px 12px; background:#FFFFFF; border:1px solid var(--border-color); border-radius:12px; margin-top:6px;">
+						<div>
+							<strong style="color:var(--text-main); font-size:0.9rem;">🎟️ Cupón: ${c.codigo}</strong>
+							<div style="font-size:0.75rem; color:var(--text-muted);">${c.usos} pedido(s) aplicado(s)</div>
+						</div>
+						<div style="text-align:right;">
+							<strong style="color:#16A34A; font-size:0.95rem;">-$${Math.round(c.descuento_total)}</strong>
+							<div style="font-size:0.7rem; color:var(--text-muted);">Descuento total</div>
+						</div>
+					</div>
+				`;
+			});
+			contCupones.innerHTML = `
+				<div style="background:#FAF9F8; border:1px solid var(--border-color); border-radius:16px; padding:14px;">
+					<small style="color:var(--accent); font-weight:800; text-transform:uppercase; font-size:0.72rem;">🎟️ Cupones Promocionales Utilizados</small>
+					${htmlCupones}
+				</div>
+			`;
+		} else {
+			contCupones.innerHTML = '';
+		}
+	}	
 }
 
 // FUNCIONES PARA MOSTRAR LOS MODALES AL HACER CLIC
