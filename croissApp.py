@@ -994,9 +994,19 @@ def registrar_venta():
 def tienda_publica():
     return render_template('tienda.html', numero_whatsapp=NUMERO_WHATSAPP)
     
+CACHE_CATALOGO = None
+CACHE_CATALOGO_TIMESTAMP = 0
+
 @app.route('/api/public/catalogo', methods=['GET'])
 @limiter.limit("30 per minute")
 def api_public_catalogo():
+    global CACHE_CATALOGO, CACHE_CATALOGO_TIMESTAMP
+    ahora = time.time()
+    
+    # Si tenemos el menú en memoria y pasaron menos de 5 minutos (300 seg), responde INSTANTÁNEAMENTE
+    if CACHE_CATALOGO and (ahora - CACHE_CATALOGO_TIMESTAMP < 300):
+        return jsonify({"status": "exito", "productos": CACHE_CATALOGO}), 200
+
     try:
         sheet = conectar_sheet("Productos_Stock")
         productos = get_clean_records(sheet)
@@ -1009,7 +1019,6 @@ def api_public_catalogo():
             if not nombre or any(k in name_lower for k in ["congelado", "sobrevendido", "masa"]):
                 continue
             
-            # Si el administrador lo apagó desde index.html, no lo mostramos en la tienda
             if estado_menu.get(name_lower) is False:
                 continue
 
@@ -1021,13 +1030,19 @@ def api_public_catalogo():
 
             menu_publico.append({"nombre": nombre, "precio": precio})
 
-        # Si Croiss a la Creme no está aún en Sheets pero está activo en el panel, se incluye
         existe_creme = any(("creme" in p["nombre"].lower() or "crema" in p["nombre"].lower()) for p in menu_publico)
         if not existe_creme and estado_menu.get("croiss a la creme") is not False:
             menu_publico.append({"nombre": "Croiss a la Creme", "precio": 190})
 
+        # Guardar en memoria RAM
+        CACHE_CATALOGO = menu_publico
+        CACHE_CATALOGO_TIMESTAMP = ahora
+
         return jsonify({"status": "exito", "productos": menu_publico}), 200
     except Exception as error:
+        # Si la planilla falla o responde lento pero hay un caché viejo, usa el menú en memoria
+        if CACHE_CATALOGO:
+            return jsonify({"status": "exito", "productos": CACHE_CATALOGO}), 200
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 MENU_ESTADO_FILE = "menu_estado.json"
@@ -1050,6 +1065,7 @@ def guardar_estado_menu(estado):
 
 @app.route('/api/menu_visibilidad', methods=['GET', 'POST'])
 def api_menu_visibilidad():
+    global CACHE_CATALOGO
     try:
         if request.method == 'POST':
             datos = request.json or {}
@@ -1062,6 +1078,10 @@ def api_menu_visibilidad():
             estado = obtener_estado_menu()
             estado[nombre_prod] = disponible
             guardar_estado_menu(estado)
+
+            # Limpia la caché para que el cambio se vea reflejado inmediatamente en la tienda
+            CACHE_CATALOGO = None
+
             return jsonify({"status": "exito", "mensaje": "Estado de menú actualizado"}), 200
 
         return jsonify({"status": "exito", "estado": obtener_estado_menu()}), 200
