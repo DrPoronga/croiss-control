@@ -1273,6 +1273,8 @@ async function cargarAgenda(conLoader = true) {
                             </div>
                         ` : '';
 
+                        let cantidadFormateada = String(p.cantidad).includes('un.') || String(p.cantidad).includes('Pop') ? p.cantidad : p.cantidad + ' un.';
+
                         htmlPedidos += `
                             <div style="background:#FAF9F8; border:1px solid var(--border-color); border-radius:14px; padding:12px; margin-bottom:10px;">
                                 <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -1284,7 +1286,7 @@ async function cargarAgenda(conLoader = true) {
                                         ${bloqueNota}
                                     </div>
                                     <div style="text-align:right;">
-                                        <span style="font-weight:800; color:#d97706; font-size:1rem;">${p.cantidad} un.</span>
+                                        <span style="font-weight:800; color:#d97706; font-size:0.95rem;">${cantidadFormateada}</span>
                                     </div>
                                 </div>
                                 <div style="margin-top:8px; padding-top:8px; border-top:1px dashed #E2D9D3; display:flex; justify-content:space-between; align-items:center;">
@@ -1727,6 +1729,7 @@ async function cargarCuentas(conLoader = true) {
                 } else {
                     data.pendientes_pago.forEach(p => {
                         const clienteClean = p.cliente.replace(/'/g, "\\'");
+                        let cantidadFormateada = String(p.cantidad).includes('un.') || String(p.cantidad).includes('Pop') ? p.cantidad : p.cantidad + ' un.';
                         
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
@@ -1734,7 +1737,7 @@ async function cargarCuentas(conLoader = true) {
                         div.innerHTML = `
                             <div style="flex: 1; min-width: 0;">
                                 <strong style="color: var(--text-main); font-size: 0.95rem;">${p.cliente}</strong> <small style="color:#64748b;">(${p.fecha_entrega})</small><br>
-                                <span style="font-size:0.82rem; color:#475569; margin-top:2px; display:inline-block;">${p.producto} (${p.cantidad} un.)</span><br>
+                                <span style="font-size:0.82rem; color:#475569; margin-top:2px; display:inline-block;">${p.producto} (${cantidadFormateada})</span><br>
                                 <span style="font-size:0.9rem; font-weight:800; color:#dc2626; margin-top:2px; display:inline-block;">Monto: $${p.monto}</span>
                             </div>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; min-width: 190px; flex-shrink: 0;">
@@ -1757,6 +1760,7 @@ async function cargarCuentas(conLoader = true) {
                     data.pendientes_entrega.forEach(e => {
                         const esPagado = e.estado.toLowerCase() === 'pagado';
                         const clienteClean = e.cliente.replace(/'/g, "\\'");
+                        let cantidadFormateada = String(e.cantidad).includes('un.') || String(e.cantidad).includes('Pop') ? e.cantidad : e.cantidad + ' un.';
 
                         const div = document.createElement('div');
                         div.className = 'cuenta-item';
@@ -1792,7 +1796,7 @@ async function cargarCuentas(conLoader = true) {
                             <div style="flex: 1; padding-right: 12px;">
                                 <strong style="color: var(--text-main); font-size: 0.95rem;">${e.fecha_entrega}</strong><br>
                                 <strong style="color: var(--text-main); font-size: 0.9rem;">${e.cliente}</strong><br>
-                                <span style="font-size:0.82rem; color:#475569; margin-top:2px; display:inline-block;">${e.producto} (${e.cantidad} un.)</span><br>
+                                <span style="font-size:0.82rem; color:#475569; margin-top:2px; display:inline-block;">${e.producto} (${cantidadFormateada})</span><br>
                                 ${e.direccion ? `<span style="font-size:0.8rem; color:var(--text-muted); display:inline-block; margin-top:2px;">📍 ${e.direccion}</span>` : ''}
                                 <br>${bloqueNota}
                                 ${avisoEnCamino}
