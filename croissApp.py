@@ -1272,61 +1272,7 @@ def calcular_unidades_reales_desde_descripcion(desc_str):
             total_reales += cant_cajas
     return total_reales
 
-@app.route('/api/agenda', methods=['GET'])
-def obtener_agenda():
-    try:
-        sheet_ventas = conectar_sheet("Ventas")
-        asegurar_encabezados_ventas(sheet_ventas)
-        registros = get_clean_records(sheet_ventas)
-        
-        hoy = datetime.now().date()
-        dias_agenda = {}
-        nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
-        
-        for i in range(7):
-            fecha_dt = hoy + timedelta(days=i)
-            fecha_str = fecha_dt.strftime("%Y-%m-%d")
-            dias_agenda[fecha_str] = {
-                "fecha": fecha_str,
-                "nombre_dia": f"{nombres_dias[fecha_dt.weekday()]} {fecha_dt.strftime('%d/%m')}",
-                "pedidos": [],
-                "total_croissants": 0
-            }
-        
-        for idx, reg in enumerate(registros, start=2):
-            estado_entrega = get_field_val(reg, "Entrega", "Estado Entrega", "Estado de Entrega")
-            if estado_entrega and "entregad" in estado_entrega.lower(): continue
-
-            f_entrega_norm = normalizar_fecha(get_field_val(reg, "Fecha Entrega", "Fecha"))
-
-            if f_entrega_norm in dias_agenda:
-                cant_str = get_field_val(reg, "Cantidad")
-                cant_horno = int(cant_str) if cant_str.isdigit() else 0
-                
-                desc_prod = get_field_val(reg, "Producto")
-                # Calcular las unidades reales para mostrar en la tarjeta del cliente
-                cant_real = calcular_unidades_reales_desde_descripcion(desc_prod) or cant_horno
-
-                dias_agenda[f_entrega_norm]["pedidos"].append({
-                    "fila": idx,
-                    "id": get_field_val(reg, "ID Venta", "ID"),
-                    "cliente": get_field_val(reg, "Cliente"),
-                    "descripcion": desc_prod,
-                    "cantidad": cant_real,  # <--- Muestra 9, 18, 27 un. en el distintivo
-                    "estado": get_field_val(reg, "Estado"),
-                    "direccion": get_field_val(reg, "Dirección", "Direccion"),
-                    "telefono": get_field_val(reg, "Teléfono", "Telefono", "Tel"),
-                    "email": get_field_val(reg, "Email", "Correo"),
-                    "notas": get_field_val(reg, "Notas", "Nota", "Comentario", "Observaciones")
-                })
-                # Mantiene la carga equivalente para la barra de tope del horno (35 max)
-                dias_agenda[f_entrega_norm]["total_croissants"] += cant_horno
-                
-        return jsonify({"status": "exito", "agenda": list(dias_agenda.values())}), 200
-    except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
-
+ 
 # ==========================================
 # LECTURA Y ACTUALIZACIÓN UNIFICADA DE STOCK
 # ==========================================
@@ -2133,6 +2079,108 @@ def editar_pedido():
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
+def desglosar_unidades_descripcion(desc_str):
+    if not desc_str:
+        return 0, 0
+    total_clasicos = 0
+    total_pops = 0
+    partes = str(desc_str).split(",")
+    for item in partes:
+        item_clean = item.strip()
+        if not item_clean:
+            continue
+        
+        # Eliminar sufijos como (Con Jalea)
+        sin_jalea = re.sub(r"\(con jalea\)", "", item_clean, flags=re.IGNORECASE).strip()
+        m = re.match(r"^(\d+)x\s+(.+)", sin_jalea, re.IGNORECASE)
+        if m:
+            cant = int(m.group(1))
+            prod_nombre = m.group(2).lower()
+        else:
+            cant = 1
+            prod_nombre = sin_jalea.lower()
+
+        if "pop" in prod_nombre:
+            if "27" in prod_nombre:
+                total_pops += cant * 27
+            elif "18" in prod_nombre:
+                total_pops += cant * 18
+            elif "9" in prod_nombre:
+                total_pops += cant * 9
+            else:
+                total_pops += cant * 9
+        else:
+            total_clasicos += cant
+            
+    return total_clasicos, total_pops
+
+def formatear_resumen_unidades(desc_str, cant_horno=0):
+    clasicos, pops = desglosar_unidades_descripcion(desc_str)
+    if clasicos > 0 and pops > 0:
+        return f"{clasicos} un. + {pops} Pop"
+    elif pops > 0:
+        return f"{pops} Pop"
+    elif clasicos > 0:
+        return f"{clasicos} un."
+    return f"{cant_horno} un."
+
+@app.route('/api/agenda', methods=['GET'])
+def obtener_agenda():
+    try:
+        sheet_ventas = conectar_sheet("Ventas")
+        asegurar_encabezados_ventas(sheet_ventas)
+        registros = get_clean_records(sheet_ventas)
+        
+        hoy = datetime.now().date()
+        dias_agenda = {}
+        nombres_dias = ["LUNES", "MARTES", "MIÉRCOLES", "JUEVES", "VIERNES", "SÁBADO", "DOMINGO"]
+        
+        for i in range(7):
+            fecha_dt = hoy + timedelta(days=i)
+            fecha_str = fecha_dt.strftime("%Y-%m-%d")
+            dias_agenda[fecha_str] = {
+                "fecha": fecha_str,
+                "nombre_dia": f"{nombres_dias[fecha_dt.weekday()]} {fecha_dt.strftime('%d/%m')}",
+                "pedidos": [],
+                "total_croissants": 0
+            }
+        
+        for idx, reg in enumerate(registros, start=2):
+            estado_entrega = get_field_val(reg, "Entrega", "Estado Entrega", "Estado de Entrega")
+            if estado_entrega and "entregad" in estado_entrega.lower(): continue
+
+            f_entrega_norm = normalizar_fecha(get_field_val(reg, "Fecha Entrega", "Fecha"))
+
+            if f_entrega_norm in dias_agenda:
+                cant_str = get_field_val(reg, "Cantidad")
+                cant_horno = int(cant_str) if cant_str.isdigit() else 0
+                
+                desc_prod = get_field_val(reg, "Producto")
+                # Se formatea el string con "3 un. + 9 Pop"
+                cant_resumen = formatear_resumen_unidades(desc_prod, cant_horno)
+
+                dias_agenda[f_entrega_norm]["pedidos"].append({
+                    "fila": idx,
+                    "id": get_field_val(reg, "ID Venta", "ID"),
+                    "cliente": get_field_val(reg, "Cliente"),
+                    "descripcion": desc_prod,
+                    "cantidad": cant_resumen,  # Muestra texto desglosado
+                    "estado": get_field_val(reg, "Estado"),
+                    "direccion": get_field_val(reg, "Dirección", "Direccion"),
+                    "telefono": get_field_val(reg, "Teléfono", "Telefono", "Tel"),
+                    "email": get_field_val(reg, "Email", "Correo"),
+                    "notas": get_field_val(reg, "Notas", "Nota", "Comentario", "Observaciones")
+                })
+                # Mantiene la carga equivalente para la barra de tope del horno
+                dias_agenda[f_entrega_norm]["total_croissants"] += cant_horno
+                
+        return jsonify({"status": "exito", "agenda": list(dias_agenda.values())}), 200
+    except Exception as error:
+        return jsonify({"status": "error", "mensaje": str(error)}), 500
+
+# (Mantén aquí las funciones de stock que están entre medio: obtener_niveles_stock, etc.)
+# Y luego reemplaza solo la función de cuentas:
+
 @app.route('/api/cuentas', methods=['GET'])
 def obtener_cuentas():
     try:
@@ -2149,7 +2197,9 @@ def obtener_cuentas():
             
             cant_str = get_field_val(reg, "Cantidad")
             cant_horno = int(cant_str) if cant_str.isdigit() else 0
-            cant_real = calcular_unidades_reales_desde_descripcion(prod) or cant_horno
+            
+            # Se formatea el string con "3 un. + 9 Pop"
+            cant_resumen = formatear_resumen_unidades(prod, cant_horno)
             
             direccion_item = get_field_val(reg, "Dirección", "Direccion")
             notas_item = get_field_val(reg, "Notas", "Nota", "Comentario", "Observaciones")
@@ -2168,7 +2218,7 @@ def obtener_cuentas():
                 "fila": idx, 
                 "cliente": cliente, 
                 "producto": prod, 
-                "cantidad": cant_real, 
+                "cantidad": cant_resumen, 
                 "monto": monto, 
                 "estado": estado_pago, 
                 "fecha_entrega": f_entrega, 
