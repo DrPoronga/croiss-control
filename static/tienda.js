@@ -210,6 +210,12 @@ function mostrarCroissLoader() {
     });
 }
 
+function cerrarCroissLoaderSeguro() {
+    const popup = Swal.getPopup();
+    if (popup) {
+        Swal.close();
+    }
+}
 function iniciarAnimacionCanvasCroissant() {
     const canvas = document.getElementById('croissBiteCanvas');
     if (!canvas) return;
@@ -473,6 +479,7 @@ async function aplicarCuponPublico() {
             body: JSON.stringify({ codigo })
         });
         const data = await res.json();
+        
         cerrarCroissLoaderSeguro();
 
         if (data.status === 'exito') {
