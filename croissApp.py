@@ -439,18 +439,12 @@ def validar_cupon():
                 if activo != "SI":
                     return jsonify({"status": "error", "mensaje": "Este cupón ya no se encuentra activo."}), 400
                 
-                # --- NUEVA LÓGICA DE VENCIMIENTO ---
-                vencimiento_str = get_field_val(reg, "Vencimiento", "Expiracion", "Fecha Vencimiento")
+                # Validación únicamente por Fecha de Vencimiento
+                vencimiento_str = get_field_val(reg, "Fecha Vencimiento", "Vencimiento", "Expiracion")
                 if vencimiento_str:
                     venc_norm = normalizar_fecha(vencimiento_str)
-                    # Si hay fecha y ya pasó el día de hoy, rechazar el cupón
                     if venc_norm and venc_norm < hoy_str:
                         return jsonify({"status": "error", "mensaje": "El cupón ha expirado."}), 400
-                    
-                limite_str = get_field_val(reg, "Limite_Usos", "Limite", "Usos")
-                if limite_str and limite_str.isdigit():
-                    if int(limite_str) <= 0:
-                        return jsonify({"status": "error", "mensaje": "Este cupón ha agotado su límite de usos."}), 400
                         
                 tipo = get_field_val(reg, "Tipo")
                 try:
@@ -471,7 +465,7 @@ def validar_cupon():
         return jsonify({"status": "error", "mensaje": "El cupón no existe o es inválido."}), 404
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
- 
+        
 def obtener_o_crear_sheet_cupones():
     """Obtiene o crea la pestaña 'Cupones' ajustada al orden real de columnas."""
     ruta_credenciales = "credentials.json"
@@ -1859,6 +1853,7 @@ def obtener_balance():
 
         historico_dict, clientes_mes_dict, clientes_historico_dict = {}, {}, {}
         clientes_por_mes_dict = {}
+        cupones_mes_dict = {}
 
         try:
             anio_f, mes_f = int(mes_filtro.split("-")[0]), int(mes_filtro.split("-")[1])
@@ -1927,6 +1922,10 @@ def obtener_balance():
                     elif porcentaje_dto > 0 and monto > 0:
                         precio_original = monto / (1 - (porcentaje_dto / 100))
                         monto_descontado_pedido = precio_original - monto
+            elif notas and "Cupón:" in notas:
+                match_dto_fijo = re.search(r"-\$(\d+(?:\.\d+)?)", notas)
+                if match_dto_fijo:
+                    monto_descontado_pedido = float(match_dto_fijo.group(1))
 
             datos_costo = calcular_costo_y_empaque_pedido(desc_prod, cant_horno)
             costo_pedido = datos_costo["costo_total"]
@@ -1982,6 +1981,15 @@ def obtener_balance():
                 total_croiss_mes += cant_clasicos
                 total_pop_mes += cant_pops
                 total_descuentos_mes += monto_descontado_pedido
+
+                # Conteo y estadísticas de cupones usados en el mes
+                match_cupon = re.search(r"Cupón:\s*([\w-]+)", notas, re.IGNORECASE)
+                if match_cupon:
+                    cod_c = match_cupon.group(1).upper()
+                    if cod_c not in cupones_mes_dict:
+                        cupones_mes_dict[cod_c] = {"codigo": cod_c, "usos": 0, "descuento_total": 0.0}
+                    cupones_mes_dict[cod_c]["usos"] += 1
+                    cupones_mes_dict[cod_c]["descuento_total"] += monto_descontado_pedido
 
                 es_web = "[web]" in notas.lower() or "web" in medio_pago.lower()
                 if es_web:
@@ -2084,6 +2092,7 @@ def obtener_balance():
             "top_clientes": {"mes": top_mes, "historico": top_historico},
             "ranking_mes_actual": ranking_mes_actual,
             "ganadores_por_mes": ganadores_por_mes,
+            "cupones_stats": list(cupones_mes_dict.values()),
             "stats_jalea": {"con_jalea": con_jalea_count, "sin_jalea": sin_jalea_count, "porcentaje": round((con_jalea_count / (con_jalea_count + sin_jalea_count) * 100), 1) if (con_jalea_count + sin_jalea_count) > 0 else 0},
             "ranking_sabores": ranking_sabores, "dias_semana": dias_semana_count, "historico_meses": lista_historica
         }), 200
