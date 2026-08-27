@@ -10,8 +10,7 @@ const defaultMenu = [
     { nombre: "Croissant c/ Jamón y Queso (+ $50)", relleno: "salado" },
 	{ nombre: "Croiss Milano (Salame y Queso) (+ $50)", relleno: "salado" },
     { nombre: "Croisstzel (Tu Croissant Clásico con sal en escamas)", relleno: "ninguno" },
-    { nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" },
-    { nombre: "Croisstzel c/ Jamón y Queso (+ $50)", relleno: "salado" }
+    { nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" }
 ];
 
 let menuItems = defaultMenu;
@@ -272,7 +271,9 @@ async function fetchCatalogo() {
         if(data.status === 'exito' && Array.isArray(data.productos) && data.productos.length > 0) {
             let lista = data.productos.map(p => {
                 let nombreLimpio = p.nombre || '';
-                if (nombreLimpio.toLowerCase().includes('sal') && !nombreLimpio.toLowerCase().includes('croisstzel')) {
+                
+                // Agregamos la excepción de "salame" para que no lo confunda con la sal en escamas
+                if (nombreLimpio.toLowerCase().includes('sal') && !nombreLimpio.toLowerCase().includes('croisstzel') && !nombreLimpio.toLowerCase().includes('salame')) {
                     if (nombreLimpio.toLowerCase().includes('jamon') || nombreLimpio.toLowerCase().includes('queso')) {
                         nombreLimpio = "Croisstzel c/ Jamón y Queso (+ $50)";
                     } else if (nombreLimpio.toLowerCase().includes('dulce') || nombreLimpio.toLowerCase().includes('ddl')) {
