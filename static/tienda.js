@@ -2,18 +2,8 @@ const croissImagePreload = new Image();
 croissImagePreload.src = '/static/croissant.png';
 let croissAnimFrameId = null;
 
-
-const defaultMenu = [
-    { nombre: "Croissant Clásico", relleno: "ninguno" },
-    { nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
-    { nombre: "Croiss a la Creme (Relleno de Crema Pastelera)", relleno: "dulce" },
-    { nombre: "Croissant c/ Jamón y Queso (+ $50)", relleno: "salado" },
-	{ nombre: "Croiss Milano (Salame y Queso) (+ $50)", relleno: "salado" },
-    { nombre: "Croisstzel (Tu Croissant Clásico con sal en escamas)", relleno: "ninguno" },
-    { nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" }
-];
-
-let menuItems = defaultMenu;
+// El menú inicia vacío y se llena 100% desde tu Google Sheet sin inventar productos
+let menuItems = []; 
 let cart = {}; 
 let selectedDate = "";
 let datesCapacity = [];
@@ -272,16 +262,8 @@ async function fetchCatalogo() {
             let lista = data.productos.map(p => {
                 let nombreLimpio = p.nombre || '';
                 
-                // Agregamos la excepción de "salame" para que no lo confunda con la sal en escamas
-                if (nombreLimpio.toLowerCase().includes('sal') && !nombreLimpio.toLowerCase().includes('croisstzel') && !nombreLimpio.toLowerCase().includes('salame')) {
-                    if (nombreLimpio.toLowerCase().includes('jamon') || nombreLimpio.toLowerCase().includes('queso')) {
-                        nombreLimpio = "Croisstzel c/ Jamón y Queso (+ $50)";
-                    } else if (nombreLimpio.toLowerCase().includes('dulce') || nombreLimpio.toLowerCase().includes('ddl')) {
-                        nombreLimpio = "Croisstzel c/ Dulce de Leche (+ $30)";
-                    } else {
-                        nombreLimpio = "Croisstzel (Tu Croissant Clásico con sal en escamas)";
-                    }
-                } else if (nombreLimpio.toLowerCase().includes('creme') || nombreLimpio.toLowerCase().includes('crema')) {
+                // Solo formateamos Croiss a la Creme si existe
+                if (nombreLimpio.toLowerCase().includes('creme') || nombreLimpio.toLowerCase().includes('crema')) {
                     nombreLimpio = "Croiss a la Creme (Relleno de Crema Pastelera)";
                 }
                 return { ...p, nombre: nombreLimpio };

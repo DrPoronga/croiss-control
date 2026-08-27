@@ -1042,23 +1042,31 @@ def api_public_catalogo():
         return jsonify({"status": "error", "mensaje": str(error)}), 500
         
 MENU_ESTADO_FILE = "menu_estado.json"
+ESTADO_MENU_MEMORIA = {}
 
 def obtener_estado_menu():
+    global ESTADO_MENU_MEMORIA
+    if ESTADO_MENU_MEMORIA:
+        return ESTADO_MENU_MEMORIA
+        
     if os.path.exists(MENU_ESTADO_FILE):
         try:
             with open(MENU_ESTADO_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                ESTADO_MENU_MEMORIA = json.load(f)
+                return ESTADO_MENU_MEMORIA
         except Exception:
             pass
-    return {}
+    return ESTADO_MENU_MEMORIA
 
 def guardar_estado_menu(estado):
+    global ESTADO_MENU_MEMORIA
+    ESTADO_MENU_MEMORIA = estado
     try:
         with open(MENU_ESTADO_FILE, "w", encoding="utf-8") as f:
             json.dump(estado, f, ensure_ascii=False, indent=2)
     except Exception as e:
         print(f"Error guardando estado menu: {e}", flush=True)
-
+        
 @app.route('/api/menu_visibilidad', methods=['GET', 'POST'])
 def api_menu_visibilidad():
     global CACHE_CATALOGO
