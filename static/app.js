@@ -96,11 +96,10 @@ function obtenerPrecioDesdeObjeto(prod) {
 function obtenerExtraRelleno(nombreProducto) {
     if (!nombreProducto) return 0;
     const nombre = nombreProducto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    if (nombre.includes('jamon') || nombre.includes('queso') || nombre.includes('creme') || nombre.includes('crema')) return 50;
+    if (nombre.includes('jamon') || nombre.includes('queso') || nombre.includes('creme') || nombre.includes('crema') || nombre.includes('milano')) return 50;
     if (nombre.includes('dulce de leche') || nombre.includes('ddl') || nombre.includes('dulce')) return 30;
     return 0;
 }
-	
 function calcularPrecioBase(totalCroissants) {
     if (totalCroissants >= 6) return 100;
     if (totalCroissants >= 3) return 110;

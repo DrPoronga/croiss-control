@@ -8,6 +8,7 @@ const defaultMenu = [
     { nombre: "Croissant c/ Dulce de Leche (+ $30)", relleno: "dulce" },
     { nombre: "Croiss a la Creme (Relleno de Crema Pastelera)", relleno: "dulce" },
     { nombre: "Croissant c/ Jamón y Queso (+ $50)", relleno: "salado" },
+	{ nombre: "Croiss Milano (Salame y Queso) (+ $50)", relleno: "salado" },
     { nombre: "Croisstzel (Tu Croissant Clásico con sal en escamas)", relleno: "ninguno" },
     { nombre: "Croisstzel c/ Dulce de Leche (+ $30)", relleno: "dulce" },
     { nombre: "Croisstzel c/ Jamón y Queso (+ $50)", relleno: "salado" }
@@ -436,8 +437,7 @@ function calculatePrices() {
             totalMoney += precioFijo * cart[k].cantidad;
         } else {
             let extra = 0;
-            // Detecta Jamón, Queso, Salado y también Creme / Crema (+ $50 extra)
-            if(kLower.includes('jamon') || kLower.includes('jamón') || kLower.includes('queso') || kLower.includes('salado') || kLower.includes('creme') || kLower.includes('crema')) extra = 50;
+            if(kLower.includes('jamon') || kLower.includes('jamón') || kLower.includes('queso') || kLower.includes('salado') || kLower.includes('creme') || kLower.includes('crema') || kLower.includes('milano')) extra = 50;
             else if(kLower.includes('dulce') || kLower.includes('ddl')) extra = 30;
 
             totalMoney += (basePrice + extra) * cart[k].cantidad;
