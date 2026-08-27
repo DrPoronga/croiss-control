@@ -761,8 +761,8 @@ def calcular_costo_y_empaque_pedido(desc_producto, total_croissants):
             else:
                 c_unit = c_base
 
-            # Rellenos (Se agrega Creme/Crema con el mismo costo)
-            if "jamon" in sabor_item or "jamón" in sabor_item or "queso" in sabor_item or "creme" in sabor_item or "crema" in sabor_item:
+            # Rellenos (Se agrega Creme/Crema y Milano con el mismo costo de producción)
+            if "jamon" in sabor_item or "jamón" in sabor_item or "queso" in sabor_item or "creme" in sabor_item or "crema" in sabor_item or "milano" in sabor_item:
                 c_unit += costos_dinamicos["extra_salado"]
             elif "dulce" in sabor_item or "ddl" in sabor_item:
                 c_unit += costos_dinamicos["extra_dulce"]
