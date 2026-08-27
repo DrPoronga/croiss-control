@@ -192,53 +192,47 @@
                         </div>
 
                         <div id="subSecStockCongelados" class="sub-seccion active">
-                            <!-- STOCK CROISSANTS TRADICIONALES -->
-                            <div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 14px;">
-                                <h4 style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px;">Croissants Tradicionales</h4>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-                                    <div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 14px; padding: 10px;">
-                                        <small style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block;">En Freezer 🧊</small>
-                                        <div id="cantCroissCongelados" style="font-size: 1.3rem; font-weight: 800; color: var(--accent); margin-top: 2px;">0 un.</div>
-                                    </div>
-                                    <div id="boxSobrevendidosContainer" style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 14px; padding: 10px;">
-                                        <small id="lblSobrevendidosTitulo" style="font-size: 0.65rem; font-weight: 700; color: #166534; text-transform: uppercase; display: block;">Masas Heladera 🥣</small>
-                                        <div id="cantSobrevendidos" style="font-size: 1.1rem; font-weight: 800; color: #15803D; margin-top: 2px;">0 masas</div>
-                                    </div>
-                                </div>
-                                <div style="display: flex; gap: 8px; justify-content: center;">
-                                    <button type="button" class="btn-add-item" style="margin: 0; flex: 1; padding: 10px;" onclick="abrirModalSumarCongelados()">+ Sumar Masas</button>
-                                    <button type="button" class="btn-jalea-chip active" style="margin: 0; padding: 10px 14px;" onclick="abrirModalEditarCongeladosDirecto()">✏️ Fijar Stock</button>
-                                </div>
-                            </div>
+                           <!-- STOCK CROISANTS TRADICIONALES -->
+							<div style="background: #FAF9F8; border: 1px solid var(--border-color); border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 14px;">
+								<h4 style="font-size: 0.8rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; margin-bottom: 10px;">Croissants Tradicionales</h4>
+								<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+									<div style="background: #FFFFFF; border: 1px solid var(--border-color); border-radius: 14px; padding: 10px;">
+										<small style="font-size: 0.65rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; display: block;">En Freezer 🧊</small>
+										<div id="cantCroissCongelados" style="font-size: 1.3rem; font-weight: 800; color: var(--accent); margin-top: 2px;">0 un.</div>
+									</div>
+									<div id="boxSobrevendidosContainer" style="background: #F0FDF4; border: 1px solid #DCFCE7; border-radius: 14px; padding: 10px;">
+										<small id="lblSobrevendidosTitulo" style="font-size: 0.65rem; font-weight: 700; color: #166534; text-transform: uppercase; display: block;">Masas Heladera 🥣</small>
+										<div id="cantSobrevendidos" style="font-size: 1.1rem; font-weight: 800; color: #15803D; margin-top: 2px;">0 masas</div>
+									</div>
+								</div>
+								<button type="button" class="btn-add-item" style="margin: 0; width: 100%; padding: 12px;" onclick="abrirModalEditarCongeladosDirecto()">✏️ Fijar Stock Tradicionales</button>
+							</div>
 
-                            <!-- STOCK POP CROISS -->
-                            <div style="background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 16px;">
-                                <h4 style="font-size: 0.8rem; font-weight: 800; color: #B45309; text-transform: uppercase; margin-bottom: 10px;">🍿 Pop Croiss (Unidades Sueltas)</h4>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
-                                    <div style="background: #FFFFFF; border: 1px solid #FDE68A; border-radius: 14px; padding: 10px;">
-                                        <small style="font-size: 0.65rem; font-weight: 700; color: #D97706; text-transform: uppercase; display: block;">Pop en Freezer 🧊</small>
-                                        <div id="cantPopCongelados" style="font-size: 1.3rem; font-weight: 800; color: #D97706; margin-top: 2px;">0 un.</div>
-                                    </div>
-                                    <div style="background: #FFFFFF; border: 1px solid #FDE68A; border-radius: 14px; padding: 10px;">
-                                        <small style="font-size: 0.65rem; font-weight: 700; color: #D97706; text-transform: uppercase; display: block;">Masas Pop 🥣</small>
-                                        <div id="cantMasasPop" style="font-size: 1.1rem; font-weight: 800; color: #B45309; margin-top: 2px;">0 masas</div>
-                                    </div>
-                                </div>
-                                <div style="display: flex; gap: 8px; justify-content: center;">
-                                    <button type="button" class="btn-add-item" style="margin: 0; flex: 1; padding: 10px; background: #D97706;" onclick="abrirModalSumarPop()">+ Sumar Pop</button>
-                                    <button type="button" class="btn-jalea-chip active" style="margin: 0; padding: 10px 14px; background: #FEF3C7; color: #B45309; border-color: #FCD34D;" onclick="abrirModalEditarPopDirecto()">✏️ Fijar Stock Pop</button>
-                                </div>
-                            </div>
+							<!-- STOCK POP CROISS -->
+							<div style="background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 18px; padding: 18px; text-align: center; margin-bottom: 16px;">
+								<h4 style="font-size: 0.8rem; font-weight: 800; color: #B45309; text-transform: uppercase; margin-bottom: 10px;">🍿 Pop Croiss (Unidades Sueltas)</h4>
+								<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px;">
+									<div style="background: #FFFFFF; border: 1px solid #FDE68A; border-radius: 14px; padding: 10px;">
+										<small style="font-size: 0.65rem; font-weight: 700; color: #D97706; text-transform: uppercase; display: block;">Pop en Freezer 🧊</small>
+										<div id="cantPopCongelados" style="font-size: 1.3rem; font-weight: 800; color: #D97706; margin-top: 2px;">0 un.</div>
+									</div>
+									<div style="background: #FFFFFF; border: 1px solid #FDE68A; border-radius: 14px; padding: 10px;">
+										<small style="font-size: 0.65rem; font-weight: 700; color: #D97706; text-transform: uppercase; display: block;">Masas Pop 🥣</small>
+										<div id="cantMasasPop" style="font-size: 1.1rem; font-weight: 800; color: #B45309; margin-top: 2px;">0 masas</div>
+									</div>
+								</div>
+								<button type="button" class="btn-add-item" style="margin: 0; width: 100%; padding: 12px; background: #D97706;" onclick="abrirModalEditarPopDirecto()">✏️ Fijar Stock Pop</button>
+							</div>
 
-                            <!-- TARJETA UNIFICADA: MENÚ, RENOMBRAR Y VISIBILIDAD -->
-                            <div style="background: #FAF9F8; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 16px; margin-bottom: 16px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
-                                    <h4 style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); margin: 0; text-transform: uppercase;">🥐 Menú & Visibilidad en Tienda</h4>
-                                    <small style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">ON / OFF & Editar</small>
-                                </div>
-                                <div id="listaStock">Cargando productos del menú...</div>
-                            </div>
-                        </div>
+							<!-- TARJETA UNIFICADA: MENÚ, RENOMBRAR Y VISIBILIDAD -->
+							<div style="background: #FAF9F8; border: 1.5px solid var(--border-color); border-radius: 18px; padding: 16px; margin-bottom: 16px;">
+								<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 8px;">
+									<h4 style="font-size: 0.85rem; font-weight: 800; color: var(--text-main); margin: 0; text-transform: uppercase;">🥐 Menú & Visibilidad en Tienda</h4>
+									<small style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">ON / OFF & Editar</small>
+								</div>
+								<div id="listaStock">Cargando productos del menú...</div>
+							</div>
+						</div>
 
                         <div id="subSecStockMateriaPrima" class="sub-seccion">
                             <button type="button" class="btn-add-item" style="margin-bottom: 14px;" onclick="abrirModalSumarStock('Materia Prima')">+ Cargar Materia Prima</button>
