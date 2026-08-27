@@ -3524,6 +3524,27 @@ function renderizarMenuYStock() {
     }
 }
 
+async function cambiarVisibilidadMenuTienda(nombreProducto, disponible) {
+    try {
+        const res = await fetch('/api/menu_visibilidad', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ producto: nombreProducto, disponible: disponible })
+        });
+        const data = await res.json();
+
+        if (data.status === 'exito') {
+            mostrarCroissExito('Menú Actualizado', `${nombreProducto} ahora está ${disponible ? 'VISIBLE' : 'OCULTO'} en la tienda.`);
+            renderizarMenuYStock(); // Recarga la lista para refrescar el estado del badge
+        } else {
+            Swal.fire('Error', data.mensaje || 'No se pudo actualizar la visibilidad.', 'error');
+        }
+    } catch (err) {
+        console.error("Error al cambiar visibilidad del menú:", err);
+        Swal.fire('Error', 'No se pudo conectar con el servidor para actualizar el menú.', 'error');
+    }
+}
+
 async function enviarLinkPagoWhatsApp(numFila, clienteTelefono) {
     const tInicio = Date.now();
     mostrarCroissLoader();
