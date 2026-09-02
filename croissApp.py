@@ -1044,32 +1044,51 @@ def api_public_catalogo():
 MENU_ESTADO_FILE = "menu_estado.json"
 ESTADO_MENU_MEMORIA = {}
 
+
+    # ==========================================
+# GESTIÓN PERSISTENTE DE VISIBILIDAD DEL MENÚ (GOOGLE SHEETS)
+# ==========================================
+def obtener_o_crear_sheet_config_menu():
+    ruta_credenciales = "credentials.json"
+    creds = Credentials.from_service_account_file(ruta_credenciales, scopes=SCOPES)
+    cliente = gspread.authorize(creds)
+    doc = cliente.open_by_key(SPREADSHEET_ID)
+    try:
+        return doc.worksheet("Config_Menu")
+    except Exception:
+        ws = doc.add_worksheet(title="Config_Menu", rows="50", cols="2")
+        ws.append_row(["Producto", "Disponible"])
+        return ws
+
 def obtener_estado_menu():
-    global ESTADO_MENU_MEMORIA
-    if ESTADO_MENU_MEMORIA:
-        return ESTADO_MENU_MEMORIA
-        
-    if os.path.exists(MENU_ESTADO_FILE):
-        try:
-            with open(MENU_ESTADO_FILE, "r", encoding="utf-8") as f:
-                ESTADO_MENU_MEMORIA = json.load(f)
-                return ESTADO_MENU_MEMORIA
-        except Exception:
-            pass
-    return ESTADO_MENU_MEMORIA
+    try:
+        sheet = obtener_o_crear_sheet_config_menu()
+        registros = get_clean_records(sheet)
+        estado = {}
+        for r in registros:
+            prod = get_field_val(r, "Producto").lower().strip()
+            disp = get_field_val(r, "Disponible").upper().strip()
+            if prod:
+                estado[prod] = (disp == "SI")
+        return estado
+    except Exception as e:
+        print(f"⚠️ Error leyendo estado de menú en Sheets: {e}", flush=True)
+        return {}
 
 def guardar_estado_menu(estado):
-    global ESTADO_MENU_MEMORIA
-    ESTADO_MENU_MEMORIA = estado
     try:
-        with open(MENU_ESTADO_FILE, "w", encoding="utf-8") as f:
-            json.dump(estado, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        print(f"Error guardando estado menu: {e}", flush=True)
+        sheet = obtener_o_crear_sheet_config_menu()
+        filas = [["Producto", "Disponible"]]
+        for prod, disp in estado.items():
+            filas.append([prod, "SI" if disp else "NO"])
         
+        ejecutar_con_reintento(sheet.clear)
+        ejecutar_con_reintento(sheet.update, 'A1', filas)
+    except Exception as e:
+        print(f"❌ Error guardando estado de menú en Sheets: {e}", flush=True)
+
 @app.route('/api/menu_visibilidad', methods=['GET', 'POST'])
 def api_menu_visibilidad():
-    global CACHE_CATALOGO
     try:
         if request.method == 'POST':
             datos = request.json or {}
@@ -1082,16 +1101,13 @@ def api_menu_visibilidad():
             estado = obtener_estado_menu()
             estado[nombre_prod] = disponible
             guardar_estado_menu(estado)
-
-            # Limpia la caché para que el cambio se vea reflejado inmediatamente en la tienda
-            CACHE_CATALOGO = None
-
             return jsonify({"status": "exito", "mensaje": "Estado de menú actualizado"}), 200
 
         return jsonify({"status": "exito", "estado": obtener_estado_menu()}), 200
     except Exception as error:
-        return jsonify({"status": "error", "mensaje": str(error)}), 500
-        
+        return jsonify({"status": "error", "mensaje": str(error)}), 500  
+
+      
 @app.route('/api/public/fechas', methods=['GET'])
 @limiter.limit("30 per minute")
 def api_public_fechas():
