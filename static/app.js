@@ -3582,15 +3582,27 @@ async function enviarLinkPagoWhatsApp(numFila, clienteTelefono) {
             if (telLimpio.startsWith('0')) telLimpio = telLimpio.substring(1);
             if (telLimpio && !telLimpio.startsWith('598')) telLimpio = '598' + telLimpio;
 
-            let mensaje = `Hola ${primerNombre}, Te escribimos de CROISS 🥐\n\n` +
-                `Tu pedido es de un total de *$${data.monto_original}*.\n\n` +
-                `Opciones de Pago:\n\n` +
-                `-Transferencia directa (Sin recargo):\n` +
+            // Formatear items del pedido en viñetas para WhatsApp
+            let itemsFormateados = (data.producto || 'Pedido CROISS')
+                .split(',')
+                .map(item => `  • ${item.trim()}`)
+                .join('\n');
+
+            let fechaStr = data.fecha_entrega ? `\n📅 *Fecha de Entrega:* ${data.fecha_entrega}` : '';
+
+            let mensaje = `Hola ${primerNombre}, ¡te escribimos de CROISS! 🥐\n\n` +
+                `📌 *DETALLE DE TU PEDIDO:*${fechaStr}\n` +
+                `${itemsFormateados}\n\n` +
+                `───────────────\n` +
+                `💵 *MONTO TOTAL:* *$${data.monto_original}*\n` +
+                `───────────────\n\n` +
+                `💳 *FORMAS DE PAGO:*\n\n` +
+                `1️⃣ *Transferencia Bancaria (Sin recargo - $${data.monto_original}):*\n` +
                 `• Itaú: 5584633\n` +
                 `• Mercado Pago (Cuenta/CVU): 1003657866242\n\n` +
-                `-Tarjeta / Link Mercado Pago (+ 8.5% comisión = $${data.monto_tarjeta}):\n` +
+                `2️⃣ *Tarjeta de Crédito / Débito (+8.5% comisión - $${data.monto_tarjeta}):*\n` +
                 `• Link de pago: ${data.link}\n\n` +
-                `¡Muchas gracias!`;
+                `Por favor envianos el comprobante por este medio una vez realizado. ¡Muchas gracias!`;
 
             let urlWa = telLimpio 
                 ? `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`
