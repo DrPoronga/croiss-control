@@ -262,14 +262,12 @@ async function fetchCatalogo() {
             let lista = data.productos.map(p => {
                 let nombreLimpio = p.nombre || '';
                 
-                // Solo formateamos Croiss a la Creme si existe
                 if (nombreLimpio.toLowerCase().includes('creme') || nombreLimpio.toLowerCase().includes('crema')) {
                     nombreLimpio = "Croiss a la Creme (Relleno de Crema Pastelera)";
                 }
                 return { ...p, nombre: nombreLimpio };
             });
 
-            // Reordenar dinámicamente para ubicar Croiss a la Creme abajo de Dulce de Leche
             const idxCreme = lista.findIndex(p => p.nombre.toLowerCase().includes('creme') || p.nombre.toLowerCase().includes('crema'));
             if (idxCreme !== -1) {
                 const itemCreme = lista.splice(idxCreme, 1)[0];
@@ -279,6 +277,12 @@ async function fetchCatalogo() {
                 } else {
                     lista.push(itemCreme);
                 }
+            }
+
+            // INYECCIÓN PAIN AU CHOCOLAT
+            const existeChocolat = lista.some(p => p.nombre.toLowerCase().includes('chocolat'));
+            if (!existeChocolat) {
+                lista.push({ nombre: "Pain Au Chocolat", precio: 220 });
             }
 
             menuItems = lista;

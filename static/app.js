@@ -543,6 +543,19 @@ async function cargarStock(forzar = false) {
                 }
             }
 
+            // INYECCIÓN PAIN AU CHOCOLAT
+            const existeChocolat = catalogoProductos.some(p => {
+                const nom = obtenerNombreDesdeObjeto(p).toLowerCase();
+                return nom.includes('chocolat');
+            });
+
+            if (!existeChocolat) {
+                catalogoProductos.push({
+                    "Nombre": "Pain Au Chocolat",
+                    "Precio Venta": 220
+                });
+            }
+
             renderizarMenuYStock();
         }
     } catch (err) {
