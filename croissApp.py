@@ -1032,6 +1032,11 @@ def api_public_catalogo():
         if not existe_creme and estado_menu.get("croiss a la creme") is not False:
             menu_publico.append({"nombre": "Croiss a la Creme", "precio": 190})
 
+        # INYECCIÓN PAIN AU CHOCOLAT
+        existe_chocolat = any(("chocolat" in p["nombre"].lower()) for p in menu_publico)
+        if not existe_chocolat and estado_menu.get("pain au chocolat") is not False:
+            menu_publico.append({"nombre": "Pain Au Chocolat", "precio": 220})
+
         # Guardar en memoria RAM
         CACHE_CATALOGO = menu_publico
         CACHE_CATALOGO_TIMESTAMP = ahora
