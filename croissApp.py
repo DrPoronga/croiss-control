@@ -287,15 +287,25 @@ def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estad
     texto_pago = "PAGADO" if es_pagado else "Pendiente de pago"
     color_pago = "#16A34A" if es_pagado else "#DC2626"
 
+    # Formatear lista de productos separada por comas en viñetas HTML
+    items_html = ""
+    if items_str:
+        partes = [item.strip() for item in str(items_str).split(",") if item.strip()]
+        for item in partes:
+            items_html += f"<li style='margin-bottom: 4px; color: #2D1E18; font-weight: 700;'>🥐 {item}</li>"
+        items_html = f"<ul style='margin: 0; padding-left: 18px; list-style-type: none;'>{items_html}</ul>"
+    else:
+        items_html = "<span style='font-weight: 700; color: #2D1E18;'>Detalle no especificado</span>"
+
     cuerpo = f"""
     <h2 style="color: #2D1E18; font-size: 18px; font-weight: 800; margin: 0 0 12px 0; text-align: center;">¡Hola, {cliente}!</h2>
-    <p style="margin: 0 0 18px 0; color: #7A6B63; text-align: center;">Tu pedido ha sido registrado con éxito. A continuación te dejamos el detalle de tu orden:</p>
+    <p style="margin: 0 0 18px 0; color: #7A6B63; text-align: center;">Tu pedido ha sido registrado con éxito. A continuación te dejamos el resumen de tu orden:</p>
 
     <div style="background-color: #FAF9F8; border: 1px solid #EFEAE6; border-radius: 14px; padding: 18px; margin-bottom: 20px;">
       <table width="100%" border="0" cellspacing="0" cellpadding="0" style="font-size: 13px;">
         <tr>
-          <td style="padding-bottom: 10px; color: #7A6B63; font-weight: 600;">Productos:</td>
-          <td style="padding-bottom: 10px; text-align: right; font-weight: 700; color: #2D1E18;">{items_str}</td>
+          <td style="padding-bottom: 12px; color: #7A6B63; font-weight: 600; vertical-align: top;">Productos:</td>
+          <td style="padding-bottom: 12px; text-align: right;">{items_html}</td>
         </tr>
         <tr>
           <td style="padding-bottom: 10px; color: #7A6B63; font-weight: 600;">Fecha de Entrega:</td>
@@ -317,7 +327,7 @@ def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estad
     <p style="margin: 0; font-size: 13px; color: #7A6B63; text-align: center;">¡Muchas gracias por elegir la artesanía de CROISS!</p>
     """
     return _base_email_template("¡Pedido Confirmado! 🥐", "#C86D28", cuerpo)
-
+    
 def plantilla_email_pago_recibido(cliente, monto):
     cuerpo = f"""
     <h2 style="color: #2D1E18; font-size: 18px; font-weight: 800; margin: 0 0 12px 0; text-align: center;">¡Pago Acreditado, {cliente}!</h2>
@@ -2631,14 +2641,16 @@ def generar_link_pago():
         row_data = sheet_ventas.row_values(int(num_fila))
         headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
 
-        col_cli, col_monto, col_prod = 4, 7, 5
+        col_cli, col_monto, col_prod, col_fecha = 4, 7, 5, 3
         for i, h in enumerate(headers, start=1):
             if "cliente" in h: col_cli = i
             elif "monto" in h: col_monto = i
             elif "producto" in h: col_prod = i
+            elif "fecha entrega" in h: col_fecha = i
 
         cliente_nom = row_data[col_cli - 1] if col_cli - 1 < len(row_data) else "Cliente"
         prod_desc = row_data[col_prod - 1] if col_prod - 1 < len(row_data) else "Pedido CROISS"
+        fecha_ent = row_data[col_fecha - 1] if col_fecha - 1 < len(row_data) else ""
         
         try:
             monto_original = float(str(row_data[col_monto - 1]).replace("$", "").replace(",", ".").strip())
@@ -2677,7 +2689,9 @@ def generar_link_pago():
             "link": link_mp,
             "monto_original": monto_original,
             "monto_tarjeta": monto_tarjeta,
-            "cliente": cliente_nom
+            "cliente": cliente_nom,
+            "producto": prod_desc,
+            "fecha_entrega": fecha_ent
         }), 200
 
     except Exception as error:
