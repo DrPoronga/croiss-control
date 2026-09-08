@@ -282,7 +282,8 @@ def _base_email_template(titulo_badge, badge_color, contenido_body):
     </html>
     """
     
-def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente"):
+def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estado_pago="Pendiente", notas=""):
+    import re
     es_pagado = estado_pago.lower() == "pagado"
     texto_pago = "PAGADO" if es_pagado else "Pendiente de pago"
     color_pago = "#16A34A" if es_pagado else "#DC2626"
@@ -296,6 +297,18 @@ def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estad
         items_html = f"<ul style='margin: 0; padding-left: 18px; list-style-type: none;'>{items_html}</ul>"
     else:
         items_html = "<span style='font-weight: 700; color: #2D1E18;'>Detalle no especificado</span>"
+
+    # Detectar si hay un descuento o cupón en las notas guardadas
+    descuento_html = ""
+    if notas:
+        match = re.search(r'\[([^\]]*(?:Dto|Cupón|Cupon)[^\]]*)\]', str(notas), re.IGNORECASE)
+        if match:
+            descuento_html = f"""
+            <tr>
+              <td style="padding-top: 10px; color: #16A34A; font-weight: 600;">Beneficio Aplicado:</td>
+              <td style="padding-top: 10px; text-align: right; color: #16A34A; font-weight: 800;">{match.group(1).upper()}</td>
+            </tr>
+            """
 
     cuerpo = f"""
     <h2 style="color: #2D1E18; font-size: 18px; font-weight: 800; margin: 0 0 12px 0; text-align: center;">¡Hola, {cliente}!</h2>
@@ -311,6 +324,7 @@ def plantilla_email_confirmacion(cliente, items_str, fecha_entrega, total, estad
           <td style="padding-bottom: 10px; color: #7A6B63; font-weight: 600;">Fecha de Entrega:</td>
           <td style="padding-bottom: 10px; text-align: right; font-weight: 700; color: #2D1E18;">{fecha_entrega}</td>
         </tr>
+        {descuento_html}
         <tr>
           <td style="padding-top: 10px; border-top: 1px dashed #E2D9D3; color: #7A6B63; font-weight: 600;">Estado de Pago:</td>
           <td style="padding-top: 10px; border-top: 1px dashed #E2D9D3; text-align: right;">
@@ -984,7 +998,7 @@ def registrar_venta():
 
         if email_cliente:
             try:
-                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido)
+                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido, notas_cliente)
                 enviar_email_async(email_cliente, "🥐 ¡Tu pedido en CROISS está confirmado!", html)
             except Exception: pass
 
@@ -1265,7 +1279,7 @@ def api_public_crear_pedido():
         # 1. Enviar e-mail de confirmación al CLIENTE (si ingresó un mail válido)
         if email_cliente:
             try:
-                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, "Pendiente")
+                html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, "Pendiente", notas_guardar)
                 enviar_email_async(email_cliente, f"🥐 ¡Pedido {nuevo_id} Registrado en CROISS!", html)
             except Exception as e_cli:
                 print(f"Aviso enviado cliente: {e_cli}", flush=True)
@@ -2641,16 +2655,18 @@ def generar_link_pago():
         row_data = sheet_ventas.row_values(int(num_fila))
         headers = [str(h).strip().lower() for h in sheet_ventas.row_values(1)]
 
-        col_cli, col_monto, col_prod, col_fecha = 4, 7, 5, 3
+        col_cli, col_monto, col_prod, col_fecha, col_notas = 4, 7, 5, 3, 14
         for i, h in enumerate(headers, start=1):
             if "cliente" in h: col_cli = i
             elif "monto" in h: col_monto = i
             elif "producto" in h: col_prod = i
             elif "fecha entrega" in h: col_fecha = i
+            elif "nota" in h or "comentario" in h or "observacion" in h: col_notas = i
 
         cliente_nom = row_data[col_cli - 1] if col_cli - 1 < len(row_data) else "Cliente"
         prod_desc = row_data[col_prod - 1] if col_prod - 1 < len(row_data) else "Pedido CROISS"
         fecha_ent = row_data[col_fecha - 1] if col_fecha - 1 < len(row_data) else ""
+        notas_str = row_data[col_notas - 1] if col_notas - 1 < len(row_data) else ""
         
         try:
             monto_original = float(str(row_data[col_monto - 1]).replace("$", "").replace(",", ".").strip())
@@ -2691,7 +2707,8 @@ def generar_link_pago():
             "monto_tarjeta": monto_tarjeta,
             "cliente": cliente_nom,
             "producto": prod_desc,
-            "fecha_entrega": fecha_ent
+            "fecha_entrega": fecha_ent,
+            "notas": notas_str
         }), 200
 
     except Exception as error:
