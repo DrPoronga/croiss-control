@@ -420,7 +420,10 @@ function calculatePrices() {
             totalMoney += precioFijo * cart[k].cantidad;
         } else {
             let extra = 0;
-            if(kLower.includes('jamon') || kLower.includes('jamón') || kLower.includes('queso') || kLower.includes('salado') || kLower.includes('creme') || kLower.includes('crema') || kLower.includes('milano')) extra = 50;
+            
+            // Nuevo: Validación para Pain Au Chocolat sumando el extra de $80
+            if(kLower.includes('pain au chocolat') || kLower.includes('chocolat')) extra = 80;
+            else if(kLower.includes('jamon') || kLower.includes('jamón') || kLower.includes('queso') || kLower.includes('salado') || kLower.includes('creme') || kLower.includes('crema') || kLower.includes('milano')) extra = 50;
             else if(kLower.includes('dulce') || kLower.includes('ddl')) extra = 30;
 
             totalMoney += (basePrice + extra) * cart[k].cantidad;
