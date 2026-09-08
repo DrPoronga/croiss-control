@@ -175,7 +175,7 @@ function verMenuPublico() {
 
                 <!-- Imágenes del Menú vinculadas con su ruta absoluta -->
                 <img src="/static/menu.png" style="width: 100%; border-radius: 20px; margin-bottom: 12px; display: block; box-shadow: 0 15px 35px rgba(0,0,0,0.4);" alt="Menú 1">
-                <img src="/static/menu2.jpg" style="width: 100%; border-radius: 20px; display: block; box-shadow: 0 15px 35px rgba(0,0,0,0.4);" alt="Menú 2">
+               
             </div>
         `,
         background: 'transparent',
