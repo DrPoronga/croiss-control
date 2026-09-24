@@ -1835,9 +1835,18 @@ async function cargarCuentas(conLoader = true) {
                         }
 
                         const esGratis = e.monto <= 0;
-                        const botonCobroOPago = (esPagado || esGratis)
-                            ? `<div class="agenda-badge badge-ok" style="display:flex; align-items:center; justify-content:center; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; text-align:center; height:100%; box-sizing:border-box;">${esGratis ? 'Cortesía $0' : 'Pagado'}</div>`
-                            : `<button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${e.fila}, '${clienteClean}')">💸 Pago</button>`;
+							let botonCobroOPago = '';
+
+							if (esGratis) {
+								botonCobroOPago = `<div class="agenda-badge badge-ok" style="display:flex; align-items:center; justify-content:center; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; text-align:center; height:100%; box-sizing:border-box;">Cortesía $0</div>`;
+							} else if (esPagado) {
+								const telSeguro = e.telefono || '';
+								const prodSeguro = e.producto ? e.producto.replace(/'/g, "\\'") : '';
+								// El badge estático ahora es un botón verde claro clickeable
+								botonCobroOPago = `<button type="button" style="background:#DCFCE7; color:#15803D; margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; border:1px solid #BBF7D0; font-weight:800; cursor:pointer;" onclick="confirmarPagoWhatsApp('${clienteClean}', '${telSeguro}', ${e.monto}, '${e.fecha_entrega}', '${prodSeguro}')">💬 Conf. Pago</button>`;
+							} else {
+								botonCobroOPago = `<button type="button" class="btn-pagar-ahora" style="margin:0; padding:6px 4px; font-size:0.75rem; border-radius:10px; width:100%; height:100%; box-sizing:border-box; display:flex; align-items:center; justify-content:center; box-shadow:none; background:#16A34A;" onclick="marcarComoPagado(${e.fila}, '${clienteClean}')">💸 Pago</button>`;
+							}
 
                         div.innerHTML = `
                             <div style="flex: 1; padding-right: 12px;">
@@ -3582,6 +3591,15 @@ async function enviarLinkPagoWhatsApp(numFila, clienteTelefono) {
             if (telLimpio.startsWith('0')) telLimpio = telLimpio.substring(1);
             if (telLimpio && !telLimpio.startsWith('598')) telLimpio = '598' + telLimpio;
 
+            // Extraer descuento de las notas si existe
+            let dtoStr = '';
+            if (data.notas) {
+                const match = data.notas.match(/\[([^\]]*(?:Dto|Cupón|Cupon)[^\]]*)\]/i);
+                if (match) {
+                    dtoStr = `\n🎁 *Beneficio Aplicado:* ${match[1].toUpperCase()}`;
+                }
+            }
+
             // Formatear items del pedido en viñetas para WhatsApp
             let itemsFormateados = (data.producto || 'Pedido CROISS')
                 .split(',')
@@ -3590,11 +3608,11 @@ async function enviarLinkPagoWhatsApp(numFila, clienteTelefono) {
 
             let fechaStr = data.fecha_entrega ? `\n📅 *Fecha de Entrega:* ${data.fecha_entrega}` : '';
 
-            let mensaje = `Hola ${primerNombre}, ¡te escribimos de CROISS! 🥐\n\n` +
+            let mensaje = `Hola ${primerNombre}, ¡te escribimos de CROISS! \n\n` +
                 `📌 *DETALLE DE TU PEDIDO:*${fechaStr}\n` +
-                `${itemsFormateados}\n\n` +
+                `${itemsFormateados}${dtoStr}\n\n` +
                 `───────────────\n` +
-                `💵 *MONTO TOTAL:* *$${data.monto_original}*\n` +
+                `*MONTO TOTAL:* *$${data.monto_original}*\n` +
                 `───────────────\n\n` +
                 `💳 *FORMAS DE PAGO:*\n\n` +
                 `1️⃣ *Transferencia Bancaria (Sin recargo - $${data.monto_original}):*\n` +
@@ -3618,3 +3636,35 @@ async function enviarLinkPagoWhatsApp(numFila, clienteTelefono) {
         cerrarCroissLoaderSeguro();
     }
 }
+
+// ==========================================
+// NUEVO: CONFIRMACIÓN DE PAGO POR WHATSAPP
+// ==========================================
+function confirmarPagoWhatsApp(nombreCliente, telefono, monto, fechaEntrega, producto) {
+    if (!telefono) {
+        Swal.fire('Sin teléfono', `El cliente ${nombreCliente} no tiene un teléfono registrado para enviar el mensaje.`, 'info');
+        return;
+    }
+
+    let primerNombre = nombreCliente.trim().split(' ')[0];
+    let telLimpio = telefono.replace(/\D/g, '');
+    
+    // Normalizar el número para el prefijo de Uruguay (598)
+    if (telLimpio.startsWith('0')) telLimpio = telLimpio.substring(1);
+    if (telLimpio && !telLimpio.startsWith('598')) telLimpio = '598' + telLimpio;
+
+    // Formatear los ítems del pedido en viñetas para que se lea claro en WhatsApp
+    let itemsFormateados = producto.split(',').map(item => `  • ${item.trim()}`).join('\n');
+
+    // Plantilla del mensaje a enviar
+    let mensaje = `¡Hola ${primerNombre}! Te escribimos de CROISS 🥐\n\n` +
+                  `Te confirmamos que recibimos correctamente tu pago de *$${monto}*.\n\n` +
+                  `Tu pedido para el *${fechaEntrega}* ya figura como PAGADO:\n` +
+                  `${itemsFormateados}\n\n` +
+                  `¡Muchas gracias por elegirnos! Nos contactaremos cuando vaya en camino. 🛵`;
+
+    // Redirección a la app web/nativa de WhatsApp
+    let urlWa = `https://wa.me/${telLimpio}?text=${encodeURIComponent(mensaje)}`;
+    window.open(urlWa, '_blank');
+}
+
