@@ -59,9 +59,15 @@
                                 <select id="vProductoSelect"></select>
                             </div>
                             <div class="row">
-                                <div class="form-group">
+                                <div class="form-group" style="flex: 1.5;">
                                     <label>Cantidad</label>
                                     <input type="number" id="vCantidadItem" value="1" min="1">
+                                </div>
+                                <div class="form-group" style="flex: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 0;">
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.85rem; font-weight: 800; color: #C86D28; margin: 0; padding-top: 15px;">
+                                        <input type="checkbox" id="vEsRegaloItem" style="width: 18px; height: 18px; margin: 0; accent-color: #C86D28;">
+                                        🎁 Regalo
+                                    </label>
                                 </div>
                                 <div class="form-group" style="display: flex; align-items: flex-end;">
                                     <button type="button" class="btn-add-item" onclick="agregarAlPedido()">+ Agregar</button>
