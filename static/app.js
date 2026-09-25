@@ -3487,3 +3487,101 @@ async function guardarPreciosInsumos(e) {
         cerrarCroissLoaderSeguro();
     }
 }
+
+// ==========================================
+// NAVEGAÇÃO DE SEGMENTOS / SUB-ABAS
+// ==========================================
+
+function cambiarSegmentoEntrega(segmento) {
+    const btnCue = document.getElementById('segBtnCuentas');
+    const btnEnt = document.getElementById('segBtnEntregas');
+    const btnAge = document.getElementById('segBtnAgenda');
+    if (btnCue) btnCue.classList.toggle('active', segmento === 'cuentas');
+    if (btnEnt) btnEnt.classList.toggle('active', segmento === 'entregas');
+    if (btnAge) btnAge.classList.toggle('active', segmento === 'agenda');
+    
+    const subCue = document.getElementById('subSecCuentas');
+    const subEnt = document.getElementById('subSecEntregas');
+    const subAge = document.getElementById('subSecAgenda');
+    if (subCue) subCue.classList.toggle('active', segmento === 'cuentas');
+    if (subEnt) subEnt.classList.toggle('active', segmento === 'entregas');
+    if (subAge) subAge.classList.toggle('active', segmento === 'agenda');
+}
+
+function cambiarSegmentoGasto(segmento) {
+    const btnNue = document.getElementById('segBtnNuevoGasto');
+    const btnHis = document.getElementById('segBtnHistorialGasto');
+    const btnPre = document.getElementById('segBtnPreciosInsumos');
+    if (btnNue) btnNue.classList.toggle('active', segmento === 'nuevo');
+    if (btnHis) btnHis.classList.toggle('active', segmento === 'historial');
+    if (btnPre) btnPre.classList.toggle('active', segmento === 'precios');
+
+    const subNue = document.getElementById('subSecNuevoGasto');
+    const subHis = document.getElementById('subSecHistorialGasto');
+    const subPre = document.getElementById('subSecPreciosInsumos');
+    if (subNue) subNue.classList.toggle('active', segmento === 'nuevo');
+    if (subHis) subHis.classList.toggle('active', segmento === 'historial');
+    if (subPre) subPre.classList.toggle('active', segmento === 'precios');
+}
+
+function cambiarSegmentoStock(segmento) {
+    const btnCong = document.getElementById('segBtnStockCongelados');
+    const btnMat = document.getElementById('segBtnStockMateriaPrima');
+    const btnEmp = document.getElementById('segBtnStockEmpaque');
+    if (btnCong) btnCong.classList.toggle('active', segmento === 'congelados');
+    if (btnMat) btnMat.classList.toggle('active', segmento === 'materiaprima');
+    if (btnEmp) btnEmp.classList.toggle('active', segmento === 'empaque');
+
+    const subCong = document.getElementById('subSecStockCongelados');
+    const subMat = document.getElementById('subSecStockMateriaPrima');
+    const subEmp = document.getElementById('subSecStockEmpaque');
+    if (subCong) subCong.classList.toggle('active', segmento === 'congelados');
+    if (subMat) subMat.classList.toggle('active', segmento === 'materiaprima');
+    if (subEmp) subEmp.classList.toggle('active', segmento === 'empaque');
+}
+
+function cambiarSegmentoBalance(segmento) {
+    const btnBal = document.getElementById('segBtnBalance');
+    const btnSab = document.getElementById('segBtnSabores');
+    const btnEvo = document.getElementById('segBtnEvolucion');
+    if (btnBal) btnBal.classList.toggle('active', segmento === 'balance');
+    if (btnSab) btnSab.classList.toggle('active', segmento === 'sabores');
+    if (btnEvo) btnEvo.classList.toggle('active', segmento === 'evolucion');
+    
+    const subBal = document.getElementById('subSecBalance');
+    const subSab = document.getElementById('subSecSabores');
+    const subEvo = document.getElementById('subSecEvolucion');
+    if (subBal) subBal.classList.toggle('active', segmento === 'balance');
+    if (subSab) subSab.classList.toggle('active', segmento === 'sabores');
+    if (subEvo) subEvo.classList.toggle('active', segmento === 'evolucion');
+}
+
+function cambiarSegmentoCliente(segmento) {
+    document.querySelectorAll('#sec-clientes .seg-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#sec-clientes .sub-seccion').forEach(s => s.classList.remove('active'));
+
+    const btnLis = document.getElementById('segBtnLista');
+    const btnPro = document.getElementById('segBtnPromo');
+    const btnMen = document.getElementById('segBtnMensajes');
+
+    const subLis = document.getElementById('subSecLista');
+    const subPro = document.getElementById('subSecPromo');
+    const subMen = document.getElementById('subSecMensajes');
+
+    if (segmento === 'lista') {
+        if (btnLis) btnLis.classList.add('active');
+        if (subLis) subLis.classList.add('active');
+        datosClientesGlobal.subOrigen = 'lista';
+    } else if (segmento === 'promo') {
+        if (btnPro) btnPro.classList.add('active');
+        if (subPro) subPro.classList.add('active');
+        datosClientesGlobal.subOrigen = 'promo';
+    } else {
+        if (btnMen) btnMen.classList.add('active');
+        if (subMen) subMen.classList.add('active');
+        datosClientesGlobal.subOrigen = 'mensajes';
+        const txtArea = document.getElementById('txtPlantillaPromo');
+        if (txtArea) txtArea.value = localStorage.getItem('croiss_promo_msg') || '¡Hola {nombre}! Te escribimos de Croiss para regalarte este cupón...';
+    }
+}
+
