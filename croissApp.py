@@ -232,6 +232,35 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
             print(f"❌ Error general enviando correo: {e}", flush=True)
 
     threading.Thread(target=_enviar).start()
+
+# ==========================================
+# INTEGRACIÓN CON APP DE FINANZAS
+# ==========================================
+# IMPORTANTE: Cambia esta URL por la URL real donde tengas alojada tu app de Finanzas
+URL_FINANZAS = os.environ.get("URL_FINANZAS", "https://tu-app-de-finanzas.com/api/webhook/ingreso_croiss")
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "super_secreto_croiss_2026")
+
+def registrar_ingreso_en_finanzas(monto, cliente):
+    def _enviar():
+        try:
+            payload = {
+                "secret": WEBHOOK_SECRET,
+                "monto": float(monto),
+                "concepto": f"Croiss - {cliente}"
+            }
+            req = urllib.request.Request(
+                URL_FINANZAS, 
+                data=json.dumps(payload).encode("utf-8"), 
+                headers={"Content-Type": "application/json"}, 
+                method="POST"
+            )
+            with urllib.request.urlopen(req, timeout=10) as response:
+                print(f"✅ Ingreso de ${monto} registrado en Finanzas", flush=True)
+        except Exception as e:
+            print(f"❌ Error enviando a Finanzas: {e}", flush=True)
+
+    # Se ejecuta en un hilo separado para que no tranque tu app de Croiss
+    threading.Thread(target=_enviar).start()
     
 # ==========================================
 # PLANTILLAS DE EMAIL UNIFICADAS
@@ -995,7 +1024,12 @@ def registrar_venta():
             direccion_cliente, "Pendiente", notas_cliente
         ]
         ejecutar_con_reintento(sheet_ventas.append_row, nueva_fila)
-
+        
+        # 👇 --- NUEVO: AVISAR A FINANZAS --- 👇
+        if estado_pedido.lower() == "pagado" and monto_total > 0:
+            registrar_ingreso_en_finanzas(monto_total, cliente_nombre)
+        # 👆 ------------------------------- 👆
+        
         if email_cliente:
             try:
                 html = plantilla_email_confirmacion(cliente_nombre, descripcion_final, fecha_entrega, monto_total, estado_pedido, notas_cliente)
@@ -2389,6 +2423,16 @@ def cambiar_estado_pago():
 
         ejecutar_con_reintento(sheet_ventas.update_cell, int(num_fila), col_estado, nuevo_estado)
 
+        if nuevo_estado.lower() == "pagado":
+            try:
+                monto_str = row_data[col_monto - 1] if col_monto > 0 and col_monto - 1 < len(row_data) else "0"
+                monto_num = float(str(monto_str).replace('$', '').replace(',', '.').strip())
+                nombre_cliente = row_data[col_cliente - 1] if col_cliente > 0 and col_cliente - 1 < len(row_data) else "Cliente"
+                if monto_num > 0:
+                    registrar_ingreso_en_finanzas(monto_num, nombre_cliente)
+            except Exception as e:
+                print(f"Aviso Finanzas: {e}", flush=True)
+
         if nuevo_estado.lower() == "pagado" and col_email > 0 and col_cliente > 0:
             email_cliente = row_data[col_email - 1] if col_email - 1 < len(row_data) else ""
             nombre_cliente = row_data[col_cliente - 1] if col_cliente - 1 < len(row_data) else "Cliente"
@@ -2399,7 +2443,7 @@ def cambiar_estado_pago():
         return jsonify({"status": "exito", "mensaje": "Estado actualizado"}), 200
     except Exception as error:
         return jsonify({"status": "error", "mensaje": str(error)}), 500
-
+        
 @app.route('/api/gastos_e_insumos', methods=['GET'])
 def obtener_gastos_e_insumos():
     try:
