@@ -237,7 +237,7 @@ def enviar_email_async(destinatario, asunto, cuerpo_html):
 # INTEGRACIÓN CON APP DE FINANZAS
 # ==========================================
 # IMPORTANTE: Cambia esta URL por la URL real donde tengas alojada tu app de Finanzas
-URL_FINANZAS = os.environ.get("URL_FINANZAS", "https://tu-app-de-finanzas.com/api/webhook/ingreso_croiss")
+URL_FINANZAS = os.environ.get("URL_FINANZAS", "https://tu-subdominio-finanzas.onrender.com/api/webhook/ingreso_croiss")
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "super_secreto_croiss_2026")
 
 def registrar_ingreso_en_finanzas(monto, cliente):
