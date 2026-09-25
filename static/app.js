@@ -577,7 +577,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const descuentoSelect = document.getElementById('vDescuento');
             let descuentoPorcentaje = descuentoSelect ? (parseFloat(descuentoSelect.value) || 0) : 0;
 
-            const totalBruto = carrito.reduce((acc, i) => acc + (i.precio_unitario * i.cantidad), 0);
+            // FIX: Ahora solo se suman al total bruto los ítems que NO sean regalos
+            const totalBruto = carrito.reduce((acc, i) => acc + (i.es_regalo ? 0 : (i.precio_unitario * i.cantidad)), 0);
             let montoDescuento = Math.round(totalBruto * (descuentoPorcentaje / 100));
             let tagCupon = '';
 
